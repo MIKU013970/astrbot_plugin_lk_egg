@@ -341,8 +341,17 @@ class LkMarketNotify(Star):
             logger.info("[市集推送] 配置 enabled=false，插件不启动")
             return
         self._task = asyncio.create_task(self._loop())
+        self._code_task = asyncio.create_task(self._daily_code_loop())
 
     async def terminate(self) -> None:
+        _ct = getattr(self, "_code_task", None)
+        if _ct:
+            _ct.cancel()
+            try:
+                await _ct
+            except (asyncio.CancelledError, BaseException):
+                pass
+            self._code_task = None
         if self._task:
             self._task.cancel()
             try:
@@ -673,6 +682,7 @@ class LkMarketNotify(Star):
         "/34/3617                整数按克算（3617g）\n"
         "—————— 发码 ——————\n"
         "发码 EGG-XXXX-XXXX       随机发到设置里指定的群\n"
+        "发码记录                 看最近发了哪些码\n"
         "输入兑换码 EGG-XXXX      同上（两个名字都行）\n"
         "—————— 查助手（商家）——————\n"
         "查ID Z10014514          昵称/上架/售出/好评差评/货架明细\n"
@@ -978,6 +988,96 @@ class LkMarketNotify(Star):
         yield event.plain_result(
             f"没查到商家 {sid}。\n如果是精灵名，用：查询 火花")
 
+    # ---------------------------------------------------------------- 发码记录 / 每日自动发
+    def _code_log(self) -> list:
+        return self.state.setdefault("code_log", [])
+
+    def _log_code(self, code: str, egg: str, group: str, way: str) -> None:
+        log = self._code_log()
+        log.append({"code": code, "egg": egg, "group": group,
+                    "way": way, "at": int(time.time())})
+        self.state["code_log"] = log[-500:]
+        _save_state(self.state)
+
+    def _sent_today(self) -> set:
+        today = time.strftime("%Y-%m-%d")
+        return {x["code"] for x in self._code_log()
+                if time.strftime("%Y-%m-%d", time.localtime(x.get("at", 0))) == today}
+
+    async def _fetch_available_codes(self) -> list:
+        """从控制台拉可领的兑换码"""
+        data = await self._api("/api/purchases?account=*&refresh=0")
+        items = (data or {}).get("items") or []
+        out = []
+        for it in items:
+            if it.get("state") == "available" and it.get("code"):
+                out.append({"code": it["code"], "name": it.get("name") or "",
+                            "at": it.get("claimed_at") or 0})
+        out.sort(key=lambda x: x["at"])          # 最早的在前
+        return out
+
+    def _in_window(self) -> bool:
+        now = time.strftime("%H:%M")
+        start = str(self._cfg("daily_code_start", "08:30") or "08:30")
+        end = str(self._cfg("daily_code_end", "10:00") or "10:00")
+        return start <= now <= end
+
+    async def _daily_code_once(self) -> int:
+        """执行一次每日发码，返回发出条数"""
+        if not bool(self._cfg("daily_code_enabled", True)):
+            return 0
+        if not self._in_window():
+            return 0
+        groups = self._code_groups()
+        if not groups:
+            return 0
+        keyword = str(self._cfg("daily_code_keyword", "神奇") or "神奇")
+        count = max(1, int(self._cfg("daily_code_count", 10) or 10))
+        tpl = str(self._cfg("daily_code_template", "神奇礼物蛋神兑换码———{code}")
+                  or "神奇礼物蛋神兑换码———{code}")
+
+        # 当天额度：每天最多发 count 个
+        today = time.strftime("%Y-%m-%d")
+        quota_sent = sum(
+            1 for x in self._code_log()
+            if x.get("way") == "每日自动"
+            and time.strftime("%Y-%m-%d", time.localtime(x.get("at", 0))) == today)
+        remain = count - quota_sent
+        if remain <= 0:
+            return 0
+
+        sent_today = self._sent_today()
+        codes = [c for c in await self._fetch_available_codes()
+                 if keyword in c["name"] and c["code"] not in sent_today]
+        if not codes:
+            return 0
+        picked = codes[:remain]                   # 时间最早的 N 个（受当天额度限制）
+        import random as _random
+        ok = 0
+        for c in picked:
+            gid = _random.choice(groups)
+            text = tpl.format(code=c["code"], egg=c["name"])
+            if await self._send_to_group(gid, text):
+                self._log_code(c["code"], c["name"], gid, "每日自动")
+                ok += 1
+            await asyncio.sleep(1.0)
+        if ok:
+            logger.info(f"[发码] 每日自动发放 {ok} 个（关键字「{keyword}」）")
+        return ok
+
+    async def _daily_code_loop(self) -> None:
+        """每分钟检查一次，在时间窗内把当天额度发完"""
+        while True:
+            try:
+                n = await self._daily_code_once()
+                if n:
+                    logger.info(f"[发码] 本轮发出 {n} 个")
+            except asyncio.CancelledError:
+                raise
+            except Exception as e:
+                logger.warning(f"[发码] 自动发放异常: {type(e).__name__}: {e}")
+            await asyncio.sleep(60)
+
     # ---------------------------------------------------------------- 发码到群
     def _code_groups(self) -> list:
         raw = str(self._cfg("code_groups", "") or "")
@@ -1000,6 +1100,25 @@ class LkMarketNotify(Star):
             except Exception as e:
                 logger.warning(f"[发码] 发到 {umo} 失败: {type(e).__name__}: {e}")
         return False
+
+    @filter.command("发码记录")
+    async def cmd_code_log(self, event: AstrMessageEvent):
+        """发码记录 —— 看最近发了哪些码"""
+        log = self._code_log()
+        if not log:
+            yield event.plain_result("还没有发码记录")
+            return
+        today = time.strftime("%Y-%m-%d")
+        today_n = sum(1 for x in log
+                      if time.strftime("%Y-%m-%d", time.localtime(x.get("at", 0))) == today)
+        lines = [f"发码记录（共 {len(log)} 条 · 今天 {today_n} 个）"]
+        for x in log[-15:][::-1]:
+            when = time.strftime("%m-%d %H:%M", time.localtime(x.get("at", 0)))
+            egg = f" {x['egg']}" if x.get("egg") else ""
+            lines.append(f"· {when} · {x['code']} → 群 {x['group']}（{x.get('way', '')}）{egg}")
+        if len(log) > 15:
+            lines.append(f"…… 只显示最近 15 条")
+        yield event.plain_result("\n".join(lines))
 
     @filter.command("发码")
     async def cmd_give_code(self, event: AstrMessageEvent):
@@ -1040,6 +1159,8 @@ class LkMarketNotify(Star):
         text = codes[0] if len(codes) == 1 else "\n".join(codes)
         ok = await self._send_to_group(group_id, text)
         if ok:
+            for _c in codes:
+                self._log_code(_c, "", group_id, "手动")
             show = codes[0] if len(codes) == 1 else f"{len(codes)} 个码"
             yield event.plain_result(
                 f"已发放：{show}\n"
