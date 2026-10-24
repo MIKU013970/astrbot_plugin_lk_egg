@@ -95,7 +95,7 @@ def _save_state(state: Dict[str, Any]) -> None:
     "astrbot_plugin_lk_egg",
     "MIKU013970 & DeepSeek",
     "市集购买成功推送 + 新上架监控 + 黑白名单查询",
-    "1.4.3",
+    "1.4.4",
 )
 class LkMarketNotify(Star):
     def __init__(self, context: Context, config: AstrBotConfig = None):
@@ -924,6 +924,43 @@ class LkMarketNotify(Star):
             return
         yield event.plain_result(self._render_identify(*hw))
 
+    @filter.regex(r"^\s*[Zz]\d{5,12}(\s+(黑|白)(\s+.*)?)?\s*$")
+    async def on_bare_zid(self, event: AstrMessageEvent):
+        """直接发 Z10014514 查商家；发「Z10014514 黑 备注」加名单。
+
+        AstrBot 派发前会把 / 剥掉，所以 /Z10014514 也会走到这里。
+        """
+        raw = (getattr(event, "message_str", "") or "").strip()
+        parts = raw.split()
+        if not parts:
+            return
+        sid = parts[0].upper()
+        if not sid.startswith("Z"):
+            return
+        # Z号 + 黑/白 [+备注] → 打标记
+        if len(parts) >= 2 and parts[1] in ("黑", "白"):
+            note = " ".join(parts[2:])
+            by = getattr(event, "unified_msg_origin", "") or ""
+            rec = self._set_mark(sid, parts[1], note, by)
+            yield event.plain_result(await self._describe_mark(sid, rec))
+            return
+        # 单纯 Z 号 → 查商家
+        data = await self._api("/api/merchant?q=" + urllib.parse.quote(sid))
+        if data and data.get("ok"):
+            mark = self._marks().get(sid)
+            yield event.plain_result(self._merchant_block(data, mark))
+            return
+        if data and data.get("blocked_by"):
+            yield event.plain_result(
+                f"查不到 {sid}：这个商家屏蔽了你的账号（{'、'.join(data['blocked_by'])}）。")
+            return
+        mark = self._marks().get(sid)
+        if mark:
+            yield event.plain_result(await self._describe_mark(sid, mark))
+            return
+        yield event.plain_result(
+            f"没查到商家 {sid}。\n如果是精灵名，用：查询 火花")
+
     @filter.command("查ID")
     async def cmd_lookup_id(self, event: AstrMessageEvent):
         """查ID Z10014514 / 查ID 咕咕"""
@@ -932,12 +969,21 @@ class LkMarketNotify(Star):
             yield event.plain_result(
                 "格式：查ID Z10014514\n也可以用昵称：查ID 咕咕")
             return
-        live = await self._live_merchant(q)
-        mark = self._marks().get((live or {}).get("seller", "").upper()) \
-            or self._marks().get(q.upper())
-        if live:
-            yield event.plain_result(self._merchant_block(live, mark))
+        data = await self._api("/api/merchant?q=" + urllib.parse.quote(str(q)))
+        mark = None
+        if data and data.get("ok"):
+            mark = self._marks().get((data.get("seller") or "").upper())
+            yield event.plain_result(self._merchant_block(data, mark))
             return
+        if data and data.get("blocked_by"):
+            yield event.plain_result(
+                f"查不到「{q}」：这个商家屏蔽了你的账号（{'、'.join(data['blocked_by'])}）。\n"
+                f"换个没被屏蔽的账号再查；挂单本身在市集还能看到。")
+            return
+        if data and data.get("error"):
+            yield event.plain_result(f"查不到「{q}」：{str(data['error'])[:60]}")
+            return
+        mark = self._marks().get(q.upper())
         if mark:
             yield event.plain_result(await self._describe_mark(q.upper(), mark))
             return
@@ -952,12 +998,21 @@ class LkMarketNotify(Star):
             yield event.plain_result(
                 "格式：查ID Z10014514\n也可以用昵称：查ID 咕咕")
             return
-        live = await self._live_merchant(q)
-        mark = self._marks().get((live or {}).get("seller", "").upper()) \
-            or self._marks().get(q.upper())
-        if live:
-            yield event.plain_result(self._merchant_block(live, mark))
+        data = await self._api("/api/merchant?q=" + urllib.parse.quote(str(q)))
+        mark = None
+        if data and data.get("ok"):
+            mark = self._marks().get((data.get("seller") or "").upper())
+            yield event.plain_result(self._merchant_block(data, mark))
             return
+        if data and data.get("blocked_by"):
+            yield event.plain_result(
+                f"查不到「{q}」：这个商家屏蔽了你的账号（{'、'.join(data['blocked_by'])}）。\n"
+                f"换个没被屏蔽的账号再查；挂单本身在市集还能看到。")
+            return
+        if data and data.get("error"):
+            yield event.plain_result(f"查不到「{q}」：{str(data['error'])[:60]}")
+            return
+        mark = self._marks().get(q.upper())
         if mark:
             yield event.plain_result(await self._describe_mark(q.upper(), mark))
             return
