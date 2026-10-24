@@ -155,5 +155,10 @@
     "description": "买不到时每次加多少分（默认 1，可设 0.01 这类小数）",
     "type": "float",
     "default": 1
+  },
+  "show_body": {
+    "description": "查蛋时同时显示本体（成体）数据（默认只显示蛋）",
+    "type": "bool",
+    "default": false
   }
 }
