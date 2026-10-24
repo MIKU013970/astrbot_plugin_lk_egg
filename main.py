@@ -96,7 +96,7 @@ def _save_state(state: Dict[str, Any]) -> None:
     "astrbot_plugin_lk_egg",
     "MIKU013970 & DeepSeek",
     "市集购买成功推送 + 新上架监控 + 黑白名单查询",
-    "1.7.0",
+    "1.8.0",
 )
 class LkMarketNotify(Star):
     def __init__(self, context: Context, config: AstrBotConfig = None):
@@ -1114,36 +1114,48 @@ class LkMarketNotify(Star):
             await asyncio.sleep(60)
 
     async def _auto_buy_shortfall(self, need: int) -> int:
-        """券不够时去市集补货。返回实际买到的数量。"""
+        """券不够时去市集补货：从起始价开始，每次 +1 分，直到上限。
+
+        例：10 分没买到 → 11 分 → 12 分 → 13 分（默认上限 13，可配）
+        返回总共买到的数量。
+        """
         if not bool(self._cfg("auto_buy_enabled", False)):
             return 0
         if need <= 0:
             return 0
         try:
-            cnt = max(1, min(20, int(self._cfg("auto_buy_count", 10) or 10)))
-            cap = float(self._cfg("auto_buy_max_points", 10) or 10)
+            per_round = max(1, min(20, int(self._cfg("auto_buy_count", 10) or 10)))
+            start_price = float(self._cfg("auto_buy_max_points", 10) or 10)
+            ceiling = float(self._cfg("auto_buy_ceiling_points", 13) or 13)
             kw = str(self._cfg("auto_buy_keyword", "神奇蛋") or "神奇蛋")
         except Exception:
             return 0
-        cnt = min(cnt, need)
-        body = json.dumps({"keyword": kw, "max_points": cap,
-                           "count": cnt, "confirm": True})
-        try:
-            raw = await self._api_post("/api/buy/codes", body)
-        except Exception as e:
-            logger.warning(f"[补货] 调用失败: {type(e).__name__}: {e}")
-            return 0
-        if not raw or not raw.get("ok"):
-            logger.warning(f"[补货] 失败: {(raw or {}).get('error')}")
-            return 0
-        bought = int(raw.get("bought") or 0)
-        if bought:
-            logger.info(f"[补货] ≤{cap:g} 分买进 {bought} 个「{kw}」，"
-                        f"共花 {bought * cap:g} 分上限")
-            BUS_log = getattr(self, "_bus_log", None)
-            if BUS_log:
-                BUS_log(f"[补货] 买进 {bought} 个")
-        return bought
+        if ceiling < start_price:
+            ceiling = start_price
+
+        total = 0
+        price = start_price
+        while need - total > 0 and price <= ceiling:
+            cnt = min(per_round, need - total)
+            body = json.dumps({"keyword": kw, "max_points": price,
+                               "count": cnt, "confirm": True})
+            try:
+                raw = await self._api_post("/api/buy/codes", body)
+            except Exception as e:
+                logger.warning(f"[补货] {price:g} 分档调用失败: {type(e).__name__}: {e}")
+                raw = None
+            bought = int((raw or {}).get("bought") or 0)
+            if bought:
+                total += bought
+                logger.info(f"[补货] {price:g} 分档买进 {bought} 个「{kw}」")
+            else:
+                logger.info(f"[补货] {price:g} 分档没买到，加价到 {price + 1:g}")
+            price += 1
+            await asyncio.sleep(0.5)
+
+        if total:
+            logger.info(f"[补货] 共买进 {total} 个（价格档 {start_price:g}~{ceiling:g}）")
+        return total
 
     # ---------------------------------------------------------------- 发码到群
     def _code_groups(self) -> list:

@@ -145,5 +145,10 @@
     "description": "只买名字含这个字的蛋",
     "type": "string",
     "default": "神奇蛋"
+  },
+  "auto_buy_ceiling_points": {
+    "description": "加价上限：起始价买不到就每次 +1 分，到这个价为止（默认 13）",
+    "type": "float",
+    "default": 13
   }
 }
