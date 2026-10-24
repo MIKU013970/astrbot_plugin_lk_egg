@@ -96,7 +96,7 @@ def _save_state(state: Dict[str, Any]) -> None:
     "astrbot_plugin_lk_egg",
     "MIKU013970 & DeepSeek",
     "市集购买成功推送 + 新上架监控 + 黑白名单查询",
-    "1.10.0",
+    "1.10.1",
 )
 class LkMarketNotify(Star):
     def __init__(self, context: Context, config: AstrBotConfig = None):
@@ -1232,16 +1232,49 @@ class LkMarketNotify(Star):
         raw = str(self._cfg("code_pool", "") or "")
         return [x.strip() for x in raw.splitlines() if x.strip()]
 
+    def _known_umos(self) -> List[str]:
+        return [str(u) for u in (self.state.get("umos") or []) if u]
+
+    def _group_umos(self, group_id: str) -> List[str]:
+        """给一个群号，给出所有可能可用的 umo（优先用真实见过的）"""
+        gid = str(group_id).strip()
+        out: List[str] = []
+        # ① 真实见过这个群 → 直接用原样的 umo
+        for u in self._known_umos():
+            if u.endswith(f":GroupMessage:{gid}") or u.endswith(f":GroupMessage_{gid}"):
+                if u not in out:
+                    out.append(u)
+        if out:
+            return out
+        # ② 没见过的群 → 用平台前缀拼，多试几个
+        prefixes: List[str] = []
+        for p in (self._platform(), "aiocqhttp", "qq_official", "gewechat"):
+            if p and p not in prefixes:
+                prefixes.append(p)
+        for u in self._known_umos():
+            p = u.split(":", 1)[0]
+            if p and p not in prefixes:
+                prefixes.append(p)
+        return [f"{p}:GroupMessage:{gid}" for p in prefixes]
+
     async def _send_to_group(self, group_id: str, text: str) -> bool:
-        """把一条消息发到指定群"""
-        plat = self._platform()
-        umo = f"{plat}:GroupMessage:{group_id}"
-        for chain in self._chains(text):
-            try:
-                await self.context.send_message(umo, chain)
+        """把一条消息发到指定群；确实发出去才算成功"""
+        chains = self._chains(text)
+        for umo in self._group_umos(group_id):
+            last_err = ""
+            for chain in chains:
+                try:
+                    ret = await self.context.send_message(umo, chain)
+                except Exception as e:
+                    last_err = f"{type(e).__name__}: {e}"
+                    continue
+                if ret is False:
+                    last_err = "返回 False（会话不存在/平台不匹配）"
+                    continue
+                logger.info(f"[发码] 已发到 {umo}")
                 return True
-            except Exception as e:
-                logger.warning(f"[发码] 发到 {umo} 失败: {type(e).__name__}: {e}")
+            logger.warning(f"[发码] {umo} 发送失败：{last_err}")
+        logger.warning(f"[发码] 群 {group_id} 全部失败，试过: {self._group_umos(group_id)}")
         return False
 
     @filter.command("发码记录")
@@ -1373,8 +1406,11 @@ class LkMarketNotify(Star):
                 f"已发放：{text}\n"
                 f"发到群：{group_id}（从 {len(groups)} 个群里随机选）")
         else:
+            tried = "、".join(self._group_umos(group_id)[:3])
             yield event.plain_result(
-                f"发到群 {group_id} 失败，检查群号对不对、机器人还在不在群里")
+                f"发到群 {group_id} 失败。\n"
+                f"试过：{tried}\n"
+                f"检查：① 群号对不对 ② 机器人在不在那个群 ③ 配置里的 platform 是否和适配器一致")
 
     @filter.command("查ID")
     async def cmd_lookup_id(self, event: AstrMessageEvent):
