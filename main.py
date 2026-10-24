@@ -96,7 +96,7 @@ def _save_state(state: Dict[str, Any]) -> None:
     "astrbot_plugin_lk_egg",
     "MIKU013970 & DeepSeek",
     "市集购买成功推送 + 新上架监控 + 黑白名单查询",
-    "1.6.0",
+    "1.7.0",
 )
 class LkMarketNotify(Star):
     def __init__(self, context: Context, config: AstrBotConfig = None):
@@ -153,6 +153,20 @@ class LkMarketNotify(Star):
         if self._session is None or self._session.closed:
             self._session = aiohttp.ClientSession(timeout=aiohttp.ClientTimeout(total=60))
         return self._session
+
+    async def _api_post(self, path: str, body: str) -> Optional[Dict[str, Any]]:
+        """向控制台发 POST 请求（市场补货等）"""
+        try:
+            sess = await self._session_get()
+            async with sess.post(self.api_base + path, data=body,
+                                 headers={"Content-Type": "application/json"}) as resp:
+                if resp.status != 200:
+                    logger.warning(f"[市集推送] POST {path} → HTTP {resp.status}")
+                    return None
+                return await resp.json(content_type=None)
+        except Exception as e:
+            logger.warning(f"[市集推送] POST {path} 失败: {type(e).__name__}: {e}")
+            return None
 
     async def _api(self, path: str) -> Optional[Dict[str, Any]]:
         try:
@@ -683,6 +697,7 @@ class LkMarketNotify(Star):
         "—————— 发码 ——————\n"
         "发码 EGG-XXXX-XXXX       随机发到设置里指定的群\n"
         "发码记录                 看最近发了哪些码\n"
+        "（码不够时可在配置里开 auto_buy_enabled 自动补货）\n"
         "输入兑换码 EGG-XXXX      同上（两个名字都行）\n"
         "—————— 查助手（商家）——————\n"
         "查ID Z10014514          昵称/上架/售出/好评差评/货架明细\n"
@@ -1049,6 +1064,26 @@ class LkMarketNotify(Star):
         sent_today = self._sent_today()
         codes = [c for c in await self._fetch_available_codes()
                  if keyword in c["name"] and c["code"] not in sent_today]
+
+        # 不够就先去市集补（默认关闭，要手动开 auto_buy_enabled）
+        if len(codes) < remain:
+            short = remain - len(codes)
+            bought = await self._auto_buy_shortfall(short)
+            if bought:
+                try:
+                    data = await self._api("/api/purchases?account=*&refresh=1")
+                    items = (data or {}).get("items") or []
+                    codes = sorted(
+                        [{"code": it["code"], "name": it.get("name") or "",
+                          "at": it.get("claimed_at") or 0}
+                         for it in items
+                         if it.get("state") == "available" and it.get("code")
+                         and keyword in str(it.get("name") or "")
+                         and it["code"] not in sent_today],
+                        key=lambda x: x["at"])
+                except Exception:
+                    pass
+
         if not codes:
             return 0
         picked = codes[:remain]                   # 时间最早的 N 个（受当天额度限制）
@@ -1077,6 +1112,38 @@ class LkMarketNotify(Star):
             except Exception as e:
                 logger.warning(f"[发码] 自动发放异常: {type(e).__name__}: {e}")
             await asyncio.sleep(60)
+
+    async def _auto_buy_shortfall(self, need: int) -> int:
+        """券不够时去市集补货。返回实际买到的数量。"""
+        if not bool(self._cfg("auto_buy_enabled", False)):
+            return 0
+        if need <= 0:
+            return 0
+        try:
+            cnt = max(1, min(20, int(self._cfg("auto_buy_count", 10) or 10)))
+            cap = float(self._cfg("auto_buy_max_points", 10) or 10)
+            kw = str(self._cfg("auto_buy_keyword", "神奇蛋") or "神奇蛋")
+        except Exception:
+            return 0
+        cnt = min(cnt, need)
+        body = json.dumps({"keyword": kw, "max_points": cap,
+                           "count": cnt, "confirm": True})
+        try:
+            raw = await self._api_post("/api/buy/codes", body)
+        except Exception as e:
+            logger.warning(f"[补货] 调用失败: {type(e).__name__}: {e}")
+            return 0
+        if not raw or not raw.get("ok"):
+            logger.warning(f"[补货] 失败: {(raw or {}).get('error')}")
+            return 0
+        bought = int(raw.get("bought") or 0)
+        if bought:
+            logger.info(f"[补货] ≤{cap:g} 分买进 {bought} 个「{kw}」，"
+                        f"共花 {bought * cap:g} 分上限")
+            BUS_log = getattr(self, "_bus_log", None)
+            if BUS_log:
+                BUS_log(f"[补货] 买进 {bought} 个")
+        return bought
 
     # ---------------------------------------------------------------- 发码到群
     def _code_groups(self) -> list:

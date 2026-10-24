@@ -125,5 +125,25 @@
     "description": "发送文案模板，{code}=兑换码 {egg}=蛋名",
     "type": "string",
     "default": "神奇礼物蛋神兑换码———{code}"
+  },
+  "auto_buy_enabled": {
+    "description": "兑换码不够时自动去市集买（会花积分！默认关闭）",
+    "type": "bool",
+    "default": false
+  },
+  "auto_buy_count": {
+    "description": "每次最多补几个",
+    "type": "int",
+    "default": 10
+  },
+  "auto_buy_max_points": {
+    "description": "只买单价不超过这个分数的",
+    "type": "float",
+    "default": 10
+  },
+  "auto_buy_keyword": {
+    "description": "只买名字含这个字的蛋",
+    "type": "string",
+    "default": "神奇蛋"
   }
 }
