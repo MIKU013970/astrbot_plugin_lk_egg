@@ -95,7 +95,7 @@ def _save_state(state: Dict[str, Any]) -> None:
     "astrbot_plugin_lk_egg",
     "MIKU013970 & DeepSeek",
     "市集购买成功推送 + 新上架监控 + 黑白名单查询",
-    "1.4.4",
+    "1.4.5",
 )
 class LkMarketNotify(Star):
     def __init__(self, context: Context, config: AstrBotConfig = None):
@@ -691,6 +691,9 @@ class LkMarketNotify(Star):
     FORMAT_HINTS = {
         "查询": "格式：查询 火花\n进化链上任意名字都行：查询 火神 / 查询 焰火",
         "查ID": "格式：查ID Z10014514\n也可以用平台昵称：查ID 咕咕",
+        "查询ID": "格式：查询ID Z10014514（和 查ID 一样）",
+        "新上架": "格式：\n新上架 添加 Z10014514\n新上架 删除 Z10014514\n新上架 列表",
+        "蛋监控": "格式：\n蛋监控 添加 Z10014514\n蛋监控 删除 Z10014514\n蛋监控 列表",
         "标": "格式：标 Z10014514 黑 备注写这里\n（第二项只能是「黑」或「白」）",
         "黑名单": "直接发「黑名单」就能列出全部\n加人：标 Z10014514 黑 备注",
         "白名单": "直接发「白名单」就能列出全部\n加人：标 Z10014514 白 备注",
@@ -854,11 +857,19 @@ class LkMarketNotify(Star):
         args = self._cmd_parts(event)
         sub = args[1] if len(args) > 1 else ""
         rest = args[2:]
+        # 兼容「添加Z10014514」这种不带空格的写法
+        for kw in ("添加", "删除", "列表"):
+            if sub.startswith(kw) and sub != kw:
+                tail = sub[len(kw):].strip()
+                if tail:
+                    rest = [tail] + rest
+                sub = kw
+                break
 
         if sub in ("列表", "list", ""):
             watch = self._watch()
             if not watch:
-                yield event.plain_result(self.FORMAT_HINTS["新上架"])
+                yield event.plain_result(self.FORMAT_HINTS.get("新上架", "格式：\n新上架 添加 Z10014514\n新上架 删除 Z10014514\n新上架 列表"))
                 return
             lines = [f"监控中的商家（{len(watch)} 个）"]
             for sid in watch[:20]:
@@ -878,7 +889,7 @@ class LkMarketNotify(Star):
             _save_state(self.state)
             yield event.plain_result(
                 ("已添加监控：" + "、".join(added) + f"\n共 {len(self.state['watch'])} 个")
-                if added else self.FORMAT_HINTS["新上架"])
+                if added else self.FORMAT_HINTS.get("新上架", "格式：\n新上架 添加 Z10014514\n新上架 删除 Z10014514\n新上架 列表"))
             return
 
         if sub in ("删除", "del", "remove"):
@@ -892,10 +903,10 @@ class LkMarketNotify(Star):
             _save_state(self.state)
             yield event.plain_result(
                 ("已删除监控：" + "、".join(removed)) if removed
-                else self.FORMAT_HINTS["新上架"])
+                else self.FORMAT_HINTS.get("新上架", "格式：\n新上架 添加 Z10014514\n新上架 删除 Z10014514\n新上架 列表"))
             return
 
-        yield event.plain_result(self.FORMAT_HINTS["新上架"])
+        yield event.plain_result(self.FORMAT_HINTS.get("新上架", "格式：\n新上架 添加 Z10014514\n新上架 删除 Z10014514\n新上架 列表"))
 
     # 只发了关键词、没带参数 → 直接教格式
     @filter.regex(r"^\s*[\u4e00-\u9fa5A-Za-z0-9·]{2,12}\s*$")
