@@ -96,7 +96,7 @@ def _save_state(state: Dict[str, Any]) -> None:
     "astrbot_plugin_lk_egg",
     "MIKU013970 & DeepSeek",
     "市集购买成功推送 + 新上架监控 + 黑白名单查询",
-    "1.9.1",
+    "1.10.0",
 )
 class LkMarketNotify(Star):
     def __init__(self, context: Context, config: AstrBotConfig = None):
@@ -722,8 +722,9 @@ class LkMarketNotify(Star):
         "/34/3.617               身高/体重 查蛋（34cm 3.617kg）\n"
         "/34/3617                整数按克算（3617g）\n"
         "—————— 发码 ——————\n"
-        "发码 EGG-XXXX-XXXX       随机发到设置里指定的群\n"
-        "发码记录                 看最近发了哪些码\n"
+        "发码                     从最早的 10 个码里随机发 1 个\n"
+        "发码 EGG-XXXX-XXXX       直接发这个码\n"
+        "发码记录                 看最近发了哪些码（仅管理员）\n"
         "（码不够时可在配置里开 auto_buy_enabled 自动补货）\n"
         "输入兑换码 EGG-XXXX      同上（两个名字都行）\n"
         "—————— 查助手（商家）——————\n"
@@ -1245,7 +1246,10 @@ class LkMarketNotify(Star):
 
     @filter.command("发码记录")
     async def cmd_code_log(self, event: AstrMessageEvent):
-        """发码记录 —— 看最近发了哪些码"""
+        """发码记录 —— 只有管理员能看"""
+        if not self._is_admin(event):
+            yield event.plain_result("发码记录只有管理员能看。\n（在配置里把 QQ 号填进 admin_ids）")
+            return
         log = self._code_log()
         if not log:
             yield event.plain_result("还没有发码记录")
@@ -1253,6 +1257,11 @@ class LkMarketNotify(Star):
         today = time.strftime("%Y-%m-%d")
         today_n = sum(1 for x in log
                       if time.strftime("%Y-%m-%d", time.localtime(x.get("at", 0))) == today)
+        if self._cmd_args(event).strip() in ("清空", "clear"):
+            self.state["code_log"] = []
+            _save_state(self.state)
+            yield event.plain_result("已清空发码记录")
+            return
         lines = [f"发码记录（共 {len(log)} 条 · 今天 {today_n} 个）"]
         for x in log[-15:][::-1]:
             when = time.strftime("%m-%d %H:%M", time.localtime(x.get("at", 0)))
@@ -1274,38 +1283,94 @@ class LkMarketNotify(Star):
         async for r in self._give_code(event):
             yield r
 
+    # ---------------------------------------------------------------- 管理员判定
+    def _admin_ids(self) -> list:
+        raw = str(self._cfg("admin_ids", "") or "")
+        for ch in ("，", " ", "\n", "\t"):
+            raw = raw.replace(ch, ",")
+        out = [x.strip() for x in raw.split(",") if x.strip()]
+        tq = str(self._cfg("target_qq", "") or "").strip()
+        if tq and tq not in out:
+            out.append(tq)
+        return out
+
+    def _sender_id(self, event) -> str:
+        for fn in ("get_sender_id",):
+            try:
+                v = getattr(event, fn)()
+                if v:
+                    return str(v)
+            except Exception:
+                pass
+        try:
+            obj = getattr(event, "message_obj", None)
+            sender = getattr(obj, "sender", None)
+            for attr in ("user_id", "uin", "id"):
+                v = getattr(sender, attr, None)
+                if v:
+                    return str(v)
+        except Exception:
+            pass
+        return ""
+
+    def _is_admin(self, event) -> bool:
+        admins = self._admin_ids()
+        sid = self._sender_id(event)
+        if not admins:
+            # 没配管理员：只允许私聊里查（相对安全）
+            return self._is_private(event)
+        return sid in admins
+
     async def _give_code(self, event: AstrMessageEvent):
         import random as _random
 
         groups = self._code_groups()
-        arg = self._cmd_args(event).strip()
         if not groups:
             yield event.plain_result(
                 "还没配置群号。\n"
                 "去 AstrBot WebUI → 插件 → 本插件 → 配置 → `code_groups` 填群号（多个用逗号隔开）")
             return
 
-        # 取码：参数优先，否则从备选池随机
-        codes = [x for x in arg.split() if x]
-        if not codes:
-            pool = self._code_pool()
+        arg = self._cmd_args(event).strip()
+        egg_name = ""
+        if arg:
+            # ② 带了码 → 直接发这个
+            codes = [x for x in arg.split() if x][:1]
+        else:
+            # ① 没带码 → 从最早的 10 个可领码里随机取 1 个
+            pool = []
+            try:
+                available = await self._fetch_available_codes()
+                kw = str(self._cfg("daily_code_keyword", "") or "")
+                if kw:
+                    available = [c for c in available if kw in c["name"]]
+                pool = available[:10]
+            except Exception:
+                pool = []
+            if not pool:
+                # 控制台拿不到就退回配置里的备选池
+                cfg_pool = self._code_pool()[:10]
+                pool = [{"code": x, "name": ""} for x in cfg_pool]
             if not pool:
                 yield event.plain_result(
-                    "没给兑换码，备选池也是空的。\n"
-                    "用法：发码 EGG-XXXX-XXXX\n"
-                    "或者在配置里填 `code_pool`（一行一个）")
+                    "没有可发的兑换码。\n"
+                    "控制台没连上、或者当前没有可领的码。\n"
+                    "也可以直接指定：发码 EGG-XXXX-XXXX")
                 return
-            codes = [_random.choice(pool)]
+            pick = _random.choice(pool)
+            codes = [pick["code"]]
+            egg_name = pick.get("name") or ""
 
         group_id = _random.choice(groups)
-        text = codes[0] if len(codes) == 1 else "\n".join(codes)
+        tpl = str(self._cfg("daily_code_template", "神奇礼物蛋神兑换码———{code}")
+                  or "神奇礼物蛋神兑换码———{code}")
+        text = tpl.format(code=codes[0], egg=egg_name) if not arg else codes[0]
         ok = await self._send_to_group(group_id, text)
         if ok:
             for _c in codes:
-                self._log_code(_c, "", group_id, "手动")
-            show = codes[0] if len(codes) == 1 else f"{len(codes)} 个码"
+                self._log_code(_c, egg_name, group_id, "手动")
             yield event.plain_result(
-                f"已发放：{show}\n"
+                f"已发放：{text}\n"
                 f"发到群：{group_id}（从 {len(groups)} 个群里随机选）")
         else:
             yield event.plain_result(

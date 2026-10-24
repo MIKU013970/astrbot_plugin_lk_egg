@@ -160,5 +160,10 @@
     "description": "查蛋时同时显示本体（成体）数据（默认只显示蛋）",
     "type": "bool",
     "default": false
+  },
+  "admin_ids": {
+    "description": "管理员 QQ 号（逗号分隔），只有他们能看发码记录；留空则仅私聊可用",
+    "type": "string",
+    "default": ""
   }
 }
