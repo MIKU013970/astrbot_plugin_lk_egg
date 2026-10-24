@@ -84,5 +84,16 @@
     "description": "指令前缀（默认 /）",
     "type": "string",
     "default": "/"
+  },
+  "code_groups": {
+    "description": "发码目标群号，多个用逗号或换行分隔（随机选一个群发）",
+    "type": "string",
+    "default": "",
+    "hint": "例：123456789,987654321"
+  },
+  "code_pool": {
+    "description": "备选兑换码（一行一个）；发指令时不带码就随机从这里取",
+    "type": "text",
+    "default": ""
   }
 }

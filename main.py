@@ -20,6 +20,7 @@
 from __future__ import annotations
 
 import asyncio
+import re
 import json
 import shutil
 import urllib.parse
@@ -95,7 +96,7 @@ def _save_state(state: Dict[str, Any]) -> None:
     "astrbot_plugin_lk_egg",
     "MIKU013970 & DeepSeek",
     "市集购买成功推送 + 新上架监控 + 黑白名单查询",
-    "1.4.5",
+    "1.5.0",
 )
 class LkMarketNotify(Star):
     def __init__(self, context: Context, config: AstrBotConfig = None):
@@ -670,6 +671,9 @@ class LkMarketNotify(Star):
         "查询 鸭吉吉             多形态的精灵会把每种规格都列出来\n"
         "/34/3.617               身高/体重 查蛋（34cm 3.617kg）\n"
         "/34/3617                整数按克算（3617g）\n"
+        "—————— 发码 ——————\n"
+        "发码 EGG-XXXX-XXXX       随机发到设置里指定的群\n"
+        "输入兑换码 EGG-XXXX      同上（两个名字都行）\n"
         "—————— 查助手（商家）——————\n"
         "查ID Z10014514          昵称/上架/售出/好评差评/货架明细\n"
         "查询ID Z10014514        同上（两个名字都能用）\n"
@@ -690,6 +694,8 @@ class LkMarketNotify(Star):
 
     FORMAT_HINTS = {
         "查询": "格式：查询 火花\n进化链上任意名字都行：查询 火神 / 查询 焰火",
+        "发码": "格式：发码 EGG-XXXX-XXXX（先配置 code_groups 群号）",
+        "输入兑换码": "格式：输入兑换码 EGG-XXXX-XXXX",
         "查ID": "格式：查ID Z10014514\n也可以用平台昵称：查ID 咕咕",
         "查询ID": "格式：查询ID Z10014514（和 查ID 一样）",
         "新上架": "格式：\n新上架 添加 Z10014514\n新上架 删除 Z10014514\n新上架 列表",
@@ -971,6 +977,76 @@ class LkMarketNotify(Star):
             return
         yield event.plain_result(
             f"没查到商家 {sid}。\n如果是精灵名，用：查询 火花")
+
+    # ---------------------------------------------------------------- 发码到群
+    def _code_groups(self) -> list:
+        raw = str(self._cfg("code_groups", "") or "")
+        for ch in ("，", ",", "\n", "\t", " "):
+            raw = raw.replace(ch, ",")
+        return [x.strip() for x in raw.split(",") if x.strip()]
+
+    def _code_pool(self) -> list:
+        raw = str(self._cfg("code_pool", "") or "")
+        return [x.strip() for x in raw.splitlines() if x.strip()]
+
+    async def _send_to_group(self, group_id: str, text: str) -> bool:
+        """把一条消息发到指定群"""
+        plat = self._platform()
+        umo = f"{plat}:GroupMessage:{group_id}"
+        for chain in self._chains(text):
+            try:
+                await self.context.send_message(umo, chain)
+                return True
+            except Exception as e:
+                logger.warning(f"[发码] 发到 {umo} 失败: {type(e).__name__}: {e}")
+        return False
+
+    @filter.command("发码")
+    async def cmd_give_code(self, event: AstrMessageEvent):
+        """发码 兑换码 —— 随机发到配置里指定的群"""
+        async for r in self._give_code(event):
+            yield r
+
+    @filter.command("输入兑换码")
+    async def cmd_give_code_alias(self, event: AstrMessageEvent):
+        """输入兑换码 XXX —— 和「发码」等价"""
+        async for r in self._give_code(event):
+            yield r
+
+    async def _give_code(self, event: AstrMessageEvent):
+        import random as _random
+
+        groups = self._code_groups()
+        arg = self._cmd_args(event).strip()
+        if not groups:
+            yield event.plain_result(
+                "还没配置群号。\n"
+                "去 AstrBot WebUI → 插件 → 本插件 → 配置 → `code_groups` 填群号（多个用逗号隔开）")
+            return
+
+        # 取码：参数优先，否则从备选池随机
+        codes = [x for x in arg.split() if x]
+        if not codes:
+            pool = self._code_pool()
+            if not pool:
+                yield event.plain_result(
+                    "没给兑换码，备选池也是空的。\n"
+                    "用法：发码 EGG-XXXX-XXXX\n"
+                    "或者在配置里填 `code_pool`（一行一个）")
+                return
+            codes = [_random.choice(pool)]
+
+        group_id = _random.choice(groups)
+        text = codes[0] if len(codes) == 1 else "\n".join(codes)
+        ok = await self._send_to_group(group_id, text)
+        if ok:
+            show = codes[0] if len(codes) == 1 else f"{len(codes)} 个码"
+            yield event.plain_result(
+                f"已发放：{show}\n"
+                f"发到群：{group_id}（从 {len(groups)} 个群里随机选）")
+        else:
+            yield event.plain_result(
+                f"发到群 {group_id} 失败，检查群号对不对、机器人还在不在群里")
 
     @filter.command("查ID")
     async def cmd_lookup_id(self, event: AstrMessageEvent):
