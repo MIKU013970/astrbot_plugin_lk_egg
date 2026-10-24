@@ -96,7 +96,7 @@ def _save_state(state: Dict[str, Any]) -> None:
     "astrbot_plugin_lk_egg",
     "MIKU013970 & DeepSeek",
     "市集购买成功推送 + 新上架监控 + 黑白名单查询",
-    "1.8.1",
+    "1.9.0",
 )
 class LkMarketNotify(Star):
     def __init__(self, context: Context, config: AstrBotConfig = None):
@@ -425,32 +425,53 @@ class LkMarketNotify(Star):
         if not variants:                      # 兼容旧结构
             variants = [r]
         n = len(variants)
-        head = f"{r['精灵']}（{variants[0].get('蛋名') or r.get('蛋名') or ''}）图鉴 {variants[0].get('图鉴编号') or r.get('图鉴编号') or ''}"
+        first = variants[0]
+        head = (f"{r['精灵']}（{first.get('蛋名') or r.get('蛋名') or ''}）"
+                f"图鉴 {first.get('图鉴编号') or r.get('图鉴编号') or ''}")
         if n > 1:
             head += f" · {n} 种形态"
         else:
-            bins = variants[0].get("区间数")
+            bins = first.get("区间数")
             if bins not in (None, "", 0):
                 head += f" · 区间 {bins}"
-        lines = [head, f"蛋组：{r['蛋组']}",
+
+        lines = [head,
+                 f"蛋组：{r['蛋组']}",
                  f"公母比例：{r.get('公母') or '未知'}",
                  f"进化链：{r['进化链']}"]
 
+        def body_lines(v, prefix="") -> list:
+            out = []
+            b = v.get("本体") or {}
+            if prefix:
+                out.append(f"{prefix}{v.get('形态') or ''} · 区间 {v.get('区间数')}")
+                out.append(f"   蛋：{v['身高区间']} · {v['体重区间']}")
+                out.append(f"       小块头 {v['小块头过线值']} / 大块头 {v['大块头过线值']}")
+            else:
+                out.append(f"身高区间：{v['身高区间']}")
+                out.append(f"体重区间：{v['体重区间']}")
+                out.append(f"小块头：过线 {v['小块头过线值']} · 极限 {v['小块头极限值']}")
+                out.append(f"大块头：过线 {v['大块头过线值']} · 极限 {v['大块头极限值']}")
+            if b:
+                if prefix:
+                    out.append(f"   本体：{b.get('身高区间') or '—'} · {b.get('体重区间')}")
+                    out.append(f"       小块头 {b.get('小块头过线值')} / 大块头 {b.get('大块头过线值')}")
+                else:
+                    out.append("—— 本体（成体）——")
+                    out.append(f"身高区间：{b.get('身高区间') or '—'}")
+                    out.append(f"体重区间：{b.get('体重区间')}")
+                    out.append(f"小块头：过线 {b.get('小块头过线值')} · 极限 {b.get('小块头极限值')}")
+                    out.append(f"大块头：过线 {b.get('大块头过线值')} · 极限 {b.get('大块头极限值')}")
+            return out
+
         if n == 1:
-            v = variants[0]
-            lines += [
-                f"身高区间：{v['身高区间']}",
-                f"体重区间：{v['体重区间']}",
-                f"小块头：过线 {v['小块头过线值']} · 极限 {v['小块头极限值']}",
-                f"大块头：过线 {v['大块头过线值']} · 极限 {v['大块头极限值']}",
-            ]
+            lines += body_lines(first)
+            if first.get("公母"):
+                lines.append(f"公母比例：{first['公母']}")
         else:
             for i, v in enumerate(variants, 1):
-                label = v.get("形态") or v.get("蛋名") or ""
-                lines.append(f"{i}. {label} · 区间 {v['区间数']}"
-                             f" · {v['身高区间']} · {v['体重区间']}")
-                lines.append(f"   小块头 {v['小块头过线值']} · 大块头 {v['大块头过线值']}"
-                             f" · {v.get('公母') or '公母未知'}")
+                lines += body_lines(v, prefix=f"{i}. ")
+
         return "\n".join(lines)
 
     # ---------------------------------------------------------------- 新上架提醒
