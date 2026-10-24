@@ -96,7 +96,7 @@ def _save_state(state: Dict[str, Any]) -> None:
     "astrbot_plugin_lk_egg",
     "MIKU013970 & DeepSeek",
     "市集购买成功推送 + 新上架监控 + 黑白名单查询",
-    "1.10.1",
+    "1.10.2",
 )
 class LkMarketNotify(Star):
     def __init__(self, context: Context, config: AstrBotConfig = None):
@@ -832,13 +832,15 @@ class LkMarketNotify(Star):
             return
 
         if sub in ("删除", "del", "remove"):
-            removed = []
+            removed, missing = [], []
             for x in rest:
                 x = x.strip().upper()
                 if x in self.state["watch"]:
                     self.state["watch"].remove(x)
                     self.state["listings"].pop(x, None)
                     removed.append(x)
+                else:
+                    missing.append(x)
             _save_state(self.state)
             yield event.plain_result(
                 ("已删除监控：" + "、".join(removed)) if removed else "列表里没有这些 ID")
@@ -939,30 +941,51 @@ class LkMarketNotify(Star):
             return
 
         if sub in ("添加", "add"):
-            added = []
+            added, dup, bad = [], [], []
             for x in rest:
                 x = x.strip().upper()
-                if x.startswith("Z") and x not in self.state["watch"]:
+                if not x.startswith("Z"):
+                    bad.append(x)
+                elif x in self._watch():
+                    dup.append(x)
+                else:
                     self.state["watch"].append(x)
                     added.append(x)
             _save_state(self.state)
-            yield event.plain_result(
-                ("已添加监控：" + "、".join(added) + f"\n共 {len(self.state['watch'])} 个")
-                if added else self.FORMAT_HINTS.get("新上架", "格式：\n新上架 添加 Z10014514\n新上架 删除 Z10014514\n新上架 列表"))
+            total = len(self.state["watch"])
+            parts = []
+            if added:
+                parts.append("已添加监控：" + "、".join(added))
+            if dup:
+                parts.append("已经在监控里了：" + "、".join(dup))
+            if bad:
+                parts.append("不是助手ID（要 Z 开头）：" + "、".join(bad))
+            if not rest:
+                parts = ["没写要监控谁。\n格式：新上架 添加 Z10014514"]
+            parts.append(f"当前共 {total} 个")
+            yield event.plain_result("\n".join(parts))
             return
 
         if sub in ("删除", "del", "remove"):
-            removed = []
+            removed, missing = [], []
             for x in rest:
                 x = x.strip().upper()
                 if x in self.state["watch"]:
                     self.state["watch"].remove(x)
                     self.state["listings"].pop(x, None)
                     removed.append(x)
+                else:
+                    missing.append(x)
             _save_state(self.state)
-            yield event.plain_result(
-                ("已删除监控：" + "、".join(removed)) if removed
-                else self.FORMAT_HINTS.get("新上架", "格式：\n新上架 添加 Z10014514\n新上架 删除 Z10014514\n新上架 列表"))
+            parts = []
+            if removed:
+                parts.append("已删除监控：" + "、".join(removed))
+            if missing:
+                parts.append("本来就不在监控里：" + "、".join(missing))
+            if not rest:
+                parts = ["没写要删除谁。\n格式：新上架 删除 Z10014514"]
+            parts.append(f"当前共 {len(self.state['watch'])} 个")
+            yield event.plain_result("\n".join(parts))
             return
 
         yield event.plain_result(self.FORMAT_HINTS.get("新上架", "格式：\n新上架 添加 Z10014514\n新上架 删除 Z10014514\n新上架 列表"))
