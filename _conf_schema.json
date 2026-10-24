@@ -150,5 +150,10 @@
     "description": "加价上限：起始价买不到就每次 +1 分，到这个价为止（默认 13）",
     "type": "float",
     "default": 13
+  },
+  "auto_buy_step": {
+    "description": "买不到时每次加多少分（默认 1，可设 0.01 这类小数）",
+    "type": "float",
+    "default": 1
   }
 }

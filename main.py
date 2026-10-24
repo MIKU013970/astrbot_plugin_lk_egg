@@ -96,7 +96,7 @@ def _save_state(state: Dict[str, Any]) -> None:
     "astrbot_plugin_lk_egg",
     "MIKU013970 & DeepSeek",
     "市集购买成功推送 + 新上架监控 + 黑白名单查询",
-    "1.8.0",
+    "1.8.1",
 )
 class LkMarketNotify(Star):
     def __init__(self, context: Context, config: AstrBotConfig = None):
@@ -1113,11 +1113,21 @@ class LkMarketNotify(Star):
                 logger.warning(f"[发码] 自动发放异常: {type(e).__name__}: {e}")
             await asyncio.sleep(60)
 
-    async def _auto_buy_shortfall(self, need: int) -> int:
-        """券不够时去市集补货：从起始价开始，每次 +1 分，直到上限。
+    async def _sync_market(self) -> bool:
+        """让控制台重新拉一遍市集快照"""
+        try:
+            raw = await self._api_post("/api/market/sync", "{}")
+            return bool(raw and raw.get("ok"))
+        except Exception as e:
+            logger.warning(f"[补货] 刷新市场失败: {type(e).__name__}: {e}")
+            return False
 
-        例：10 分没买到 → 11 分 → 12 分 → 13 分（默认上限 13，可配）
-        返回总共买到的数量。
+    async def _auto_buy_shortfall(self, need: int) -> int:
+        """券不够时补货：买不到就先刷新市场重试，仍不够再加价。
+
+        每一档的流程：
+           买 → 不够 → 刷新市场 → 再买一次 → 还不够 → 加 auto_buy_step 分
+        价格从 auto_buy_max_points 开始，加到 auto_buy_ceiling_points 为止。
         """
         if not bool(self._cfg("auto_buy_enabled", False)):
             return 0
@@ -1125,36 +1135,62 @@ class LkMarketNotify(Star):
             return 0
         try:
             per_round = max(1, min(20, int(self._cfg("auto_buy_count", 10) or 10)))
-            start_price = float(self._cfg("auto_buy_max_points", 10) or 10)
+            price = float(self._cfg("auto_buy_max_points", 10) or 10)
             ceiling = float(self._cfg("auto_buy_ceiling_points", 13) or 13)
+            step = float(self._cfg("auto_buy_step", 1) or 1)
             kw = str(self._cfg("auto_buy_keyword", "神奇蛋") or "神奇蛋")
         except Exception:
             return 0
-        if ceiling < start_price:
-            ceiling = start_price
+        if step <= 0:
+            step = 1.0
+        if ceiling < price:
+            ceiling = price
 
         total = 0
-        price = start_price
-        while need - total > 0 and price <= ceiling:
+        rounds = 0
+        while need - total > 0 and price <= ceiling + 1e-9 and rounds < 80:
+            rounds += 1
             cnt = min(per_round, need - total)
-            body = json.dumps({"keyword": kw, "max_points": price,
-                               "count": cnt, "confirm": True})
+            bought = 0
+            # ① 先按当前价买
             try:
-                raw = await self._api_post("/api/buy/codes", body)
+                raw = await self._api_post("/api/buy/codes", json.dumps(
+                    {"keyword": kw, "max_points": price, "count": cnt, "confirm": True}))
+                bought = int((raw or {}).get("bought") or 0)
             except Exception as e:
-                logger.warning(f"[补货] {price:g} 分档调用失败: {type(e).__name__}: {e}")
-                raw = None
-            bought = int((raw or {}).get("bought") or 0)
+                logger.warning(f"[补货] {price:g} 分档失败: {type(e).__name__}")
             if bought:
                 total += bought
                 logger.info(f"[补货] {price:g} 分档买进 {bought} 个「{kw}」")
-            else:
-                logger.info(f"[补货] {price:g} 分档没买到，加价到 {price + 1:g}")
-            price += 1
-            await asyncio.sleep(0.5)
+                if need - total <= 0:
+                    break
+
+            # ② 不够 → 刷新市场再试一次
+            if need - total > 0:
+                logger.info(f"[补货] {price:g} 分档没买够，刷新市场后重试")
+                if await self._sync_market():
+                    await asyncio.sleep(1.0)
+                    try:
+                        raw2 = await self._api_post("/api/buy/codes", json.dumps(
+                            {"keyword": kw, "max_points": price,
+                             "count": min(per_round, need - total), "confirm": True}))
+                        b2 = int((raw2 or {}).get("bought") or 0)
+                    except Exception:
+                        b2 = 0
+                    if b2:
+                        total += b2
+                        logger.info(f"[补货] 刷新后 {price:g} 分档又买进 {b2} 个")
+                        if need - total <= 0:
+                            break
+
+            # ③ 还不够 → 加价
+            price = round(price + step, 2)
+            await asyncio.sleep(0.4)
 
         if total:
-            logger.info(f"[补货] 共买进 {total} 个（价格档 {start_price:g}~{ceiling:g}）")
+            logger.info(f"[补货] 共买进 {total} 个（轮次 {rounds}）")
+        else:
+            logger.info(f"[补货] 到上限 {ceiling:g} 分仍没买到")
         return total
 
     # ---------------------------------------------------------------- 发码到群
