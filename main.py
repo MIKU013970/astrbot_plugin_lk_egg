@@ -93,9 +93,9 @@ def _save_state(state: Dict[str, Any]) -> None:
 
 @register(
     "astrbot_plugin_lk_egg",
-    "LK-Market",
+    "MIKU013970",
     "市集购买成功推送 + 新上架监控 + 黑白名单查询",
-    "1.4.0",
+    "1.4.1",
 )
 class LkMarketNotify(Star):
     def __init__(self, context: Context, config: AstrBotConfig = None):
