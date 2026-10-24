@@ -1,0 +1,88 @@
+{
+  "enabled": {
+    "description": "总开关",
+    "type": "bool",
+    "default": true,
+    "hint": "关闭后不再轮询与推送"
+  },
+  "api_base": {
+    "description": "市集控制台地址",
+    "type": "string",
+    "default": "http://127.0.0.1:8777",
+    "hint": "本机跑的就是这个；AstrBot 在别的机器上就填那台机器的 IP:8777"
+  },
+  "platform": {
+    "description": "AstrBot 平台 id",
+    "type": "string",
+    "default": "aiocqhttp",
+    "hint": "SnowLuma 是 OneBot v11，接 AstrBot 用 aiocqhttp 适配器，保持默认即可"
+  },
+  "target_qq": {
+    "description": "推送给谁（QQ 号，多个用逗号分隔）",
+    "type": "string",
+    "default": "",
+    "hint": "也可以留空，改用 /蛋推送绑定 指令绑定会话（更稳，不怕 umo 格式不对）"
+  },
+  "umo_template": {
+    "description": "会话标识模板",
+    "type": "string",
+    "default": "{platform}:FriendMessage:{qq}",
+    "hint": "群聊改成 {platform}:GroupMessage:群号；用 /蛋推送绑定 的话这里不用管"
+  },
+  "poll_interval": {
+    "description": "轮询间隔（秒）",
+    "type": "int",
+    "default": 20,
+    "hint": "最小 3 秒。控制台自己缓存 60 秒，20~30 秒足够"
+  },
+  "only_unclaimed": {
+    "description": "只推还没领取的兑换码",
+    "type": "bool",
+    "default": true,
+    "hint": "关掉后已领取/已退款也会推"
+  },
+  "max_candidates": {
+    "description": "可能精灵最多显示几个",
+    "type": "int",
+    "default": 4,
+    "hint": "查蛋接口一般给 1~4 个候选"
+  },
+  "include_special": {
+    "description": "额外推送「特殊精灵」那一段",
+    "type": "bool",
+    "default": false,
+    "hint": "接口会单独给一段特殊精灵，默认不推"
+  },
+  "notify_existing": {
+    "description": "首次运行也推送已有记录",
+    "type": "bool",
+    "default": false,
+    "hint": "默认关闭，避免一装插件就把几十条历史全推一遍"
+  },
+  "template": {
+    "description": "消息模板",
+    "type": "text",
+    "default": "🥚 购买成功\n蛋名：{name}\n消耗：{points} 积分\n可能孵出：{pets}\n尺寸：{size}\n卖家：{seller}\n时间：{time}",
+    "hint": "占位符：{name} {points} {pets} {size} {seller} {courier} {code} {time}（多行会自动拆成多段发送）"
+  },
+  "watch_sellers": {
+    "description": "默认监控的商家助手ID（逗号分隔，也可用「蛋监控 添加 Zxxx」）",
+    "type": "string",
+    "default": ""
+  },
+  "listing_template": {
+    "description": "新上架提醒模板（留空用内置排版），可用 {nickname} {seller} {items} {total}",
+    "type": "string",
+    "default": ""
+  },
+  "bare_name_private": {
+    "description": "私聊里直接发精灵名字就查（群聊始终需要 / 前缀）",
+    "type": "bool",
+    "default": true
+  },
+  "wake_prefix": {
+    "description": "指令前缀（默认 /）",
+    "type": "string",
+    "default": "/"
+  }
+}
