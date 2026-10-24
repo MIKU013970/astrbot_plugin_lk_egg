@@ -161,6 +161,24 @@
     "type": "bool",
     "default": false
   },
+  "market_quote_enabled": {
+    "description": "查蛋时附带实时行情",
+    "type": "bool",
+    "default": true,
+    "hint": "显示大婉 / 小婉 / 大粗 / 小粗 的今日成交与最低积分（只锁极限声线）"
+  },
+  "market_quote_cache_min": {
+    "description": "行情缓存时间（分钟）",
+    "type": "int",
+    "default": 60,
+    "hint": "同一只蛋在这段时间内复用缓存、不再请求接口；0 = 每次都打实时"
+  },
+  "market_quote_timeout": {
+    "description": "行情请求超时（秒）",
+    "type": "int",
+    "default": 6,
+    "hint": "超时就只发图鉴正文、不显示行情，不会卡住查蛋"
+  },
   "admin_ids": {
     "description": "管理员 QQ 号（逗号分隔），只有他们能看发码记录；留空则仅私聊可用",
     "type": "string",

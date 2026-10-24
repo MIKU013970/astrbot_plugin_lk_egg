@@ -96,7 +96,7 @@ def _save_state(state: Dict[str, Any]) -> None:
     "astrbot_plugin_lk_egg",
     "MIKU013970 & DeepSeek",
     "市集购买成功推送 + 新上架监控 + 黑白名单查询",
-    "1.10.2",
+    "1.11.0",
 )
 class LkMarketNotify(Star):
     def __init__(self, context: Context, config: AstrBotConfig = None):
@@ -420,6 +420,59 @@ class LkMarketNotify(Star):
                 return sp[target]
         return None
 
+    # ---------------------------------------------------------------- 查蛋行情
+    async def _market_quote_lines(self, name: str) -> List[str]:
+        """查蛋时附带的实时行情（大婉 / 小婉 / 大粗 / 小粗）。
+
+        走控制台的 GET /api/market/quote，控制台那边负责多账号轮询 + 按蛋种缓存。
+        拿不到（超时 / 控制台没起 / 接口报错）就返回空列表，绝不抛出去卡住查蛋。
+        """
+        if not bool(self._cfg("market_quote_enabled", True)):
+            return []
+        nm = str(name or "").strip()
+        if not nm:
+            return []
+        try:
+            cache_min = int(self._cfg("market_quote_cache_min", 60))
+        except (TypeError, ValueError):
+            cache_min = 60
+        try:
+            timeout = max(1.0, float(self._cfg("market_quote_timeout", 6)))
+        except (TypeError, ValueError):
+            timeout = 6.0
+        path = (f"/api/market/quote?q={urllib.parse.quote(nm)}"
+                f"&cache_min={max(0, cache_min)}")
+        try:
+            sess = await self._session_get()
+            async with sess.get(self.api_base + path,
+                                timeout=aiohttp.ClientTimeout(total=timeout)) as resp:
+                if resp.status != 200:
+                    logger.warning(f"[查蛋行情] {nm} → HTTP {resp.status}")
+                    return []
+                data = await resp.json(content_type=None)
+        except Exception as e:
+            logger.warning(f"[查蛋行情] {nm} 取失败: {type(e).__name__}: {e}")
+            return []
+        if not isinstance(data, dict) or not data.get("ok"):
+            err = (data or {}).get("error") if isinstance(data, dict) else ""
+            if err:
+                logger.warning(f"[查蛋行情] {nm}: {str(err)[:90]}")
+            return []
+        if data.get("stale"):
+            logger.info(f"[查蛋行情] {nm} 用了过期缓存（{data.get('error') or '取数失败'}）")
+        lines = data.get("lines") or []
+        return [str(x) for x in lines if str(x).strip()][:8]
+
+    async def _render_species_quoted(self, rec: Dict[str, Any]) -> str:
+        """图鉴正文 + 行情四行；行情拿不到就只发图鉴。"""
+        text = self._render_species(rec)
+        try:
+            lines = await self._market_quote_lines(rec.get("精灵") or "")
+        except Exception as e:                       # 兜底：行情绝不能影响查蛋
+            logger.warning(f"[查蛋行情] 渲染异常: {type(e).__name__}: {e}")
+            lines = []
+        return text + "\n" + "\n".join(lines) if lines else text
+
     def _render_species(self, r: Dict[str, Any]) -> str:
         """渲染图鉴。默认只显示蛋；show_body=true 时追加本体（成体）数据。"""
         show_body = bool(self._cfg("show_body", False))
@@ -563,7 +616,7 @@ class LkMarketNotify(Star):
 
     async def _seller_info(self, sid: str) -> Dict[str, Any]:
         """从控制台库里补一点信息（昵称/角色/在售）。"""
-        data = await self._api(f"/api/merchants/search?q={sid}&limit=1")
+        data = await self._api(f"/api/merchants/search?q={sid}&limit=1&auto=1")
         rows = (data or {}).get("rows") or []
         return rows[0] if rows else {}
 
@@ -1004,7 +1057,7 @@ class LkMarketNotify(Star):
         rec = self._find_species(raw)
         if not rec:
             return                      # 不是精灵名就闭嘴
-        yield event.plain_result(self._render_species(rec))
+        yield event.plain_result(await self._render_species_quoted(rec))
 
     @filter.regex(r"^\s*/?\s*\d+(?:\.\d+)?\s*/\s*\d+(?:\.\d+)?\s*$")
     async def on_bare_hw(self, event: AstrMessageEvent):
@@ -1506,7 +1559,7 @@ class LkMarketNotify(Star):
             yield event.plain_result(self._render_identify(*hw))
             return
         rec = self._find_species(q)
-        yield event.plain_result(self._render_species(rec) if rec
+        yield event.plain_result(await self._render_species_quoted(rec) if rec
                                  else f"图鉴里没有「{q}」。\n也可以发「身高/体重」，比如 34/3.617")
 
     # 直接发精灵名字也能查（只认图鉴里存在的名字，不认识的直接不理）
