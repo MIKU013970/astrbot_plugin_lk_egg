@@ -127,7 +127,7 @@ def _save_state(state: Dict[str, Any]) -> None:
     "astrbot_plugin_lk_egg",
     "MIKU013970 & DeepSeek",
     "市集购买成功推送 + 新上架监控 + 黑白名单查询",
-    "1.12.0",
+    "1.12.1",
 )
 class LkMarketNotify(Star):
     def __init__(self, context: Context, config: AstrBotConfig = None):
@@ -1066,6 +1066,8 @@ class LkMarketNotify(Star):
 
     def _looks_like_command(self, text: str) -> bool:
         t = str(text or "").lstrip()
+        if self._ID_CMD_RE.match(t):
+            return True
         return any(t.startswith(w) for w in self.COMMAND_WORDS)
 
     @filter.command("蛋监控")
@@ -1710,63 +1712,94 @@ class LkMarketNotify(Star):
                 f"试过：{tried}\n"
                 f"检查：① 群号对不对 ② 机器人在不在那个群 ③ 配置里的 platform 是否和适配器一致")
 
-    @filter.command("查ID")
-    async def cmd_lookup_id(self, event: AstrMessageEvent):
-        """查ID Z10014514 / 查ID 咕咕"""
-        q = self._cmd_args(event)
+    # ---------------------------------------------------------------- 查ID
+    #: 查ID / 查询ID：命令词大小写随便，中间空格随便，后面有没有空格都行
+    _ID_CMD_RE = re.compile(r"^\s*[/#]?\s*(?:查\s*[Ii][Dd]|查询\s*[Ii][Dd])\s*(.*)$")
+
+    def _id_arg_from_text(self, raw: str) -> str:
+        """从原始消息里抠参数：查IDZ100 / 查 id z100 / /查询ID xxx 都认。"""
+        s = str(raw or "").strip()
+        prefix = str(self._cfg("wake_prefix", "/") or "/")
+        if prefix and s.startswith(prefix):
+            s = s[len(prefix):].strip()
+        if s.startswith("#"):
+            s = s.lstrip("#").strip()
+        m = self._ID_CMD_RE.match(s)
+        return m.group(1).strip() if m else ""
+
+    def _id_dedupe(self, event: Any) -> bool:
+        """命令入口和宽松正则入口可能都命中同一条消息，保证只回一次。"""
+        if getattr(event, "_lk_lookup_id_done", False):
+            return False
+        try:
+            event._lk_lookup_id_done = True
+        except Exception:
+            pass
+        return True
+
+    async def _lookup_id_result(self, event: Any, q: str):
+        """查ID 的核心：ID 大小写归一 + 纯数字补 Z 重试。"""
+        q = str(q or "").strip()
         if not q:
-            yield event.plain_result(
-                "格式：查ID Z10014514\n也可以用昵称：查ID 咕咕")
-            return
-        data = await self._api("/api/merchant?q=" + urllib.parse.quote(str(q)))
-        mark = None
-        if data and data.get("ok"):
+            return event.plain_result(
+                "格式：查ID Z10014514\n也可以用昵称：查ID 咕咕\n（大小写、空格都随意）")
+
+        # 助手ID 大小写都行，统一成大写再查
+        qid = q.upper() if re.fullmatch(r"[Zz]\d{5,12}", q) else q
+        data = await self._api("/api/merchant?q=" + urllib.parse.quote(qid))
+        note = ""
+        # 纯数字查不到就补个 Z 再试：玩家常把助手ID 前面的 Z 忘了写
+        ok = isinstance(data, dict) and data.get("ok")
+        if not ok and re.fullmatch(r"\d{5,12}", qid):
+            alt = await self._api("/api/merchant?q=" + urllib.parse.quote("Z" + qid))
+            if isinstance(alt, dict) and alt.get("ok"):
+                data = alt
+                note = f"（你发的是纯数字，按助手ID Z{qid} 查到了）"
+
+        if isinstance(data, dict) and data.get("ok"):
             mark = self._marks().get((data.get("seller") or "").upper())
-            yield event.plain_result(self._merchant_block(data, mark))
-            return
-        if data and data.get("blocked_by"):
-            yield event.plain_result(
+            out = self._merchant_block(data, mark)
+            return event.plain_result(out + ("\n" + note if note else ""))
+        if isinstance(data, dict) and data.get("blocked_by"):
+            return event.plain_result(
                 f"查不到「{q}」：这个商家屏蔽了你的账号（{'、'.join(data['blocked_by'])}）。\n"
                 f"换个没被屏蔽的账号再查；挂单本身在市集还能看到。")
-            return
-        if data and data.get("error"):
-            yield event.plain_result(f"查不到「{q}」：{str(data['error'])[:60]}")
-            return
-        mark = self._marks().get(q.upper())
+        err = str((data or {}).get("error") or "") if isinstance(data, dict) else ""
+        if err:
+            # 「还没建索引」其实是没查到，不是出错，措辞跟着走
+            if "索引" in err:
+                return event.plain_result(
+                    f"没查到商家「{q}」。\n{err}\n如果他是精灵名，用：查询 {q}")
+            return event.plain_result(f"查不到「{q}」：{err[:60]}")
+
+        mark = self._marks().get(qid.upper())
         if mark:
-            yield event.plain_result(await self._describe_mark(q.upper(), mark))
+            return event.plain_result(await self._describe_mark(qid.upper(), mark))
+        return event.plain_result(f"没查到商家「{q}」。\n如果他是精灵名，用：查询 {q}")
+
+    @filter.command("查ID")
+    async def cmd_lookup_id(self, event: AstrMessageEvent):
+        """查ID Z10014514 / 查ID z10014514 / 查ID 咕咕"""
+        if not self._id_dedupe(event):
             return
-        yield event.plain_result(
-            f"没查到商家「{q}」。\n如果他是精灵名，用：查询 {q}")
+        yield await self._lookup_id_result(
+            event, self._id_arg_from_text(getattr(event, "message_str", "")))
 
     @filter.command("查询ID")
     async def cmd_lookup_id_alias(self, event: AstrMessageEvent):
-        """查ID Z10014514 / 查ID 咕咕"""
-        q = self._cmd_args(event)
-        if not q:
-            yield event.plain_result(
-                "格式：查ID Z10014514\n也可以用昵称：查ID 咕咕")
+        """查ID 的别名，行为完全一样"""
+        if not self._id_dedupe(event):
             return
-        data = await self._api("/api/merchant?q=" + urllib.parse.quote(str(q)))
-        mark = None
-        if data and data.get("ok"):
-            mark = self._marks().get((data.get("seller") or "").upper())
-            yield event.plain_result(self._merchant_block(data, mark))
+        yield await self._lookup_id_result(
+            event, self._id_arg_from_text(getattr(event, "message_str", "")))
+
+    @filter.regex(r"^\s*[/#]?\s*(?:查\s*[Ii][Dd]|查询\s*[Ii][Dd])\s*.*$")
+    async def on_lookup_id_loose(self, event: AstrMessageEvent):
+        """兜底入口：查id / 查 ID / 查IDZ100 这些 filter.command 派发不到的写法。"""
+        if not self._id_dedupe(event):
             return
-        if data and data.get("blocked_by"):
-            yield event.plain_result(
-                f"查不到「{q}」：这个商家屏蔽了你的账号（{'、'.join(data['blocked_by'])}）。\n"
-                f"换个没被屏蔽的账号再查；挂单本身在市集还能看到。")
-            return
-        if data and data.get("error"):
-            yield event.plain_result(f"查不到「{q}」：{str(data['error'])[:60]}")
-            return
-        mark = self._marks().get(q.upper())
-        if mark:
-            yield event.plain_result(await self._describe_mark(q.upper(), mark))
-            return
-        yield event.plain_result(
-            f"没查到商家「{q}」。\n如果他是精灵名，用：查询 {q}")
+        yield await self._lookup_id_result(
+            event, self._id_arg_from_text(getattr(event, "message_str", "")))
 
     @filter.command("查询")
     async def cmd_species(self, event: AstrMessageEvent):
