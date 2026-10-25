@@ -179,6 +179,36 @@
     "default": 6,
     "hint": "超时就只发图鉴正文、不显示行情，不会卡住查蛋"
   },
+  "reply_as_image": {
+    "description": "查蛋结果发图片",
+    "type": "bool",
+    "default": true,
+    "hint": "默认出图（排版更整齐）。关掉就强制发纯文字。出图失败会自动退回文字，不用手动切"
+  },
+  "card_theme": {
+    "description": "卡片配色",
+    "type": "text",
+    "default": "",
+    "hint": "每行一项「键=#RRGGBB」，留空用默认。可配的键：背景 卡片 边框 标题 正文 次要 强调 标签底。例：强调=#C25828"
+  },
+  "card_font_size": {
+    "description": "卡片正文字号",
+    "type": "int",
+    "default": 18,
+    "hint": "其它字号按它推导（标题 +12、次要 -3、数字 +2）。范围 10~40"
+  },
+  "card_width": {
+    "description": "卡片宽度（像素）",
+    "type": "int",
+    "default": 700,
+    "hint": "范围 320~1200。太窄的话长文本会自动截断加省略号"
+  },
+  "card_font_path": {
+    "description": "中文字体文件路径",
+    "type": "string",
+    "default": "",
+    "hint": "留空自动找（Windows 微软雅黑 / Linux 文泉驿·思源黑体）。Linux、Docker 上如果系统没有中文字体，出图会退回文字，这里填个字体路径就行"
+  },
   "admin_ids": {
     "description": "管理员 QQ 号（逗号分隔），只有他们能看发码记录；留空则仅私聊可用",
     "type": "string",

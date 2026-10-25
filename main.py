@@ -20,6 +20,7 @@
 from __future__ import annotations
 
 import asyncio
+import os
 import re
 import json
 import shutil
@@ -33,6 +34,36 @@ import aiohttp
 from astrbot.api import AstrBotConfig, logger
 from astrbot.api.event import AstrMessageEvent, filter
 from astrbot.api.star import Context, Star, register
+
+# ---------------------------------------------------------------- 出图模块
+_CARD_MOD = None
+_CARD_TRIED = False
+
+
+def _card():
+    """按文件路径加载同目录的 card.py。
+
+    AstrBot 加载插件的方式各版本不同，相对导入不一定成立，
+    所以直接按 __file__ 找同目录的 card.py，最稳。
+    """
+    global _CARD_MOD, _CARD_TRIED
+    if _CARD_TRIED:
+        return _CARD_MOD
+    _CARD_TRIED = True
+    import importlib.util
+    fp = Path(__file__).with_name("card.py")
+    if not fp.is_file():
+        return None
+    try:
+        spec = importlib.util.spec_from_file_location("lk_egg_card", str(fp))
+        m = importlib.util.module_from_spec(spec)
+        spec.loader.exec_module(m)
+        _CARD_MOD = m
+    except Exception as e:
+        logger.warning(f"[出图] card.py 加载失败，一律发文字: {type(e).__name__}: {e}")
+        _CARD_MOD = None
+    return _CARD_MOD
+
 
 _PLUGIN_DIR = Path(__file__).resolve().parent
 _PLUGIN_NAME = "astrbot_plugin_lk_egg"
@@ -96,7 +127,7 @@ def _save_state(state: Dict[str, Any]) -> None:
     "astrbot_plugin_lk_egg",
     "MIKU013970 & DeepSeek",
     "市集购买成功推送 + 新上架监控 + 黑白名单查询",
-    "1.11.0",
+    "1.12.0",
 )
 class LkMarketNotify(Star):
     def __init__(self, context: Context, config: AstrBotConfig = None):
@@ -421,17 +452,17 @@ class LkMarketNotify(Star):
         return None
 
     # ---------------------------------------------------------------- 查蛋行情
-    async def _market_quote_lines(self, name: str) -> List[str]:
+    async def _market_quote_raw(self, name: str) -> Dict[str, Any]:
         """查蛋时附带的实时行情（大婉 / 小婉 / 大粗 / 小粗）。
 
         走控制台的 GET /api/market/quote，控制台那边负责多账号轮询 + 按蛋种缓存。
-        拿不到（超时 / 控制台没起 / 接口报错）就返回空列表，绝不抛出去卡住查蛋。
+        拿不到（超时 / 控制台没起 / 接口报错）就返回空字典，绝不抛出去卡住查蛋。
         """
         if not bool(self._cfg("market_quote_enabled", True)):
-            return []
+            return {}
         nm = str(name or "").strip()
         if not nm:
-            return []
+            return {}
         try:
             cache_min = int(self._cfg("market_quote_cache_min", 60))
         except (TypeError, ValueError):
@@ -448,30 +479,50 @@ class LkMarketNotify(Star):
                                 timeout=aiohttp.ClientTimeout(total=timeout)) as resp:
                 if resp.status != 200:
                     logger.warning(f"[查蛋行情] {nm} → HTTP {resp.status}")
-                    return []
+                    return {}
                 data = await resp.json(content_type=None)
         except Exception as e:
             logger.warning(f"[查蛋行情] {nm} 取失败: {type(e).__name__}: {e}")
-            return []
+            return {}
         if not isinstance(data, dict) or not data.get("ok"):
             err = (data or {}).get("error") if isinstance(data, dict) else ""
             if err:
                 logger.warning(f"[查蛋行情] {nm}: {str(err)[:90]}")
-            return []
+            return {}
         if data.get("stale"):
             logger.info(f"[查蛋行情] {nm} 用了过期缓存（{data.get('error') or '取数失败'}）")
+        return data
+
+    async def _market_quote_lines(self, name: str) -> List[str]:
+        data = await self._market_quote_raw(name)
         lines = data.get("lines") or []
         return [str(x) for x in lines if str(x).strip()][:8]
 
-    async def _render_species_quoted(self, rec: Dict[str, Any]) -> str:
-        """图鉴正文 + 行情四行；行情拿不到就只发图鉴。"""
+    async def _species_payload(self, rec: Dict[str, Any]):
+        """图鉴正文 + 行情；返回 (文字版, 图片版或 None)。"""
         text = self._render_species(rec)
+        lines: List[str] = []
+        items: List[Dict[str, Any]] = []
         try:
-            lines = await self._market_quote_lines(rec.get("精灵") or "")
+            data = await self._market_quote_raw(rec.get("精灵") or "")
+            lines = [str(x) for x in (data.get("lines") or []) if str(x).strip()][:8]
+            items = [x for x in (data.get("items") or []) if isinstance(x, dict)]
         except Exception as e:                       # 兜底：行情绝不能影响查蛋
             logger.warning(f"[查蛋行情] 渲染异常: {type(e).__name__}: {e}")
-            lines = []
-        return text + "\n" + "\n".join(lines) if lines else text
+        if lines:
+            text = text + "\n" + "\n".join(lines)
+        png = None
+        if self._image_reply_on():
+            try:
+                png = self._species_card(rec, items)
+            except Exception as e:
+                logger.warning(f"[出图] 图鉴卡失败，退回文字: {type(e).__name__}: {e}")
+        return text, png
+
+    async def _render_species_quoted(self, rec: Dict[str, Any]) -> str:
+        """只要文字版（兼容老调用）。"""
+        text, _ = await self._species_payload(rec)
+        return text
 
     def _render_species(self, r: Dict[str, Any]) -> str:
         """渲染图鉴。默认只显示蛋；show_body=true 时追加本体（成体）数据。"""
@@ -532,6 +583,166 @@ class LkMarketNotify(Star):
                     lines += body_lines(v, prefix=f"{i}. ")
 
         return "\n".join(lines)
+
+    # ---------------------------------------------------------------- 出图
+    def _card_kwargs(self) -> Dict[str, Any]:
+        """把卡片相关配置整理成 card.render_card 的参数。"""
+        try:
+            fs = int(self._cfg("card_font_size", 18))
+        except (TypeError, ValueError):
+            fs = 18
+        try:
+            wd = int(self._cfg("card_width", 700))
+        except (TypeError, ValueError):
+            wd = 700
+        return {
+            "theme": str(self._cfg("card_theme", "") or ""),
+            "font_path": str(self._cfg("card_font_path", "") or ""),
+            "width": max(320, min(1200, wd)),
+            "font_size": max(10, min(40, fs)),
+        }
+
+    def _image_reply_on(self) -> bool:
+        """默认出图。配置关掉、或者环境里没 Pillow / 没字体，就发文字。"""
+        v = self._cfg("reply_as_image", True)
+        if isinstance(v, str):
+            on = v.strip().lower() not in ("", "0", "false", "no", "off")
+        else:
+            on = bool(v)
+        if not on:
+            return False
+        c = _card()
+        return bool(c is not None and c.available())
+
+    def _species_card(self, rec: Dict[str, Any],
+                      items: Optional[List[Dict[str, Any]]] = None) -> Optional[bytes]:
+        """图鉴卡。任何异常都往上抛，由 _species_payload 退回文字。"""
+        c = _card()
+        if c is None or not c.available():
+            return None
+        variants = rec.get("variants") or [rec]
+        v = variants[0] if variants else {}
+        rows = [
+            ("蛋名", v.get("蛋名") or rec.get("蛋名") or ""),
+            ("蛋组", rec.get("蛋组") or ""),
+            ("公母", rec.get("公母") or v.get("公母") or "未知"),
+            ("进化链", rec.get("进化链") or ""),
+            ("身高区间", v.get("身高区间") or ""),
+            ("体重区间", v.get("体重区间") or ""),
+        ]
+        boxes = [
+            ("小块头",
+             f"过线 {v.get('小块头过线值') or '—'}  极限 {v.get('小块头极限值') or '—'}",
+             (78, 138, 186)),
+            ("大块头",
+             f"过线 {v.get('大块头过线值') or '—'}  极限 {v.get('大块头极限值') or '—'}",
+             (194, 88, 40)),
+        ]
+        table = None
+        if items:
+            table = {
+                "columns": ["", "今日成交", "最低积分", "在售"],
+                "items": [(str(it.get("key") or ""),
+                           str(it.get("today", 0)),
+                           str(it.get("low", 0)),
+                           str(it.get("listed", 0))) for it in items[:6]],
+            }
+        dex = v.get("图鉴编号") or rec.get("图鉴编号") or ""
+        bins = v.get("区间数") if len(variants) == 1 else None
+        return c.render_card(
+            title=str(rec.get("精灵") or ""),
+            subtitle=(f"图鉴 {dex}" if dex else ""),
+            tag=(f"区间 {bins}" if bins not in (None, "", 0) else ""),
+            rows=rows, boxes=boxes, table=table, **self._card_kwargs())
+
+    def _identify_card(self, h: float, w: float,
+                       hits: Optional[List[Dict[str, Any]]] = None) -> Optional[bytes]:
+        """身高体重查蛋的结果卡。"""
+        c = _card()
+        if c is None or not c.available():
+            return None
+        if hits is None:
+            try:
+                hits = self._match_species(h, w)
+            except Exception:
+                hits = []
+        payload = []
+        for x in hits[:8]:
+            bins = x.get("区间数")
+            payload.append({
+                "name": x.get("精灵"),
+                "range": (f"区间 {bins}" if bins not in (None, "", 0) else ""),
+                "size": self._size_of(h, w, x),
+                "egg": x.get("蛋名"),
+                "groups": x.get("蛋组"),
+                "sex": x.get("公母"),
+                "hw": f"{x.get('身高区间')} · {x.get('体重区间')}",
+            })
+        return c.render_identify_card(
+            head=f"身高 {h:g} cm · 体重 {w / 1000:.3f} kg",
+            hits=payload, **self._card_kwargs())
+
+    def _temp_png(self, png: bytes) -> str:
+        """落到临时文件（协议端要按路径读），顺手清掉 1 小时前的旧图。"""
+        import tempfile
+        d = Path(tempfile.gettempdir()) / "lk_egg_cards"
+        try:
+            d.mkdir(parents=True, exist_ok=True)
+        except Exception:
+            d = Path(tempfile.gettempdir())
+        try:
+            now = time.time()
+            for f in d.glob("card-*.png"):
+                if now - f.stat().st_mtime > 3600:
+                    f.unlink(missing_ok=True)
+        except Exception:
+            pass
+        fp = d / f"card-{int(time.time() * 1000)}-{os.getpid() % 999:03d}.png"
+        fp.write_bytes(png)
+        return str(fp)
+
+    def _result_image(self, event: Any, png: bytes):
+        """把 PNG 包成 AstrBot 的结果对象，几种写法挨个试。"""
+        path = self._temp_png(png)
+        fn = getattr(event, "image_result", None)
+        if callable(fn):
+            try:
+                return fn(path)
+            except Exception as e:
+                logger.warning(f"[出图] image_result 不可用: {type(e).__name__}: {e}")
+        try:
+            from astrbot.api.message_components import Image as _Image
+            img = _Image.fromFileSystem(path)
+            fn = getattr(event, "chain_result", None)
+            if callable(fn):
+                try:
+                    return fn([img])
+                except Exception as e:
+                    logger.warning(f"[出图] chain_result 不可用: {type(e).__name__}: {e}")
+            mr = getattr(event, "make_result", None)
+            if callable(mr):
+                r = mr()
+                for meth in ("file_image", "image"):
+                    m2 = getattr(r, meth, None)
+                    if callable(m2):
+                        try:
+                            return m2(path)
+                        except Exception:
+                            continue
+        except Exception as e:
+            logger.warning(f"[出图] 组装图片结果失败: {type(e).__name__}: {e}")
+        return None
+
+    async def _reply(self, event: Any, text: str, png: Optional[bytes]):
+        """统一出口：能出图就出图，出不了就发文字。"""
+        if png and self._image_reply_on():
+            try:
+                r = self._result_image(event, png)
+                if r is not None:
+                    return r
+            except Exception as e:
+                logger.warning(f"[出图] 发图失败，退回文字: {type(e).__name__}: {e}")
+        return event.plain_result(text)
 
     # ---------------------------------------------------------------- 新上架提醒
     def _watch(self) -> List[str]:
@@ -643,12 +854,21 @@ class LkMarketNotify(Star):
 
     # ---------------------------------------------------------------- 身高/体重 查蛋
     def _parse_hw(self, text: str):
-        """'34/3.617' → (34.0, 3617.0)  单位：cm / 克"""
+        """'34/3.617'、'34 3.617'、'0.34 3.617' → (34.0, 3617.0)  单位：cm / 克
+
+        分隔符用 / 空格 逗号 x 都行。
+        身高小于 4 的一律按「米」算（游戏里显示的就是 0.32 这种），×100 转成厘米；
+        图鉴里最矮的蛋是 4 cm，所以这个阈值不会误伤。
+        体重带小数点或 <100 按 kg，否则按克。
+        """
         import re as _re
-        m = _re.match(r"^\s*(\d+(?:\.\d+)?)\s*/\s*(\d+(?:\.\d+)?)\s*$", str(text or ""))
+        m = _re.match(r"^\s*(\d+(?:\.\d+)?)\s*[/\s,，、x×*]\s*(\d+(?:\.\d+)?)\s*$",
+                      str(text or ""), _re.I)
         if not m:
             return None
         h = float(m.group(1))
+        if h < 4:                      # 游戏里给的是米
+            h *= 100
         w_raw = float(m.group(2))
         # 带小数点 或 <100 当成 kg，否则当克
         if "." in m.group(2) or w_raw < 100:
@@ -1057,18 +1277,20 @@ class LkMarketNotify(Star):
         rec = self._find_species(raw)
         if not rec:
             return                      # 不是精灵名就闭嘴
-        yield event.plain_result(await self._render_species_quoted(rec))
+        _t, _p = await self._species_payload(rec)
+        yield await self._reply(event, _t, _p)
 
-    @filter.regex(r"^\s*/?\s*\d+(?:\.\d+)?\s*/\s*\d+(?:\.\d+)?\s*$")
+    @filter.regex(r"^\s*/?\s*\d+(?:\.\d+)?\s*[/\s,，、x×*]\s*\d+(?:\.\d+)?\s*$")
     async def on_bare_hw(self, event: AstrMessageEvent):
-        """34/3.617 或 /34/3.617 —— 身高/体重 查蛋"""
+        """34/3.617、34 3.617、0.34 3.617 —— 身高/体重 查蛋（也认米）"""
         raw = (getattr(event, "message_str", "") or "").strip()
         prefix = str(self._cfg("wake_prefix", "/") or "/")
         body = raw[len(prefix):].strip() if raw.startswith(prefix) else raw
         hw = self._parse_hw(body)
         if not hw:
             return
-        yield event.plain_result(self._render_identify(*hw))
+        yield await self._reply(event, self._render_identify(*hw),
+                                self._identify_card(hw[0], hw[1]))
 
     @filter.regex(r"^\s*[Zz]\d{5,12}(\s+(黑|白)(\s+.*)?)?\s*$")
     async def on_bare_zid(self, event: AstrMessageEvent):
@@ -1556,11 +1778,16 @@ class LkMarketNotify(Star):
             return
         hw = self._parse_hw(q)
         if hw:
-            yield event.plain_result(self._render_identify(*hw))
+            yield await self._reply(event, self._render_identify(*hw),
+                                    self._identify_card(hw[0], hw[1]))
             return
         rec = self._find_species(q)
-        yield event.plain_result(await self._render_species_quoted(rec) if rec
-                                 else f"图鉴里没有「{q}」。\n也可以发「身高/体重」，比如 34/3.617")
+        if not rec:
+            yield event.plain_result(
+                f"图鉴里没有「{q}」。\n也可以发「身高/体重」，比如 34/3.617 或 0.34 3.617")
+            return
+        _t, _p = await self._species_payload(rec)
+        yield await self._reply(event, _t, _p)
 
     # 直接发精灵名字也能查（只认图鉴里存在的名字，不认识的直接不理）
     @filter.command("蛋推送绑定")
