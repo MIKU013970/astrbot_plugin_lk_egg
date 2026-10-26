@@ -75,7 +75,7 @@ def _card():
 
 _PLUGIN_DIR = Path(__file__).resolve().parent
 _PLUGIN_NAME = "astrbot_plugin_lk_egg"
-VERSION = "1.34.1"
+VERSION = "1.34.2"
 
 
 def _data_dir() -> Path:
@@ -138,7 +138,7 @@ def _save_state(state: Dict[str, Any]) -> None:
     "astrbot_plugin_lk_egg",
     "MIKU013970 & DeepSeek",
     "市集购买成功推送 + 新上架监控 + 黑白名单查询",
-    "1.34.1",
+    "1.34.2",
 )
 class LkMarketNotify(Star):
     def __init__(self, context: Context, config: AstrBotConfig = None):
@@ -2194,22 +2194,26 @@ class LkMarketNotify(Star):
             return
         yield await self._identify_reply(event, hw)
 
-    @filter.regex(r"^\s*[Zz]\d{5,12}(\s+(黑|白)(\s+.*)?)?\s*$")
+    @filter.regex(r"^\s*[/#]?\s*[Zz]\d{5,12}\s*(黑|白)?\s*.*$")
     async def on_bare_zid(self, event: AstrMessageEvent):
         """直接发 Z10014514 查商家；发「Z10014514 黑 备注」加名单。
 
         AstrBot 派发前会把 / 剥掉，所以 /Z10014514 也会走到这里。
         """
-        raw = (getattr(event, "message_str", "") or "").strip()
-        parts = raw.split()
-        if not parts:
+        raw = (getattr(event, "message_str", "") or "").strip().lstrip("/#").strip()
+        # 空格可有可无：Z10011581黑傻狗一个 / Z10011581 黑 傻狗一个 都认
+        m = re.match(r"^([Zz]\d{5,12})\s*(黑|白)?\s*(.*)$", raw)
+        if not m:
             return
-        sid = parts[0].upper()
-        if not sid.startswith("Z"):
+        sid = m.group(1).upper()
+        kind = m.group(2)
+        note = (m.group(3) or "").strip()
+        if kind:
+            by = getattr(event, "unified_msg_origin", "") or ""
+            rec = self._set_mark(sid, kind, note, by)
+            yield await self._say(event, await self._describe_mark(sid, rec))
             return
-        # Z号 + 黑/白 [+备注] → 打标记
-        if len(parts) >= 2 and parts[1] in ("黑", "白"):
-            note = " ".join(parts[2:])
+        # 没带黑/白 → 当查商家处理
             by = getattr(event, "unified_msg_origin", "") or ""
             rec = self._set_mark(sid, parts[1], note, by)
             yield await self._say(event, await self._describe_mark(sid, rec))
