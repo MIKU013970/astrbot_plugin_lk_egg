@@ -75,7 +75,7 @@ def _card():
 
 _PLUGIN_DIR = Path(__file__).resolve().parent
 _PLUGIN_NAME = "astrbot_plugin_lk_egg"
-VERSION = "1.31.4"
+VERSION = "1.32.0"
 
 
 def _data_dir() -> Path:
@@ -138,7 +138,7 @@ def _save_state(state: Dict[str, Any]) -> None:
     "astrbot_plugin_lk_egg",
     "MIKU013970 & DeepSeek",
     "市集购买成功推送 + 新上架监控 + 黑白名单查询",
-    "1.31.4",
+    "1.32.0",
 )
 class LkMarketNotify(Star):
     def __init__(self, context: Context, config: AstrBotConfig = None):
@@ -3082,6 +3082,24 @@ class LkMarketNotify(Star):
                 logger.warning(f"[出图] {reason}记录失败: {type(e).__name__}: {e}")
         text = "\n".join(f"{k}：{v}" for k, v in rows)
         return await self._reply(event, f"{title}\n{text}", png)
+
+    @filter.command("诊断图标")
+    async def cmd_icon_diag(self, event: AstrMessageEvent):
+        """诊断图标 蹦蹦种子 —— 列出每个形态实际用的精灵图/蛋图文件名"""
+        q = self._cmd_args(event)
+        if not q:
+            return event.plain_result("用法：诊断图标 精灵名")
+        rec = self._find_species(q)
+        if not rec:
+            return event.plain_result(f"「{q}」暂未收录")
+        c = _card()
+        lines = [f"{rec.get('精灵')} · 图鉴 {rec.get('图鉴编号') or '-'} · {len(rec.get('variants') or [])} 形态"]
+        for v in (rec.get("variants") or [])[:8]:
+            f = str(v.get("形态简称") or v.get("形态") or "")
+            pi = c.icon_path("pet", str(rec.get("精灵") or ""), f) if c else None
+            ei = c.icon_path("egg", str(v.get("蛋名") or ""), f) if c else None
+            lines.append(f"{f or '默认'}：精灵={Path(pi).name if pi else '缺'} 蛋={Path(ei).name if ei else '缺'}")
+        return event.plain_result("\n".join(lines))
 
     @filter.command("查询")
     async def cmd_species(self, event: AstrMessageEvent):
