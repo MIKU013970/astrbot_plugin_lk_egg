@@ -73,7 +73,7 @@ def _card():
 
 _PLUGIN_DIR = Path(__file__).resolve().parent
 _PLUGIN_NAME = "astrbot_plugin_lk_egg"
-VERSION = "1.18.1"
+VERSION = "1.18.2"
 
 
 def _data_dir() -> Path:
@@ -136,7 +136,7 @@ def _save_state(state: Dict[str, Any]) -> None:
     "astrbot_plugin_lk_egg",
     "MIKU013970 & DeepSeek",
     "市集购买成功推送 + 新上架监控 + 黑白名单查询",
-    "1.18.1",
+    "1.18.2",
 )
 class LkMarketNotify(Star):
     def __init__(self, context: Context, config: AstrBotConfig = None):
@@ -2575,10 +2575,10 @@ class LkMarketNotify(Star):
     async def cmd_diag(self, event: AstrMessageEvent):
         """诊断 看图片链路哪里挂了"""
         if not self._is_admin(event):
-            yield await self._say(event, "只有管理员能用「诊断」")
+            yield event.plain_result("只有管理员能用「诊断」")
             return
         c = _card()
-        lines = [f"插件版本：{self.VERSION}"]
+        lines = [f"插件版本：{VERSION}"]
         lines.append(f"出图开关 reply_as_image：{self._cfg('reply_as_image', True)}")
         lines.append(f"实际出图：{'是' if self._image_reply_on() else '否'}")
         lines.append(f"card.py 加载：{'成功' if c is not None else '失败（看日志 [出图] card.py 加载失败）'}")
@@ -2609,7 +2609,8 @@ class LkMarketNotify(Star):
             lines.append(f"试渲一张：{'OK %d 字节' % len(png) if png else '失败'}")
         except Exception as e:
             lines.append(f"试渲一张：抛异常 {type(e).__name__}: {str(e)[:60]}")
-        yield await self._say(event, "\n".join(lines))
+        # 诊断结果**故意发文字**：出了问题才好复制，图片链路坏了也能看到
+        yield event.plain_result("\n".join(lines))
 
     @filter.command("查询")
     async def cmd_species(self, event: AstrMessageEvent):
