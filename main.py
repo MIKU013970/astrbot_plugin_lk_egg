@@ -75,7 +75,7 @@ def _card():
 
 _PLUGIN_DIR = Path(__file__).resolve().parent
 _PLUGIN_NAME = "astrbot_plugin_lk_egg"
-VERSION = "1.24.0"
+VERSION = "1.25.0"
 
 
 def _data_dir() -> Path:
@@ -138,7 +138,7 @@ def _save_state(state: Dict[str, Any]) -> None:
     "astrbot_plugin_lk_egg",
     "MIKU013970 & DeepSeek",
     "市集购买成功推送 + 新上架监控 + 黑白名单查询",
-    "1.24.0",
+    "1.25.0",
 )
 class LkMarketNotify(Star):
     def __init__(self, context: Context, config: AstrBotConfig = None):
@@ -1042,6 +1042,20 @@ class LkMarketNotify(Star):
     ROCOM_TTL = 6 * 3600
 
     @staticmethod
+    def _fmt_ts_hm(v: Any) -> str:
+        """时间戳（秒/毫秒）→ 'YYYY-MM-DD HH:MM'，用于「上次离线」这种要看到时分的。"""
+        try:
+            n = float(v)
+        except (TypeError, ValueError):
+            return str(v or "")
+        if n > 1e11:
+            n /= 1000.0
+        try:
+            return time.strftime("%Y-%m-%d %H:%M", time.localtime(n))
+        except Exception:
+            return str(v or "")
+
+    @staticmethod
     def _fmt_ts(v: Any) -> str:
         """时间戳（秒/毫秒）→ 'YYYY-MM-DD'；不是数字就原样返回。"""
         try:
@@ -1070,7 +1084,9 @@ class LkMarketNotify(Star):
         """
         p = payload if isinstance(payload, dict) else {}
         card = p.get("card") if isinstance(p.get("card"), dict) else {}
-        home = p.get("home") if isinstance(p.get("home"), dict) else {}
+        player = p.get("player") if isinstance(p.get("player"), dict) else {}
+        home = (p.get("home") if isinstance(p.get("home"), dict) else {}) or \
+            (player.get("home_info") if isinstance(player.get("home_info"), dict) else {})
         brief = card.get("player_card_brief_info") if isinstance(
             card.get("player_card_brief_info"), dict) else {}
         pet = brief.get("card_pet_info") if isinstance(
@@ -1087,19 +1103,29 @@ class LkMarketNotify(Star):
                 return
             out.append((label, "是" if val else "否"))
 
-        add("注册时间", card.get("register_timestamp"), ts=True)
-        if card.get("online") is not None:
-            out.append(("在线", "在线" if card.get("online") else "离线"))
-        add("个性签名", brief.get("card_signature"))
-        add("图鉴收集", brief.get("card_handbook_collect_num"), unit=" 种")
+        GENDER = {1: "雄性", 2: "雌性"}
+        add("角色等级", player.get("level"))
+        add("世界等级", player.get("world_level"))
+        add("性别", GENDER.get(player.get("gender"), player.get("gender")))
+        add("注册时间", player.get("regist_date") or card.get("register_timestamp"),
+            ts=True)
+        online = player.get("online")
+        if online is None:
+            online = card.get("online")
+        if online is not None:
+            out.append(("在线", "在线" if online else "离线"))
+        _lo = player.get("last_logout_time")
+        if _lo not in (None, "", 0):
+            out.append(("上次离线", LkMarketNotify._fmt_ts_hm(_lo)))
+        add("个性签名", player.get("signature") or brief.get("card_signature"))
+        add("图鉴收集", brief.get("card_handbook_collect_num")
+            or player.get("card_handbook_collect_num"), unit=" 种")
         add("时装羁绊", brief.get("card_fashion_bond_collect_num"), unit=" 个")
-        add("玻璃精灵", pet.get("collected_glass_pet_count"), unit=" 只")
-        add("闪光精灵", pet.get("collected_shining_pet_count"), unit=" 只")
+        add("炫彩精灵数", pet.get("collected_glass_pet_count"), unit=" 只")
+        add("异色精灵数", pet.get("collected_shining_pet_count"), unit=" 只")
         add("话题点", card.get("topic_point"))
         yn("好友", card.get("is_friend"))
         yn("被拉黑", card.get("is_black_role"))
-        add("平台昵称", card.get("plat_nick_name"))
-
         add("家园名称", home.get("home_name"))
         add("家园等级", home.get("home_level"))
         add("房间等级", home.get("room_level"))
@@ -1153,7 +1179,7 @@ class LkMarketNotify(Star):
             return data or None
         # player/card 第一次就直接把完整资料塞在 data 里了（只是顺带带了个 task_id），
         # 这种情况别去排队轮询 —— 一轮询就只剩任务结果，图鉴收集那些字段就丢了。
-        if path.endswith("/player/card") and any(
+        if path.endswith(("/player/card", "/player/search")) and any(
                 k not in ("meta", "ret_info", "source",
                           "cache_ttl_seconds", "cached_age_seconds")
                 for k in data):
@@ -1200,25 +1226,39 @@ class LkMarketNotify(Star):
         base = str(self._cfg("rocom_api_base", "")
                    or "https://wegame.shallow.ink").rstrip("/")
         out: Dict[str, Any] = {}
-        # 两个接口并行打：串行要 1.2 + 6 秒，并行 6 秒左右就够了
-        card, home = await asyncio.gather(
+        # player/search 一次就带全：等级 / 世界等级 / 上次离线 / 性别 / 家园，
+        # player/card 补 图鉴收集、炫彩·异色精灵数、话题点。
+        # 两个并发打，各 1.2 秒左右；**不再调 home/info**（那个要走任务队列，慢 4 秒，
+        # 而且家园数据 player/search 里已经有了）。
+        search, card = await asyncio.gather(
+            self._rocom_call("/api/v1/games/rocom/ingame/player/search",
+                             game_id, key, base),
             self._rocom_call("/api/v1/games/rocom/ingame/player/card",
                              game_id, key, base),
-            self._rocom_call("/api/v1/games/rocom/ingame/home/info",
-                             game_id, key, base),
             return_exceptions=True)
+        if isinstance(search, Exception):
+            search = None
         if isinstance(card, Exception):
             card = None
-        if isinstance(home, Exception):
-            home = None
-        if card:
+        if isinstance(search, dict):
+            pi = search.get("player_info")
+            if isinstance(pi, dict) and pi:
+                out["player"] = pi
+        if isinstance(card, dict) and card:
             out["card"] = card
-        if home:
-            hi = home.get("home_info") if isinstance(home.get("home_info"), dict) else {}
-            brief = (hi.get("friend_home_brief_info")
-                     or hi.get("home_brief_info") or {})
-            if brief:
-                out["home"] = brief
+        # 家园：优先用 player_info.home_info（秒回），没有再退到 home/info
+        home = (out.get("player") or {}).get("home_info")
+        if isinstance(home, dict) and home:
+            out["home"] = home
+        else:
+            h = await self._rocom_call(
+                "/api/v1/games/rocom/ingame/home/info", game_id, key, base)
+            if isinstance(h, dict) and h:
+                hi = h.get("home_info") if isinstance(h.get("home_info"), dict) else {}
+                brief = (hi.get("friend_home_brief_info")
+                         or hi.get("home_brief_info") or {})
+                if brief:
+                    out["home"] = brief
         return out or None
 
     async def _rocom_maybe_refresh(self, data: Dict[str, Any],
@@ -1743,7 +1783,8 @@ class LkMarketNotify(Star):
         "—————— 推送 ——————\n"
         "蛋推送绑定 / 解绑 / 测试 / 状态 / 重置\n"
         "—————— 其它 ——————\n"
-        "UID 503671642           用游戏 UID 查注册时间/家园/收集度\n"
+        "UID 503671642           用游戏 UID 查等级/离线/家园/收集度\n"
+        "改绑记录 / 改名记录      看绑定角色有没有被换绑 / 改名\n"
         "帮助 / 菜单              看这张卡片\n"
         "诊断                     管理员用：查图片链路哪里挂了\n"
         "回复默认都是图片         配置里关掉 reply_as_image 就发文字\n"
@@ -2887,6 +2928,56 @@ class LkMarketNotify(Star):
         if not m:
             return
         yield await self._uid_result(event, m.group(1))
+
+    # ---------------------------------------------------------------- 改绑 / 改名记录
+    @filter.command("改绑记录")
+    async def cmd_rebind(self, event: AstrMessageEvent):
+        """改绑记录 [N] —— 谁把绑定的游戏角色换到别的助手了"""
+        yield await self._roles_changes(event, "换绑")
+
+    @filter.command("改名记录")
+    async def cmd_rename_hist(self, event: AstrMessageEvent):
+        """改名记录 [N] —— 绑定过的游戏角色改过名的"""
+        yield await self._roles_changes(event, "改名")
+
+    async def _roles_changes(self, event: Any, reason: str):
+        arg = self._cmd_args(event)
+        limit = 15
+        if str(arg).isdigit():
+            limit = max(1, min(50, int(arg)))
+        data = await self._api(
+            f"/api/roles/changes?limit={limit}"
+            f"&reason={urllib.parse.quote(reason)}")
+        if not isinstance(data, dict) or not data.get("ok"):
+            err = str((data or {}).get("error") or "") if isinstance(data, dict) else ""
+            return event.plain_result(f"取{reason}记录失败：{err or '控制台没返回'}")
+        items = [x for x in (data.get("items") or []) if isinstance(x, dict)]
+        if not items:
+            return event.plain_result(
+                f"还没有{reason}记录。\n"
+                f"（控制台每扫一次 ID 库就会比对绑定关系，发现变动才记一条）")
+        rows: List[tuple] = []
+        for x in items[:limit]:
+            gid = str(x.get("game") or "")
+            at = self._fmt_ts_hm(x.get("at"))
+            if reason == "换绑":
+                rows.append((gid, f"{x.get('old_seller') or '—'} → "
+                                   f"{x.get('now_seller') or '—'}　{at}"))
+            else:
+                rows.append((gid, f"「{x.get('old_role') or ''}」改名　{at}"))
+        title = f"{reason}记录（共 {data.get('count') or len(items)} 条）"
+        png = None
+        if self._image_reply_on():
+            try:
+                c = _card()
+                if c is not None and c.available():
+                    png = await asyncio.to_thread(
+                        c.render_card, title=title, rows=rows,
+                        **self._card_kwargs())
+            except Exception as e:
+                logger.warning(f"[出图] {reason}记录失败: {type(e).__name__}: {e}")
+        text = "\n".join(f"{k}：{v}" for k, v in rows)
+        return await self._reply(event, f"{title}\n{text}", png)
 
     @filter.command("查询")
     async def cmd_species(self, event: AstrMessageEvent):

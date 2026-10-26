@@ -4,7 +4,7 @@
 
 **输入精灵名字或「身高/体重」，查这是什么蛋**
 
-版本 `1.24.0`
+版本 `1.25.0`
 
 </div>
 
@@ -424,6 +424,19 @@ astrbot_plugin_lk_egg/
 ---
 
 ## 九、版本
+
+**v1.25.0**
+- **改用 `player/search`，一次拿全部字段**：以前只调 `player/card` + `home/info`，
+  漏了角色等级和离线时间。实测 `player/search` 的 `player_info` 里有：
+  `level 64`（角色等级，之前一直说拿不到）、`world_level`、`last_logout_time`、
+  `regist_date`、`gender`、`home_info`（家园数据内联）
+- 新增展示：**角色等级 / 世界等级 / 性别 / 上次离线（到分钟）**
+- **不再调慢接口**：家园数据从 `player_info.home_info` 直取，
+  砍掉要走任务队列的 `home/info` —— UID 查询从 3~5 秒降到 **2.7 秒**
+- **修正计数名称**：`collected_glass_pet_count` → **炫彩精灵数**、
+  `collected_shining_pet_count` → **异色精灵数**（以前叫玻璃/闪光，叫错了）
+- **新增命令**：`改绑记录` / `改名记录`（可带数字限条数，默认 15），
+  查绑定过的游戏角色有没有被换到别的助手 / 改过名
 
 **v1.24.0**
 - **同昵称不再只出第一个**：库里 23048 个昵称中有 **2657 个重名**
