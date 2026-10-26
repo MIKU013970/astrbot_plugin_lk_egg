@@ -73,6 +73,7 @@ def _card():
 
 _PLUGIN_DIR = Path(__file__).resolve().parent
 _PLUGIN_NAME = "astrbot_plugin_lk_egg"
+VERSION = "1.18.1"
 
 
 def _data_dir() -> Path:
@@ -135,7 +136,7 @@ def _save_state(state: Dict[str, Any]) -> None:
     "astrbot_plugin_lk_egg",
     "MIKU013970 & DeepSeek",
     "市集购买成功推送 + 新上架监控 + 黑白名单查询",
-    "1.18.0",
+    "1.18.1",
 )
 class LkMarketNotify(Star):
     def __init__(self, context: Context, config: AstrBotConfig = None):
@@ -1011,41 +1012,32 @@ class LkMarketNotify(Star):
     def _rocom_on(self) -> bool:
         return bool(str(self._cfg("rocom_api_key", "") or "").strip())
 
-    async def _rocom_fetch(self, game_id: str) -> Optional[Dict[str, Any]]:
-        """用游戏 UID 拉角色卡（atención：接口是排队式的，这里给 24 秒预算）。"""
-        key = str(self._cfg("rocom_api_key", "") or "").strip()
-        if not key or not game_id:
-            return None
-        base = str(self._cfg("rocom_api_base", "")
-                   or "https://wegame.shallow.ink").rstrip("/")
+    async def _rocom_call(self, path: str, game_id: str,
+                          key: str, base: str) -> Optional[Dict[str, Any]]:
+        """打一发 rocom 接口：POST 拿 task_id → 轮询 tasks/{id} → 返回 data 层。"""
         hdr = {"X-API-Key": key, "Content-Type": "application/json"}
-        url = base + "/api/v1/games/rocom/ingame/player/card"
+        url = base + path
         try:
             async with aiohttp.ClientSession(
                     timeout=aiohttp.ClientTimeout(total=12)) as s:
-                async with s.post(url, json={"uid": str(game_id), "wait_ms": 5000},
+                async with s.post(url, json={"uid": str(game_id), "wait_ms": 6000},
                                   headers=hdr) as r:
                     if r.status not in (200, 202):
-                        logger.warning(f"[角色资料] {game_id} → HTTP {r.status}")
+                        logger.warning(f"[角色资料] {path} {game_id} → HTTP {r.status}")
                         return None
-                    data = await r.json(content_type=None)
+                    env = await r.json(content_type=None)
         except Exception as e:
-            logger.warning(f"[角色资料] {game_id} 请求失败: {type(e).__name__}: {e}")
+            logger.warning(f"[角色资料] {path} 请求失败: {type(e).__name__}: {e}")
             return None
-
-        for _ in range(4):                       # 最多再等 ~20 秒
-            if not isinstance(data, dict):
-                return None
-            tid = str(data.get("task_id") or "")
-            st = str(data.get("status") or "").lower()
-            res = data.get("result") or data.get("data")
-            if isinstance(res, dict):
-                return res
-            if not tid:
-                return data if st not in ("queued", "pending", "running") else None
-            if st in ("failed", "error", "cancelled", "canceled"):
-                logger.warning(f"[角色资料] {game_id} 任务失败: {st}")
-                return None
+        if not isinstance(env, dict):
+            return None
+        data = env.get("data")
+        if not isinstance(data, dict):
+            data = env if env.get("code") in (0, None) else {}
+        tid = str(((data or {}).get("meta") or {}).get("task_id") or "")
+        if not tid:
+            return data or None
+        for _ in range(4):                      # 最多再等 ~20 秒
             await asyncio.sleep(5)
             try:
                 async with aiohttp.ClientSession(
@@ -1055,10 +1047,81 @@ class LkMarketNotify(Star):
                             headers=hdr) as r:
                         if r.status != 200:
                             return None
-                        data = await r.json(content_type=None)
+                        task = await r.json(content_type=None)
             except Exception:
                 return None
+            if not isinstance(task, dict):
+                return None
+            # 轮询返回同样是 {code, data, message} 信封，status/result 在 data 里
+            body = task.get("data") if isinstance(task.get("data"), dict) else task
+            st = str(body.get("status") or "").lower()
+            if st in ("failed", "error", "cancelled", "canceled"):
+                logger.warning(f"[角色资料] {path} 任务失败: {st}")
+                return None
+            res = body.get("result")
+            if isinstance(res, dict):
+                return res
         return None
+
+    async def _rocom_fetch(self, game_id: str) -> Optional[Dict[str, Any]]:
+        """用游戏 UID 拉角色资料。
+
+        实测结构（2026-10，用真 key 验证过）：
+          POST /ingame/player/card → data.register_timestamp / online / card_signature
+          POST /ingame/home/info   → task → result.home_info.friend_home_brief_info
+                                     {home_name, home_level, room_level,
+                                      home_comfort_level, home_experience}
+        角色等级那两个接口都没给（player/search 现在返回 502）。
+        """
+        key = str(self._cfg("rocom_api_key", "") or "").strip()
+        if not key or not game_id:
+            return None
+        base = str(self._cfg("rocom_api_base", "")
+                   or "https://wegame.shallow.ink").rstrip("/")
+        out: Dict[str, Any] = {}
+        card = await self._rocom_call("/api/v1/games/rocom/ingame/player/card",
+                                      game_id, key, base)
+        if card:
+            out["card"] = card
+        home = await self._rocom_call("/api/v1/games/rocom/ingame/home/info",
+                                      game_id, key, base)
+        if home:
+            hi = home.get("home_info") if isinstance(home.get("home_info"), dict) else {}
+            brief = (hi.get("friend_home_brief_info")
+                     or hi.get("home_brief_info") or {})
+            if brief:
+                out["home"] = brief
+        return out or None
+
+    @staticmethod
+    def _rocom_fields(payload: Any) -> List[tuple]:
+        """把采集到的资料整理成卡片行。"""
+        p = payload if isinstance(payload, dict) else {}
+        card = p.get("card") if isinstance(p.get("card"), dict) else {}
+        home = p.get("home") if isinstance(p.get("home"), dict) else {}
+        # 兼容旧结构
+        pi = p.get("player_info") if isinstance(p.get("player_info"), dict) else {}
+        hi2 = p.get("home_info") if isinstance(p.get("home_info"), dict) else {}
+        out: List[tuple] = []
+
+        def add(label: str, val: Any, ts: bool = False) -> None:
+            if val in (None, "", []):
+                return
+            out.append((label, LkMarketNotify._fmt_ts(val) if ts else str(val)))
+
+        add("等级", pi.get("level"))
+        add("注册时间", card.get("register_timestamp") or pi.get("regist_date"), ts=True)
+        online = card.get("online")
+        if isinstance(online, bool):
+            out.append(("在线", "在线" if online else "离线"))
+        sig = (card.get("player_card_brief_info") or {}).get("card_signature")
+        add("个性签名", sig)
+        add("家园名称", home.get("home_name") or hi2.get("home_name"))
+        add("家园等级", home.get("home_level") or hi2.get("home_level"))
+        add("房间等级", home.get("room_level") or hi2.get("room_level"))
+        add("家园舒适度", home.get("home_comfort_level") or hi2.get("home_comfort_level"))
+        add("家园好感/经验", home.get("home_experience") or hi2.get("home_experience"))
+        return out
 
     async def _rocom_maybe_refresh(self, data: Dict[str, Any]) -> None:
         """有 key 且缓存过期时，后台拉一次（不等结果）。"""
@@ -1123,6 +1186,7 @@ class LkMarketNotify(Star):
         m = data.get("merchant") or {}
         seller = str(data.get("seller") or m.get("seller") or "—")
         rows: List[tuple] = [("助手ID", seller)]
+        skip_home = False
 
         roles = [r for r in (data.get("roles") or []) if isinstance(r, dict)]
         first = True
@@ -1137,19 +1201,24 @@ class LkMarketNotify(Star):
         if first:                      # 一个都没有
             rows.append(("游戏UID", "未采集"))
         elif self._rocom_on() and roles:
-            rows.extend(self._rocom_rows(
-                str((roles[0] or {}).get("gameId") or "")))
+            extra = self._rocom_rows(
+                str((roles[0] or {}).get("gameId") or ""))
+            rows.extend(extra)
+            # rocom 拿到的是完整的家园数据（家园等级 + 房间等级），
+            # 就别再用官方接口那个只有房间等级的旧行了
+            if any("家园等级" in str(k) for k, _v in extra):
+                skip_home = True
 
         if m.get("title"):
             rows.append(("称号", str(m["title"])))
         home = data.get("home") or {}
-        if home.get("roomLevel") not in (None, ""):
+        if home.get("roomLevel") not in (None, "") and not skip_home:
             txt = str(home["roomLevel"])
             if home.get("residents") not in (None, ""):
                 txt += f" 级 · 家园 {home['residents']} 件"
             else:
                 txt += " 级"
-            rows.append(("家园等级", txt))
+            rows.append(("家园柜等级", txt))
 
         mark_txt = "无"
         if mark:
@@ -1527,6 +1596,7 @@ class LkMarketNotify(Star):
         "蛋推送绑定 / 解绑 / 测试 / 状态 / 重置\n"
         "—————— 其它 ——————\n"
         "帮助 / 菜单              看这张卡片\n"
+        "诊断                     管理员用：查图片链路哪里挂了\n"
         "回复默认都是图片         配置里关掉 reply_as_image 就发文字\n"
         "（提示：直接发精灵名字的功能已关闭，请用「查询 名字」）\n"
     )
@@ -2499,6 +2569,47 @@ class LkMarketNotify(Star):
             p = c.icon_path("egg", q)
             icons = [p] if p else None
         return await self._say(event, "\n".join(lines2) or f"{q}：暂无成交记录", icons)
+
+    # ---------------------------------------------------------------- 自诊断
+    @filter.command("诊断")
+    async def cmd_diag(self, event: AstrMessageEvent):
+        """诊断 看图片链路哪里挂了"""
+        if not self._is_admin(event):
+            yield await self._say(event, "只有管理员能用「诊断」")
+            return
+        c = _card()
+        lines = [f"插件版本：{self.VERSION}"]
+        lines.append(f"出图开关 reply_as_image：{self._cfg('reply_as_image', True)}")
+        lines.append(f"实际出图：{'是' if self._image_reply_on() else '否'}")
+        lines.append(f"card.py 加载：{'成功' if c is not None else '失败（看日志 [出图] card.py 加载失败）'}")
+        if c is not None:
+            lines.append(f"Pillow：{'可用' if c.available() else '缺失（要 pip install pillow）'}")
+            try:
+                f = c.find_font(str(self._cfg("card_font_path", "") or ""))
+                lines.append(f"中文字体：{f or '找不到（会退回文字）'}")
+            except Exception as e:
+                lines.append(f"中文字体：探测失败 {type(e).__name__}")
+            try:
+                lines.append(f"图标库：{'有' if c.has_icons() else '缺失（icons/ 没装上）'}")
+            except Exception:
+                lines.append("图标库：探测失败")
+        kw = self._card_kwargs()
+        lines.append(f"卡片参数：宽 {kw.get('width')} · 字号 {kw.get('font_size')}")
+        lines.append(f"缓存里现有：{len(_CARD_CACHE)} 张")
+        try:
+            from pathlib import Path as _P
+            has_icons_dir = (_P(__file__).resolve().parent / "icons").is_dir()
+            lines.append(f"icons/ 目录：{'在' if has_icons_dir else '不在'}")
+        except Exception:
+            pass
+        # 真渲一张试试
+        try:
+            png = await asyncio.to_thread(self._text_card, "诊断：这张图能出来就说明渲染没问题",
+                                          None)
+            lines.append(f"试渲一张：{'OK %d 字节' % len(png) if png else '失败'}")
+        except Exception as e:
+            lines.append(f"试渲一张：抛异常 {type(e).__name__}: {str(e)[:60]}")
+        yield await self._say(event, "\n".join(lines))
 
     @filter.command("查询")
     async def cmd_species(self, event: AstrMessageEvent):
