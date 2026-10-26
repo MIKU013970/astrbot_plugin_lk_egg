@@ -75,7 +75,7 @@ def _card():
 
 _PLUGIN_DIR = Path(__file__).resolve().parent
 _PLUGIN_NAME = "astrbot_plugin_lk_egg"
-VERSION = "1.28.0"
+VERSION = "1.29.0"
 
 
 def _data_dir() -> Path:
@@ -138,7 +138,7 @@ def _save_state(state: Dict[str, Any]) -> None:
     "astrbot_plugin_lk_egg",
     "MIKU013970 & DeepSeek",
     "市集购买成功推送 + 新上架监控 + 黑白名单查询",
-    "1.28.0",
+    "1.29.0",
 )
 class LkMarketNotify(Star):
     def __init__(self, context: Context, config: AstrBotConfig = None):
@@ -743,6 +743,36 @@ class LkMarketNotify(Star):
             rows=rows, boxes=boxes, table=table, tiles=tiles,
             head_icons=self._spe_icons(rec, v), **self._card_kwargs())
 
+    def _icon_grid(self, paths: List[str], cell: int = 34) -> Optional[str]:
+        """把最多 4 张图标拼成 2×2 一张小图（渲染器每个结果只吃一个图标路径）。
+
+        排列按要求的顺序：普通一阶段 · 普通精灵蛋 · 异色一阶段 · 异色精灵蛋。
+        """
+        ps = [p for p in (paths or []) if p]
+        if not ps:
+            return None
+        if len(ps) == 1:
+            return ps[0]
+        try:
+            from PIL import Image as _I
+            canvas = _I.new("RGBA", (cell * 2, cell * 2), (0, 0, 0, 0))
+            for i, p in enumerate(ps[:4]):
+                im = _I.open(p).convert("RGBA")
+                im.thumbnail((cell, cell), _I.LANCZOS)
+                x = (i % 2) * cell + (cell - im.width) // 2
+                y = (i // 2) * cell + (cell - im.height) // 2
+                canvas.paste(im, (x, y), im)
+            import tempfile
+            fp = Path(tempfile.gettempdir()) / "lk_egg_cards" / (
+                "grid-" + hashlib.md5(str(ps).encode()).hexdigest()[:12] + ".png")
+            fp.parent.mkdir(parents=True, exist_ok=True)
+            if not fp.is_file():
+                canvas.save(fp, "PNG", optimize=True)
+            return str(fp)
+        except Exception as e:
+            logger.warning(f"[拼图] 失败: {type(e).__name__}: {e}")
+            return ps[0]
+
     def _identify_card(self, h: float, w: float,
                        hits: Optional[List[Dict[str, Any]]] = None) -> Optional[bytes]:
         """身高体重查蛋的结果卡。"""
@@ -786,7 +816,22 @@ class LkMarketNotify(Star):
             if hw:
                 subs.append(hw)
             form0 = (forms[0] if forms else "") or str(x.get("形态简称") or "")
-            hs.append((c.icon_path("pet", nm, form0), f"{i}. {nm}", head_v, subs))
+            # 顺序：普通一阶段 → 普通精灵蛋 → 异色一阶段 → 异色精灵蛋
+            egg_nm = str(x.get("蛋名") or "")
+            four = [c.icon_path("pet", nm, form0), c.icon_path("egg", egg_nm, form0)]
+            shiny_pet = c.icon_path("shiny", nm, form0)
+            if shiny_pet:
+                four.append(shiny_pet)
+                # 异色蛋：蛋名带「异色」的那种（活动蛋）
+                if "异色" not in egg_nm:
+                    disp = self._find_species(nm)
+                    for en, _fs in (self._distinct_eggs(disp) if disp else []):
+                        if "异色" in en:
+                            four.append(c.icon_path("egg", en, form0))
+                            break
+                else:
+                    four.append(c.icon_path("egg", egg_nm, form0))
+            hs.append((self._icon_grid(four), f"{i}. {nm}", head_v, subs))
         return c.render_card(
             title="身高体重查蛋",
             subtitle=f"身高 {h:g} cm · 体重 {w / 1000:.3f} kg",
