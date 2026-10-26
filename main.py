@@ -133,7 +133,7 @@ def _save_state(state: Dict[str, Any]) -> None:
     "astrbot_plugin_lk_egg",
     "MIKU013970 & DeepSeek",
     "市集购买成功推送 + 新上架监控 + 黑白名单查询",
-    "1.15.2",
+    "1.16.0",
 )
 class LkMarketNotify(Star):
     def __init__(self, context: Context, config: AstrBotConfig = None):
@@ -759,6 +759,53 @@ class LkMarketNotify(Star):
             hits=(hs or None),
             **self._card_kwargs())
 
+    async def _fetch_bytes(self, path: str, timeout: float = 8.0):
+        """从控制台取二进制（头像用）。"""
+        try:
+            sess = await self._session_get()
+            async with sess.get(self.api_base + path,
+                                timeout=aiohttp.ClientTimeout(total=timeout)) as resp:
+                if resp.status != 200:
+                    logger.warning(f"[头像] {path[:40]} → HTTP {resp.status}")
+                    return None
+                return await resp.read()
+        except Exception as e:
+            logger.warning(f"[头像] 取失败: {type(e).__name__}: {e}")
+            return None
+
+    async def _avatar_path(self, seller: str, url: str) -> Optional[str]:
+        """下载平台头像到临时文件（每个商家缓存 24 小时），返回本地路径。
+
+        走控制台的 /api/avatar?u=...（它带磁盘缓存，浏览器/插件直连云端头像是会失败的）。
+        """
+        import tempfile
+        u = str(url or "").strip()
+        if not u:
+            return None
+        d = Path(tempfile.gettempdir()) / "lk_egg_cards"
+        try:
+            d.mkdir(parents=True, exist_ok=True)
+        except Exception:
+            d = Path(tempfile.gettempdir())
+        tag = re.sub(r"[^A-Za-z0-9]+", "_", str(seller or "x"))[:24]
+        fp = d / f"avatar-{tag}.img"
+        try:
+            if fp.is_file() and fp.stat().st_size > 200 \
+                    and time.time() - fp.stat().st_mtime < 86400:
+                return str(fp)
+        except Exception:
+            pass
+        data = await self._fetch_bytes(
+            "/api/avatar?u=" + urllib.parse.quote(u, safe=""))
+        if not data or len(data) < 200:
+            return None
+        try:
+            fp.write_bytes(data)
+            return str(fp)
+        except Exception as e:
+            logger.warning(f"[头像] 写盘失败: {type(e).__name__}: {e}")
+            return None
+
     def _temp_png(self, png: bytes) -> str:
         """落到临时文件（协议端要按路径读），顺手清掉 1 小时前的旧图。"""
         import tempfile
@@ -896,32 +943,73 @@ class LkMarketNotify(Star):
             out.append((c.icon_path("egg", g["name"]), [str(g["name"]), cap, medal]))
         return out
 
-    def _merchant_card(self, data: Dict[str, Any],
-                       mark: Optional[Dict[str, Any]] = None) -> Optional[bytes]:
-        """商家卡：统计 + 货架按精灵分类的蛋图网格。"""
-        c = _card()
-        if c is None or not c.available():
-            return None
+    def _merchant_rows(self, data: Dict[str, Any],
+                       mark: Optional[Dict[str, Any]] = None) -> List[tuple]:
+        """商家卡的行。
+
+        助手ID 只在表格里出现一次（以前标题下面还挂一遍，重复了）。
+        游戏UID（含游戏内昵称）来自控制台 roles —— 是 getEggMarketMerchantHome
+        里的 roles，一个助手ID 可以绑多个游戏角色。
+        """
         m = data.get("merchant") or {}
-        seller = data.get("seller") or m.get("seller") or "—"
-        nick = m.get("nickname") or m.get("displayName") or seller
-        items = data.get("listings") or []
-        listed = m.get("listed")
-        listed = len(items) if listed in (None, "", 0) and items else listed
+        seller = str(data.get("seller") or m.get("seller") or "—")
+        rows: List[tuple] = [("助手ID", seller)]
+
+        roles = [r for r in (data.get("roles") or []) if isinstance(r, dict)]
+        first = True
+        for r in roles[:6]:
+            gid = str(r.get("gameId") or "").strip()
+            nm = str(r.get("name") or "").strip()
+            if not gid and not nm:
+                continue
+            txt = f"{gid} · {nm}".strip(" ·") if gid else nm
+            rows.append(("游戏UID" if first else "", txt))
+            first = False
+        if first:                      # 一个都没有
+            rows.append(("游戏UID", "未采集"))
+
+        if m.get("title"):
+            rows.append(("称号", str(m["title"])))
+        home = data.get("home") or {}
+        if home.get("roomLevel") not in (None, ""):
+            txt = str(home["roomLevel"])
+            if home.get("residents") not in (None, ""):
+                txt += f" 级 · 家园 {home['residents']} 件"
+            else:
+                txt += " 级"
+            rows.append(("家园等级", txt))
+
         mark_txt = "无"
         if mark:
             mark_txt = "黑名单" if mark.get("t") == "黑" else "白名单"
             if mark.get("note"):
                 mark_txt += f" · {mark['note']}"
-        rows = [("助手ID", seller),
-                ("标记", mark_txt),
-                ("上架", listed if listed is not None else 0),
-                ("售出", m.get("sold") or 0),
-                ("好评", m.get("likes") or 0),
-                ("差评", m.get("dislikes") or 0)]
-        tiles = self._shelf_tiles(items)
-        return c.render_card(title=nick, subtitle=str(seller), rows=rows,
+        rows.append(("标记", mark_txt))
+
+        items = data.get("listings") or []
+        listed = m.get("listed")
+        if listed in (None, "", 0) and items:
+            listed = len(items)
+        rows.append(("数据", f"上架 {listed if listed is not None else 0}"
+                             f" · 售出 {m.get('sold') or 0}"
+                             f" · 好评 {m.get('likes') or 0}"
+                             f" · 差评 {m.get('dislikes') or 0}"))
+        return rows
+
+    def _merchant_card(self, data: Dict[str, Any],
+                       mark: Optional[Dict[str, Any]] = None,
+                       avatar: Optional[str] = None) -> Optional[bytes]:
+        """商家卡：头像 + 基本信息 + 货架按精灵分类的蛋图网格。"""
+        c = _card()
+        if c is None or not c.available():
+            return None
+        m = data.get("merchant") or {}
+        seller = str(data.get("seller") or m.get("seller") or "—")
+        nick = m.get("nickname") or m.get("displayName") or seller
+        tiles = self._shelf_tiles(data.get("listings") or [])
+        return c.render_card(title=str(nick), rows=self._merchant_rows(data, mark),
                              tiles=(tiles or None), tiles_per_row=4,
+                             head_icons=([avatar] if avatar else None),
                              **self._card_kwargs())
 
     def _text_card(self, text: str, icons=None) -> Optional[bytes]:
@@ -2014,7 +2102,10 @@ class LkMarketNotify(Star):
             png = None
             if self._image_reply_on():
                 try:
-                    png = await asyncio.to_thread(self._merchant_card, data, mark)
+                    avatar = await self._avatar_path(
+                        str(data.get("seller") or ""),
+                        (data.get("merchant") or {}).get("avatar") or "")
+                    png = await asyncio.to_thread(self._merchant_card, data, mark, avatar)
                 except Exception as e:
                     logger.warning(f"[出图] 商家卡失败: {type(e).__name__}: {e}")
             return await self._reply(event, text, png)
