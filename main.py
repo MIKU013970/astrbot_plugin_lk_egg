@@ -133,7 +133,7 @@ def _save_state(state: Dict[str, Any]) -> None:
     "astrbot_plugin_lk_egg",
     "MIKU013970 & DeepSeek",
     "市集购买成功推送 + 新上架监控 + 黑白名单查询",
-    "1.16.0",
+    "1.17.0",
 )
 class LkMarketNotify(Star):
     def __init__(self, context: Context, config: AstrBotConfig = None):
@@ -551,7 +551,7 @@ class LkMarketNotify(Star):
         lines = data.get("lines") or []
         return [str(x) for x in lines if str(x).strip()][:8]
 
-    async def _species_payload(self, rec: Dict[str, Any]):
+    async def _species_payload(self, rec: Dict[str, Any], query: str = ""):
         """图鉴正文 + 行情；返回 (文字版, 图片版或 None)。"""
         text = self._render_species(rec)
         lines: List[str] = []
@@ -567,7 +567,7 @@ class LkMarketNotify(Star):
         png = None
         if self._image_reply_on():
             try:
-                png = await asyncio.to_thread(self._species_card, rec, items)
+                png = await asyncio.to_thread(self._species_card, rec, items, query)
             except Exception as e:
                 logger.warning(f"[出图] 图鉴卡失败，退回文字: {type(e).__name__}: {e}")
         return text, png
@@ -668,29 +668,29 @@ class LkMarketNotify(Star):
         return bool(c is not None and c.available())
 
     def _species_card(self, rec: Dict[str, Any],
-                      items: Optional[List[Dict[str, Any]]] = None) -> Optional[bytes]:
-        """图鉴卡。任何异常都往上抛，由 _species_payload 退回文字。"""
+                      items: Optional[List[Dict[str, Any]]] = None,
+                      query: str = "") -> Optional[bytes]:
+        """图鉴卡。任何异常都往上抛，由 _species_payload 退回文字。
+
+        query 用来在多形态里挑对形态（比如查「鸭吉吉的蛋蛋」要显示「燃了鸭」）。
+        """
         c = _card()
         if c is None or not c.available():
             return None
         variants = rec.get("variants") or [rec]
-        v = variants[0] if variants else {}
-        rows = [
-            ("蛋名", v.get("蛋名") or rec.get("蛋名") or ""),
-            ("蛋组", rec.get("蛋组") or ""),
-            ("公母", rec.get("公母") or v.get("公母") or "未知"),
-            ("进化链", rec.get("进化链") or ""),
-            ("身高区间", v.get("身高区间") or ""),
-            ("体重区间", v.get("体重区间") or ""),
-        ]
-        boxes = [
-            ("小块头",
-             f"过线 {v.get('小块头过线值') or '—'}  极限 {v.get('小块头极限值') or '—'}",
-             (78, 138, 186)),
-            ("大块头",
-             f"过线 {v.get('大块头过线值') or '—'}  极限 {v.get('大块头极限值') or '—'}",
-             (194, 88, 40)),
-        ]
+        v = self._pick_variant(rec, query) if query else (variants[0] if variants else {})
+        dex2 = v.get("图鉴编号") or rec.get("图鉴编号") or ""
+        rows = self._species_rows(rec, dex2, query)
+        boxes = None
+        if len(variants) <= 1:
+            boxes = [
+                ("小块头",
+                 f"过线 {v.get('小块头过线值') or '—'}  极限 {v.get('小块头极限值') or '—'}",
+                 (78, 138, 186)),
+                ("大块头",
+                 f"过线 {v.get('大块头过线值') or '—'}  极限 {v.get('大块头极限值') or '—'}",
+                 (194, 88, 40)),
+            ]
         table = None
         if items:
             table = {
@@ -734,6 +734,7 @@ class LkMarketNotify(Star):
                 "sex": x.get("公母"),
                 "hw": f"{x.get('身高区间')} · {x.get('体重区间')}",
             })
+        hits = self._merge_hits(hits)
         hs = []
         for i, x in enumerate(hits[:6], 1):
             nm = str(x.get("精灵") or "")
@@ -741,6 +742,9 @@ class LkMarketNotify(Star):
             head_v = ((f"区间 {bins} · " if bins not in (None, "", 0) else "")
                       + str(self._size_of(h, w, x)))
             subs = []
+            forms = [f for f in (x.get("forms") or []) if f]
+            if len(forms) > 1:
+                subs.append("形态 " + " / ".join(forms))
             sub = " · ".join(y for y in (
                 (f"蛋名 {x.get('蛋名')}" if x.get("蛋名") else ""),
                 str(x.get("蛋组") or ""), str(x.get("公母") or "")) if y)
@@ -1226,6 +1230,8 @@ class LkMarketNotify(Star):
                 hp = (h - hl) / (hh - hl) if hh > hl else 0.5
                 wp = (w - wl) / (wh - wl) if wh > wl else 0.5
                 out.append({
+                    "形态": v.get("形态") or "",
+                    "形态简称": v.get("形态简称") or "",
                     "area": (hh - hl) * (wh - wl) / 1000,
                     "公母": rec.get("公母") or v.get("公母") or "未知",
                     "精灵": rec.get("精灵"), "蛋名": v.get("蛋名"),
@@ -2204,6 +2210,76 @@ class LkMarketNotify(Star):
             pass
         return True
 
+    def _merge_hits(self, hits) -> List[Dict[str, Any]]:
+        """同种 + 同身高区间 + 同体重区间的多个形态合成一条。
+
+        海枝枝有 4 个形态（碧蓝珊瑚 / 杏黄百合 / 洋红沙丁 / 翠绿纶布），
+        数值完全一样，只有形态名不同 —— 不合并就会在查蛋结果里出现 4 行
+        看着一模一样的条目。合并后形态名收进 forms 里一起展示。
+        """
+        out: List[Dict[str, Any]] = []
+        idx: Dict[tuple, Dict[str, Any]] = {}
+        for h in (hits or []):
+            k = (str(h.get("精灵") or ""),
+                 str(h.get("身高区间") or ""),
+                 str(h.get("体重区间") or ""))
+            form = str(h.get("形态简称") or h.get("形态") or "").strip()
+            g = idx.get(k)
+            if g is None:
+                g = dict(h)
+                g["forms"] = [form] if form else []
+                idx[k] = g
+                out.append(g)
+            elif form and form not in g["forms"]:
+                g["forms"].append(form)
+        return out
+
+    def _pick_variant(self, rec: Dict[str, Any], query: str) -> Dict[str, Any]:
+        """多形态精灵：按查询词挑对应形态。
+
+        有的蛋名不是默认形态的（比如「鸭吉吉的蛋蛋」对应「燃了鸭」），
+        查这个蛋名时要展示那个形态，而不是第一个。
+        """
+        variants = rec.get("variants") or [rec]
+        q = str(query or "").strip()
+        if q:
+            for cand in variants:
+                for f in ("蛋名", "形态", "形态简称"):
+                    if str(cand.get(f) or "").strip() == q:
+                        return cand
+            for cand in variants:
+                for f in ("蛋名", "形态", "形态简称"):
+                    s = str(cand.get(f) or "").strip()
+                    if s and q and (q in s or s in q):
+                        return cand
+        return variants[0] if variants else rec
+
+    def _species_rows(self, rec: Dict[str, Any], dex: str = "",
+                      query: str = "") -> List[tuple]:
+        """图鉴卡的行。多形态会列全部形态（以前只显示第一个）。"""
+        variants = rec.get("variants") or [rec]
+        rows: List[tuple] = [("蛋组", rec.get("蛋组") or ""),
+                             ("公母", rec.get("公母") or "未知"),
+                             ("进化链", rec.get("进化链") or "")]
+        if len(variants) <= 1:
+            v = variants[0] if variants else {}
+            rows += [("蛋名", v.get("蛋名") or rec.get("蛋名") or ""),
+                     ("身高区间", v.get("身高区间") or ""),
+                     ("体重区间", v.get("体重区间") or "")]
+            return rows
+        rows.append(("形态", f"{len(variants)} 种"))
+        default_egg = str(variants[0].get("蛋名") or "")
+        for i, cand in enumerate(variants[:8], 1):
+            nm = str(cand.get("形态简称") or cand.get("形态") or "")
+            bins = cand.get("区间数")
+            rows.append((f"{i}. {nm}",
+                         (f"区间 {bins} · " if bins not in (None, "", 0) else "")
+                         + str(cand.get("体重区间") or "")))
+            egg = str(cand.get("蛋名") or "")
+            if egg and egg != default_egg:
+                rows.append(("", f"蛋名 {egg}（和其它形态不同）"))
+        return rows
+
     async def _species_result(self, event: Any, arg: str, risky: bool = False):
         """精灵查询的统一出口。返回 None 表示「决定不吭声」。"""
         q = str(arg or "").strip()
@@ -2228,7 +2304,7 @@ class LkMarketNotify(Star):
                 event,
                 f"图鉴里没有「{q}」。\n也可以发「身高/体重」，"
                 f"比如 34/3.617 或 0.34 3.617")
-        text, png = await self._species_payload(rec)
+        text, png = await self._species_payload(rec, q)
         return await self._reply(event, text, png)
 
     async def _recent_reply(self, event: Any, name: str):
