@@ -75,7 +75,7 @@ def _card():
 
 _PLUGIN_DIR = Path(__file__).resolve().parent
 _PLUGIN_NAME = "astrbot_plugin_lk_egg"
-VERSION = "1.25.2"
+VERSION = "1.26.0"
 
 
 def _data_dir() -> Path:
@@ -138,7 +138,7 @@ def _save_state(state: Dict[str, Any]) -> None:
     "astrbot_plugin_lk_egg",
     "MIKU013970 & DeepSeek",
     "市集购买成功推送 + 新上架监控 + 黑白名单查询",
-    "1.25.2",
+    "1.26.0",
 )
 class LkMarketNotify(Star):
     def __init__(self, context: Context, config: AstrBotConfig = None):
@@ -1420,6 +1420,20 @@ class LkMarketNotify(Star):
                     continue
                 rows.append(("同名候选" if first else "", self._cand_text(c)))
                 first = False
+
+        # 上次采集 / 上次在助手上操作（数据变动倒推）
+        _seen = data.get("last_seen")
+        if _seen:
+            rows.append(("上次采集", self._fmt_ts_hm(_seen)))
+        _act = [a for a in (data.get("activity") or []) if isinstance(a, dict)]
+        NAMES = {"sold": "售出", "likes": "好评", "followers": "粉丝",
+                 "listed": "在售", "dislikes": "差评"}
+        if _act:
+            last = _act[-1]
+            rows.append(("上次变动",
+                         f"{NAMES.get(str(last.get('field')), last.get('field'))} "
+                         f"{last.get('from')}→{last.get('to')}　"
+                         f"{self._fmt_ts_hm(last.get('at'))}"))
 
         # 这个商家绑过的游戏ID 有没有换绑 / 改名
         for ch in [c for c in (data.get("uid_changes") or []) if isinstance(c, dict)][:6]:
