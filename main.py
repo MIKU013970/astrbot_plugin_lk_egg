@@ -75,7 +75,7 @@ def _card():
 
 _PLUGIN_DIR = Path(__file__).resolve().parent
 _PLUGIN_NAME = "astrbot_plugin_lk_egg"
-VERSION = "1.32.1"
+VERSION = "1.33.0"
 
 
 def _data_dir() -> Path:
@@ -138,7 +138,7 @@ def _save_state(state: Dict[str, Any]) -> None:
     "astrbot_plugin_lk_egg",
     "MIKU013970 & DeepSeek",
     "市集购买成功推送 + 新上架监控 + 黑白名单查询",
-    "1.32.1",
+    "1.33.0",
 )
 class LkMarketNotify(Star):
     def __init__(self, context: Context, config: AstrBotConfig = None):
@@ -728,8 +728,20 @@ class LkMarketNotify(Star):
             }
         dex = v.get("图鉴编号") or rec.get("图鉴编号") or ""
         bins = v.get("区间数") if len(variants) == 1 else None
+        pet_name = str(rec.get("精灵") or "")
         tiles = None
-        if len(eggs) > 1:
+        if len(variants) > 1:
+            # 多形态：每个形态一格，格子里是「该形态的精灵图 + 该形态的蛋图」拼起来，
+            # 下面写形态名和蛋名 —— 这样每个形态都看得见，不只默认那一个
+            tiles = []
+            for _v in variants[:12]:
+                _f = str(_v.get("形态简称") or _v.get("形态") or "")
+                _pair = self._icon_grid([
+                    c.icon_path("pet", pet_name, _f),
+                    c.icon_path("egg", str(_v.get("蛋名") or ""), _f)])
+                _cap = [x for x in (_f, str(_v.get("蛋名") or "")) if x]
+                tiles.append((_pair, _cap))
+        elif len(eggs) > 1:
             # 多种蛋：每种蛋一格，写清蛋名和它对应的形态
             tiles = []
             for egg_name, eforms in eggs:
