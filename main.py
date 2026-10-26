@@ -75,7 +75,7 @@ def _card():
 
 _PLUGIN_DIR = Path(__file__).resolve().parent
 _PLUGIN_NAME = "astrbot_plugin_lk_egg"
-VERSION = "1.23.0"
+VERSION = "1.24.0"
 
 
 def _data_dir() -> Path:
@@ -138,7 +138,7 @@ def _save_state(state: Dict[str, Any]) -> None:
     "astrbot_plugin_lk_egg",
     "MIKU013970 & DeepSeek",
     "市集购买成功推送 + 新上架监控 + 黑白名单查询",
-    "1.23.0",
+    "1.24.0",
 )
 class LkMarketNotify(Star):
     def __init__(self, context: Context, config: AstrBotConfig = None):
@@ -1346,6 +1346,37 @@ class LkMarketNotify(Star):
                              f" · 售出 {m.get('sold') or 0}"
                              f" · 好评 {m.get('likes') or 0}"
                              f" · 差评 {m.get('dislikes') or 0}"))
+
+        # 同一个昵称可能对应好多个助手（「访客」有 5000 多个），把候选都列出来
+        cands = [c for c in (data.get("candidates") or []) if isinstance(c, dict)]
+        if len(cands) > 1:
+            first = True
+            for c in cands[:8]:
+                cid = str(c.get("seller") or "")
+                if cid and cid == seller:
+                    continue
+                nm = str(c.get("nickname") or "")
+                lst = c.get("listed")
+                role = str(c.get("role") or "")
+                txt = f"{cid} · {nm}".strip(" ·")
+                if role:
+                    txt += f" · {role}"
+                if lst not in (None, ""):
+                    txt += f" · 在售 {lst}"
+                rows.append(("同名候选" if first else "", txt))
+                first = False
+
+        # 这个商家绑过的游戏ID 有没有换绑 / 改名
+        for ch in [c for c in (data.get("uid_changes") or []) if isinstance(c, dict)][:6]:
+            reason = str(ch.get("reason") or "")
+            gid = str(ch.get("game") or "")
+            now_sid = str(ch.get("now_seller") or "")
+            old_sid = str(ch.get("old_seller") or "")
+            if reason == "换绑":
+                txt = f"{gid} {old_sid} → {now_sid or '—'}"
+            else:
+                txt = f"{gid} 「{ch.get('old_role') or ''}」改名"
+            rows.append(("改绑记录" if reason == "换绑" else "改名记录", txt))
         return rows
 
     def _merchant_card(self, data: Dict[str, Any],
@@ -2461,6 +2492,25 @@ class LkMarketNotify(Star):
             mark = self._marks().get((data.get("seller") or "").upper())
             out = self._merchant_block(data, mark)
             text = out + ("\n" + note if note else "")
+            _cands = [c for c in (data.get("candidates") or []) if isinstance(c, dict)]
+            if len(_cands) > 1:
+                others = [c for c in _cands[:8]
+                          if str(c.get("seller") or "") != (data.get("seller") or "")]
+                if others:
+                    text += "\n———— 同名候选（共 %d 个）————" % len(_cands)
+                    for c in others:
+                        text += (f"\n· {c.get('seller')} · {c.get('nickname') or ''}"
+                                 + (f" · 在售 {c.get('listed')}"
+                                    if c.get("listed") not in (None, "") else ""))
+            _chs = [c for c in (data.get("uid_changes") or []) if isinstance(c, dict)][:6]
+            if _chs:
+                text += "\n———— 绑定变更 ——​——"
+                for ch in _chs:
+                    if ch.get("reason") == "换绑":
+                        text += (f"\n· 换绑 {ch.get('game')} "
+                                 f"{ch.get('old_seller')} → {ch.get('now_seller') or '—'}")
+                    else:
+                        text += f"\n· 改名 {ch.get('game')} 「{ch.get('old_role') or ''}」"
             png = None
             if self._image_reply_on():
                 try:
