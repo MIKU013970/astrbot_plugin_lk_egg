@@ -75,7 +75,7 @@ def _card():
 
 _PLUGIN_DIR = Path(__file__).resolve().parent
 _PLUGIN_NAME = "astrbot_plugin_lk_egg"
-VERSION = "1.26.1"
+VERSION = "1.27.0"
 
 
 def _data_dir() -> Path:
@@ -138,7 +138,7 @@ def _save_state(state: Dict[str, Any]) -> None:
     "astrbot_plugin_lk_egg",
     "MIKU013970 & DeepSeek",
     "市集购买成功推送 + 新上架监控 + 黑白名单查询",
-    "1.26.1",
+    "1.27.0",
 )
 class LkMarketNotify(Star):
     def __init__(self, context: Context, config: AstrBotConfig = None):
@@ -629,8 +629,10 @@ class LkMarketNotify(Star):
             else:
                 out.append(f"身高区间：{v['身高区间']}")
                 out.append(f"体重区间：{v['体重区间']}")
-                out.append(f"小块头：过线 {v['小块头过线值']} · 极限 {v['小块头极限值']}")
-                out.append(f"大块头：过线 {v['大块头过线值']} · 极限 {v['大块头极限值']}")
+                if v.get("小块头过线值") is not None:
+                    out.append(f"小块头：过线 {v['小块头过线值']} · 极限 {v['小块头极限值']}")
+                if v.get("大块头过线值") is not None:
+                    out.append(f"大块头：过线 {v['大块头过线值']} · 极限 {v['大块头极限值']}")
             return out
 
         def body_lines(v, prefix="") -> list:
@@ -1946,6 +1948,22 @@ class LkMarketNotify(Star):
         rec = self._set_mark(sid, kind, note, by)
         yield await self._say(event, await self._describe_mark(sid, rec))
 
+    @filter.regex(r"^\s*[/#]?\s*标\s*[Zz]\d{5,12}\s*(黑|白)(\s+.*)?$")
+    async def on_mark_loose(self, event: AstrMessageEvent):
+        """兜底入口：不带斜线的「标 Z10026057 黑 备注」。"""
+        if not self._sp_dedupe(event):
+            return
+        m = self._MARK_LOOSE_RE.match(
+            str(getattr(event, "message_str", "") or "").lstrip("/#").strip())
+        if not m:
+            return
+        sid = m.group(1).upper()
+        kind = m.group(2)
+        note = (m.group(3) or "").strip()
+        by = str(getattr(event, "unified_msg_origin", "") or "")
+        rec = self._set_mark(sid, kind, note, by)
+        yield await self._say(event, await self._describe_mark(sid, rec))
+
     @filter.command("取消标")
     async def cmd_unmark(self, event: AstrMessageEvent):
         args = self._cmd_parts(event)
@@ -2509,6 +2527,9 @@ class LkMarketNotify(Star):
     # ---------------------------------------------------------------- 查ID
     #: 查ID / 查询ID：命令词大小写随便，中间空格随便，后面有没有空格都行
     _ID_CMD_RE = re.compile(r"^\s*[/#]?\s*(?:查\s*[Ii][Dd]|查询\s*[Ii][Dd])\s*(.*)$")
+    #: 「标 Z10026057 黑 备注」宽松匹配（不带斜线也能用）
+    _MARK_LOOSE_RE = re.compile(
+        r"^\s*标\s*([Zz]\d{5,12})\s*(黑|白)(?:\s+(.*))?\s*$")
 
     def _id_arg_from_text(self, raw: str) -> str:
         """从原始消息里抠参数：查IDZ100 / 查 id z100 / /查询ID xxx 都认。"""
@@ -2804,8 +2825,9 @@ class LkMarketNotify(Star):
         if not rec:
             return await self._say(
                 event,
-                f"图鉴里没有「{q}」。\n也可以发「身高/体重」，"
-                f"比如 34/3.617 或 0.34 3.617")
+                f"「{q}」暂未收录。\n"
+                f"（传说精灵、活动限定这些官方图鉴没公开的品种查不到；"
+                f"知道身高体重就直接发，比如 34/3.617 或 0.34 3.617）")
         text, png = await self._species_payload(rec, q)
         return await self._reply(event, text, png)
 
