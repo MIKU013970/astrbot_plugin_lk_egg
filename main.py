@@ -133,7 +133,7 @@ def _save_state(state: Dict[str, Any]) -> None:
     "astrbot_plugin_lk_egg",
     "MIKU013970 & DeepSeek",
     "市集购买成功推送 + 新上架监控 + 黑白名单查询",
-    "1.14.0",
+    "1.14.1",
 )
 class LkMarketNotify(Star):
     def __init__(self, context: Context, config: AstrBotConfig = None):
@@ -431,12 +431,44 @@ class LkMarketNotify(Star):
 
 
     # ---------------------------------------------------------------- 图鉴区间
+    #: 官方数据里缺性别比例的，这里手工补（键写蛋名，值是标准写法）。
+    #: 只在原数据是「未知」或空的时候才覆盖 —— 官方以后补齐了就以官方为准。
+    GENDER_OVERRIDE = {
+        "云梦豚的蛋": "雄性 50% / 雌性 50%",
+    }
+
+    def _apply_gender_fix(self, data: Dict[str, Any]) -> None:
+        """把 GENDER_OVERRIDE 补进 ranges（就地改）。
+
+        ranges.json 是从官方数据导出的，官方那边少数精灵没有 genderRatio
+        （petBaseData.json 里就是 null），导出后就成了「未知」。
+        这里兜一层，将来就算换一份新导出的 ranges.json 也不会再丢。
+        """
+        if not self.GENDER_OVERRIDE:
+            return
+        for rec in (data.get("species") or []):
+            names = [str(rec.get("精灵") or ""), str(rec.get("蛋名") or "")]
+            for v in (rec.get("variants") or [rec]):
+                names.append(str(v.get("蛋名") or ""))
+                if str(v.get("公母") or "").strip() in ("", "未知"):
+                    want = next((self.GENDER_OVERRIDE[x] for x in
+                                 (str(v.get("蛋名") or ""), str(rec.get("精灵") or ""))
+                                 if x in self.GENDER_OVERRIDE), None)
+                    if want:
+                        v["公母"] = want
+            if str(rec.get("公母") or "").strip() in ("", "未知"):
+                want = next((self.GENDER_OVERRIDE[x] for x in names
+                             if x in self.GENDER_OVERRIDE), None)
+                if want:
+                    rec["公母"] = want
+
     def _load_ranges(self) -> Dict[str, Any]:
         """读同目录 ranges.json：蛋的体重区间 / 过线值 / 蛋组 / 进化链。"""
         try:
             p = _PLUGIN_DIR / "ranges.json"
             if p.exists():
                 data = json.loads(p.read_text(encoding="utf-8"))
+                self._apply_gender_fix(data)
                 sp = data.get("species") or []
                 return {"species": {r["精灵"]: r for r in sp},
                         "alias": data.get("alias") or {},
