@@ -75,7 +75,7 @@ def _card():
 
 _PLUGIN_DIR = Path(__file__).resolve().parent
 _PLUGIN_NAME = "astrbot_plugin_lk_egg"
-VERSION = "1.25.0"
+VERSION = "1.25.1"
 
 
 def _data_dir() -> Path:
@@ -138,7 +138,7 @@ def _save_state(state: Dict[str, Any]) -> None:
     "astrbot_plugin_lk_egg",
     "MIKU013970 & DeepSeek",
     "市集购买成功推送 + 新上架监控 + 黑白名单查询",
-    "1.25.0",
+    "1.25.1",
 )
 class LkMarketNotify(Star):
     def __init__(self, context: Context, config: AstrBotConfig = None):
@@ -1342,6 +1342,18 @@ class LkMarketNotify(Star):
             return [(str(k), str(v)) for k, v in fields]
         return [("角色资料", "后台采集中，稍后再查一次就有了")]
 
+    @staticmethod
+    def _sort_candidates(data: Dict[str, Any]) -> List[Dict[str, Any]]:
+        """同昵称候选排序：**有在售的排前面**，再按 在售 → 售出 → 好评 降序。"""
+        cands = [c for c in (data.get("candidates") or []) if isinstance(c, dict)]
+
+        def key(c: Dict[str, Any]):
+            listed = int(c.get("listed") or 0)
+            return (0 if listed > 0 else 1, -listed,
+                    -int(c.get("sold") or 0), -int(c.get("likes") or 0))
+
+        return sorted(cands, key=key)
+
     def _merchant_rows(self, data: Dict[str, Any],
                        mark: Optional[Dict[str, Any]] = None) -> List[tuple]:
         """商家卡的行。
@@ -1387,23 +1399,16 @@ class LkMarketNotify(Star):
                              f" · 好评 {m.get('likes') or 0}"
                              f" · 差评 {m.get('dislikes') or 0}"))
 
-        # 同一个昵称可能对应好多个助手（「访客」有 5000 多个），把候选都列出来
-        cands = [c for c in (data.get("candidates") or []) if isinstance(c, dict)]
+        # 同一个昵称可能对应好多个助手（「访客」有 5000 多个）。
+        # 候选只列助手ID；**有在售的排前面**，好让人一眼找到真正在卖的那个。
+        cands = self._sort_candidates(data)
         if len(cands) > 1:
             first = True
             for c in cands[:8]:
                 cid = str(c.get("seller") or "")
-                if cid and cid == seller:
+                if not cid or cid == seller:
                     continue
-                nm = str(c.get("nickname") or "")
-                lst = c.get("listed")
-                role = str(c.get("role") or "")
-                txt = f"{cid} · {nm}".strip(" ·")
-                if role:
-                    txt += f" · {role}"
-                if lst not in (None, ""):
-                    txt += f" · 在售 {lst}"
-                rows.append(("同名候选" if first else "", txt))
+                rows.append(("同名候选" if first else "", cid))
                 first = False
 
         # 这个商家绑过的游戏ID 有没有换绑 / 改名
@@ -2533,16 +2538,14 @@ class LkMarketNotify(Star):
             mark = self._marks().get((data.get("seller") or "").upper())
             out = self._merchant_block(data, mark)
             text = out + ("\n" + note if note else "")
-            _cands = [c for c in (data.get("candidates") or []) if isinstance(c, dict)]
+            _cands = self._sort_candidates(data)
             if len(_cands) > 1:
                 others = [c for c in _cands[:8]
                           if str(c.get("seller") or "") != (data.get("seller") or "")]
                 if others:
-                    text += "\n———— 同名候选（共 %d 个）————" % len(_cands)
+                    text += "\n———— 同名候选（共 %d 个，有在售的排前面）————" % len(_cands)
                     for c in others:
-                        text += (f"\n· {c.get('seller')} · {c.get('nickname') or ''}"
-                                 + (f" · 在售 {c.get('listed')}"
-                                    if c.get("listed") not in (None, "") else ""))
+                        text += f"\n· {c.get('seller')}"
             _chs = [c for c in (data.get("uid_changes") or []) if isinstance(c, dict)][:6]
             if _chs:
                 text += "\n———— 绑定变更 ——​——"
