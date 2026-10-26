@@ -20,6 +20,7 @@
 from __future__ import annotations
 
 import asyncio
+import hashlib
 import os
 import re
 import json
@@ -38,6 +39,11 @@ from astrbot.api.star import Context, Star, register
 # ---------------------------------------------------------------- 出图模块
 _CARD_MOD = None
 _CARD_TRIED = False
+
+#: 文字卡缓存：内容 + 配置一致就直接复用，省掉重复渲染
+#: （帮助菜单、各种格式提示这些天天发同样的内容，画一次就够了）
+_CARD_CACHE: Dict[str, bytes] = {}
+_CARD_CACHE_MAX = 64
 
 
 def _card():
@@ -127,7 +133,7 @@ def _save_state(state: Dict[str, Any]) -> None:
     "astrbot_plugin_lk_egg",
     "MIKU013970 & DeepSeek",
     "市集购买成功推送 + 新上架监控 + 黑白名单查询",
-    "1.13.0",
+    "1.13.1",
 )
 class LkMarketNotify(Star):
     def __init__(self, context: Context, config: AstrBotConfig = None):
@@ -382,6 +388,13 @@ class LkMarketNotify(Star):
 
     # ---------------------------------------------------------------- 生命周期
     async def initialize(self) -> None:
+        # 预生成卡片放最前面：就算下面的轮询被 enabled 关掉，
+        # 指令handler 照样在跑，/帮助 也得快
+        try:
+            self._warm_task = asyncio.create_task(self._prewarm_cards())
+        except Exception as e:                      # 极端情况：没有事件循环
+            logger.warning(f"[出图] 预生成启动失败: {type(e).__name__}: {e}")
+            self._warm_task = None
         if not bool(self._cfg("enabled", True)):
             logger.info("[市集推送] 配置 enabled=false，插件不启动")
             return
@@ -389,6 +402,14 @@ class LkMarketNotify(Star):
         self._code_task = asyncio.create_task(self._daily_code_loop())
 
     async def terminate(self) -> None:
+        _wt = getattr(self, "_warm_task", None)
+        if _wt:
+            _wt.cancel()
+            try:
+                await _wt
+            except (asyncio.CancelledError, BaseException):
+                pass
+            self._warm_task = None
         _ct = getattr(self, "_code_task", None)
         if _ct:
             _ct.cancel()
@@ -514,7 +535,7 @@ class LkMarketNotify(Star):
         png = None
         if self._image_reply_on():
             try:
-                png = self._species_card(rec, items)
+                png = await asyncio.to_thread(self._species_card, rec, items)
             except Exception as e:
                 logger.warning(f"[出图] 图鉴卡失败，退回文字: {type(e).__name__}: {e}")
         return text, png
@@ -744,22 +765,77 @@ class LkMarketNotify(Star):
                 logger.warning(f"[出图] 发图失败，退回文字: {type(e).__name__}: {e}")
         return event.plain_result(text)
 
+    def _card_key(self, text: str) -> str:
+        """缓存键：内容 + 影响画面的那几个配置。改配置就不会拿到旧图。"""
+        kw = self._card_kwargs()
+        raw = "\x1f".join([
+            str(kw.get("theme") or ""),
+            str(kw.get("font_path") or ""),
+            str(kw.get("width")),
+            str(kw.get("font_size")),
+            str(text or ""),
+        ])
+        return hashlib.sha1(raw.encode("utf-8")).hexdigest()
+
     def _text_card(self, text: str) -> Optional[bytes]:
-        """把任意一段文字画成卡片（和查蛋同款样式）。"""
+        """把任意一段文字画成卡片（和查蛋同款样式）。命中缓存直接返回。"""
         c = _card()
         if c is None or not c.available():
             return None
-        return c.render_text_card(text, **self._card_kwargs())
+        key = self._card_key(text)
+        hit = _CARD_CACHE.get(key)
+        if hit is not None:
+            return hit
+        png = c.render_text_card(text, **self._card_kwargs())
+        if png:
+            while len(_CARD_CACHE) >= _CARD_CACHE_MAX:
+                try:
+                    _CARD_CACHE.pop(next(iter(_CARD_CACHE)))
+                except (StopIteration, KeyError):
+                    break
+            _CARD_CACHE[key] = png
+        return png
+
+    async def _prewarm_cards(self) -> None:
+        """开服先把常发的那几张图渲好，第一条 /帮助 不用等。
+
+        Pillow 的 import、字体加载、首次渲染这些一次性开销全都在这里吃掉。
+        """
+        if not self._image_reply_on():
+            return
+        warm = [self.MENU] + list(self.FORMAT_HINTS.values())
+        done = 0
+        for txt in warm:
+            try:
+                await asyncio.to_thread(self._text_card, txt)
+                done += 1
+            except Exception as e:
+                logger.warning(f"[出图] 预生成失败: {type(e).__name__}: {e}")
+                return
+        logger.info(f"[出图] 预生成完成：{done} 张，缓存共 {len(_CARD_CACHE)} 张")
 
     async def _say(self, event: Any, text: str):
-        """所有文字回复的统一出口：能出图就出图，出不了发文字。"""
+        """所有文字回复的统一出口：能出图就出图，出不了发文字。
+
+        渲染放到线程里跑 —— 一张卡片 30 毫秒，同步画会把整个事件循环堵住。
+        """
         png = None
         if self._image_reply_on():
             try:
-                png = self._text_card(text)
+                png = await asyncio.to_thread(self._text_card, text)
             except Exception as e:
                 logger.warning(f"[出图] 文字卡失败，退回文字: {type(e).__name__}: {e}")
         return await self._reply(event, text, png)
+
+    async def _identify_reply(self, event: Any, hw):
+        """身高体重查蛋的统一出口（识别卡也放到线程里画）。"""
+        png = None
+        if self._image_reply_on():
+            try:
+                png = await asyncio.to_thread(self._identify_card, hw[0], hw[1])
+            except Exception as e:
+                logger.warning(f"[出图] 识别卡失败: {type(e).__name__}: {e}")
+        return await self._reply(event, self._render_identify(*hw), png)
 
     # ---------------------------------------------------------------- 新上架提醒
     def _watch(self) -> List[str]:
@@ -1316,8 +1392,7 @@ class LkMarketNotify(Star):
         hw = self._parse_hw(body)
         if not hw:
             return
-        yield await self._reply(event, self._render_identify(*hw),
-                                self._identify_card(hw[0], hw[1]))
+        yield await self._identify_reply(event, hw)
 
     @filter.regex(r"^\s*[Zz]\d{5,12}(\s+(黑|白)(\s+.*)?)?\s*$")
     async def on_bare_zid(self, event: AstrMessageEvent):
@@ -1836,8 +1911,7 @@ class LkMarketNotify(Star):
             return
         hw = self._parse_hw(q)
         if hw:
-            yield await self._reply(event, self._render_identify(*hw),
-                                    self._identify_card(hw[0], hw[1]))
+            yield await self._identify_reply(event, hw)
             return
         rec = self._find_species(q)
         if not rec:
