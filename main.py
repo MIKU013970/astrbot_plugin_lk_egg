@@ -133,7 +133,7 @@ def _save_state(state: Dict[str, Any]) -> None:
     "astrbot_plugin_lk_egg",
     "MIKU013970 & DeepSeek",
     "市集购买成功推送 + 新上架监控 + 黑白名单查询",
-    "1.15.0",
+    "1.15.1",
 )
 class LkMarketNotify(Star):
     def __init__(self, context: Context, config: AstrBotConfig = None):
@@ -850,36 +850,53 @@ class LkMarketNotify(Star):
         out = [x for x in out if x]
         return out or None
 
+    #: 奖牌简写（货架格子窄，写全称挤不下）
+    MEDAL_SHORT = {
+        "大块头": "大", "小不点": "小", "婉转声": "婉", "粗嗓门": "粗",
+        "大块头 MAX": "大M", "小不点 MIN": "小m",
+        "婉转声 MAX": "婉M", "粗嗓门 MAX": "粗M",
+    }
+
     def _shelf_tiles(self, items) -> List[tuple]:
-        """货架按精灵归类：每种精灵只出一张蛋图，图下写最低价（重复的标 ×N）。"""
+        """货架图标格。
+
+        **名字、价格、奖牌三个都一样才合并**（合成一格标 ×N）；
+        缺任何一个不同（同种但价格不一样、或价格一样但奖牌不一样）就各自占一格，
+        否则价格和牌子就看不出来了。
+        排序：同种排在一起，种内按价格升序。
+        """
         c = _card()
         if c is None or not c.available():
             return []
-        groups: Dict[str, Dict[str, Any]] = {}
-        order: List[str] = []
+        groups: Dict[tuple, Dict[str, Any]] = {}
         for it in (items or []):
-            name = str((it or {}).get("name") or "").strip()
+            it = it if isinstance(it, dict) else {}
+            name = str(it.get("name") or "").strip()
             if not name:
                 continue
-            key = re.sub(r"(的蛋|蛋)$", "", name) or name
+            kind = re.sub(r"(的蛋|蛋)$", "", name) or name
             try:
-                pts = int((it or {}).get("points"))
+                pts = int(it.get("points"))
             except (TypeError, ValueError):
                 pts = None
-            g = groups.get(key)
+            tags = tuple(str(x) for x in (it.get("tags") or []))
+            k = (kind, pts, tags)
+            g = groups.get(k)
             if g is None:
-                groups[key] = {"name": name, "min": pts, "n": 1}
-                order.append(key)
+                groups[k] = {"name": name, "pts": pts, "tags": tags, "n": 1}
             else:
                 g["n"] += 1
-                if pts is not None and (g["min"] is None or pts < g["min"]):
-                    g["min"] = pts
+        order = sorted(groups.items(),
+                       key=lambda kv: (kv[0][0],
+                                       kv[0][1] if kv[0][1] is not None else 10 ** 9,
+                                       kv[0][2]))
         out = []
-        for k in order:
-            g = groups[k]
-            cap = (f"{g['min']} 分" if g["min"] is not None else "—")
-            cap2 = (f"×{g['n']}" if g["n"] > 1 else "")
-            out.append((c.icon_path("egg", g["name"] or k), [cap, cap2]))
+        for _k, g in order:
+            medal = "·".join(self.MEDAL_SHORT.get(x, x) for x in g["tags"]) or "无牌"
+            if g["n"] > 1:
+                medal += f" ×{g['n']}"
+            cap = (f"{g['pts']} 分" if g["pts"] is not None else "—")
+            out.append((c.icon_path("egg", g["name"]), [cap, medal]))
         return out
 
     def _merchant_card(self, data: Dict[str, Any],
