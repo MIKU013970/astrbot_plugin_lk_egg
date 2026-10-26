@@ -133,7 +133,7 @@ def _save_state(state: Dict[str, Any]) -> None:
     "astrbot_plugin_lk_egg",
     "MIKU013970 & DeepSeek",
     "市集购买成功推送 + 新上架监控 + 黑白名单查询",
-    "1.15.1",
+    "1.15.2",
 )
 class LkMarketNotify(Star):
     def __init__(self, context: Context, config: AstrBotConfig = None):
@@ -734,33 +734,29 @@ class LkMarketNotify(Star):
                 "sex": x.get("公母"),
                 "hw": f"{x.get('身高区间')} · {x.get('体重区间')}",
             })
-        tiles = []
-        for x in hits[:8]:
-            nm = str(x.get("精灵") or "")
-            cap = [nm, str(x.get("size") or "")]
-            tiles.append((c.icon_path("pet", nm), [y for y in cap if y]))
-        rows: List[tuple] = []
-        if not hits:
-            rows = [("结果", "没有匹配的精灵蛋"),
-                    ("", "可能是输入格式不对，或者这颗蛋不是图鉴里的品种")]
+        hs = []
         for i, x in enumerate(hits[:6], 1):
             nm = str(x.get("精灵") or "")
             bins = x.get("区间数")
-            head_v = (f"区间 {bins} · " if bins not in (None, "", 0) else "")
-            rows.append((f"{i}. {nm}", head_v + str(self._size_of(h, w, x))))
+            head_v = ((f"区间 {bins} · " if bins not in (None, "", 0) else "")
+                      + str(self._size_of(h, w, x)))
+            subs = []
             sub = " · ".join(y for y in (
                 (f"蛋名 {x.get('蛋名')}" if x.get("蛋名") else ""),
                 str(x.get("蛋组") or ""), str(x.get("公母") or "")) if y)
             if sub:
-                rows.append(("", sub))
+                subs.append(sub)
             hw = f"{x.get('身高区间') or ''} · {x.get('体重区间') or ''}".strip(" ·")
             if hw:
-                rows.append(("", hw))
+                subs.append(hw)
+            hs.append((c.icon_path("pet", nm), f"{i}. {nm}", head_v, subs))
         return c.render_card(
             title="身高体重查蛋",
             subtitle=f"身高 {h:g} cm · 体重 {w / 1000:.3f} kg",
-            rows=rows,
-            tiles=(tiles or None), tiles_per_row=4,
+            rows=([("结果", "没有匹配的精灵蛋"),
+                   ("", "可能是输入格式不对，或者这颗蛋不是图鉴里的品种")]
+                  if not hs else None),
+            hits=(hs or None),
             **self._card_kwargs())
 
     def _temp_png(self, png: bytes) -> str:
@@ -896,7 +892,8 @@ class LkMarketNotify(Star):
             if g["n"] > 1:
                 medal += f" ×{g['n']}"
             cap = (f"{g['pts']} 分" if g["pts"] is not None else "—")
-            out.append((c.icon_path("egg", g["name"]), [cap, medal]))
+            # 三行：蛋名 / 价格 / 奖牌（光放个蛋看不出是啥）
+            out.append((c.icon_path("egg", g["name"]), [str(g["name"]), cap, medal]))
         return out
 
     def _merchant_card(self, data: Dict[str, Any],
