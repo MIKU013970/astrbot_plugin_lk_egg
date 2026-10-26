@@ -86,6 +86,8 @@ def _data_dir() -> Path:
 
 
 _STATE_PATH = _data_dir() / "notified.json"
+#: 游戏角色资料缓存（等级 / 注册时间 / 家园信息），按游戏 UID 存
+_ROCOM_CACHE_PATH = _STATE_PATH.parent / "rocom_roles.json"
 ZWSP = "\u200b"          # 零宽空格：防止适配器把首行/换行 strip 掉
 
 DEFAULT_TEMPLATE = (
@@ -133,7 +135,7 @@ def _save_state(state: Dict[str, Any]) -> None:
     "astrbot_plugin_lk_egg",
     "MIKU013970 & DeepSeek",
     "市集购买成功推送 + 新上架监控 + 黑白名单查询",
-    "1.17.0",
+    "1.18.0",
 )
 class LkMarketNotify(Star):
     def __init__(self, context: Context, config: AstrBotConfig = None):
@@ -947,6 +949,169 @@ class LkMarketNotify(Star):
             out.append((c.icon_path("egg", g["name"]), [str(g["name"]), cap, medal]))
         return out
 
+    #: 角色资料缓存有效期（秒）
+    ROCOM_TTL = 6 * 3600
+
+    @staticmethod
+    def _fmt_ts(v: Any) -> str:
+        """时间戳（秒/毫秒）→ 'YYYY-MM-DD'；不是数字就原样返回。"""
+        try:
+            n = float(v)
+        except (TypeError, ValueError):
+            return str(v or "")
+        if n > 1e11:
+            n /= 1000.0
+        try:
+            return time.strftime("%Y-%m-%d", time.localtime(n))
+        except Exception:
+            return str(v or "")
+
+    @staticmethod
+    def _rocom_fields(payload: Any) -> List[tuple]:
+        """从角色卡返回里挑出要展示的字段。
+
+        字段来自 /api/v1/games/rocom/ingame/player/card：
+            player_info.level / regist_date
+            home_info.home_level / home_comfort_level / home_experience
+        """
+        p = payload if isinstance(payload, dict) else {}
+        pi = p.get("player_info") if isinstance(p.get("player_info"), dict) else {}
+        hi = p.get("home_info") if isinstance(p.get("home_info"), dict) else {}
+        out: List[tuple] = []
+
+        def add(label: str, val: Any, ts: bool = False) -> None:
+            if val in (None, "", []):
+                return
+            out.append((label, LkMarketNotify._fmt_ts(val) if ts else str(val)))
+
+        add("等级", pi.get("level"))
+        add("世界等级", pi.get("world_level"))
+        add("注册时间", pi.get("regist_date"), ts=True)
+        add("家园等级", hi.get("home_level"))
+        add("房间等级", hi.get("room_level"))
+        add("家园舒适度", hi.get("home_comfort_level"))
+        add("家园好感/经验", hi.get("home_experience"))
+        return out
+
+    def _rocom_cache(self) -> Dict[str, Any]:
+        try:
+            d = json.loads(_ROCOM_CACHE_PATH.read_text(encoding="utf-8"))
+            return d if isinstance(d, dict) else {}
+        except Exception:
+            return {}
+
+    def _rocom_save(self, cache: Dict[str, Any]) -> None:
+        try:
+            _ROCOM_CACHE_PATH.parent.mkdir(parents=True, exist_ok=True)
+            _ROCOM_CACHE_PATH.write_text(
+                json.dumps(cache, ensure_ascii=False, indent=1), encoding="utf-8")
+        except Exception as e:
+            logger.warning(f"[角色资料] 缓存写盘失败: {type(e).__name__}: {e}")
+
+    def _rocom_on(self) -> bool:
+        return bool(str(self._cfg("rocom_api_key", "") or "").strip())
+
+    async def _rocom_fetch(self, game_id: str) -> Optional[Dict[str, Any]]:
+        """用游戏 UID 拉角色卡（atención：接口是排队式的，这里给 24 秒预算）。"""
+        key = str(self._cfg("rocom_api_key", "") or "").strip()
+        if not key or not game_id:
+            return None
+        base = str(self._cfg("rocom_api_base", "")
+                   or "https://wegame.shallow.ink").rstrip("/")
+        hdr = {"X-API-Key": key, "Content-Type": "application/json"}
+        url = base + "/api/v1/games/rocom/ingame/player/card"
+        try:
+            async with aiohttp.ClientSession(
+                    timeout=aiohttp.ClientTimeout(total=12)) as s:
+                async with s.post(url, json={"uid": str(game_id), "wait_ms": 5000},
+                                  headers=hdr) as r:
+                    if r.status not in (200, 202):
+                        logger.warning(f"[角色资料] {game_id} → HTTP {r.status}")
+                        return None
+                    data = await r.json(content_type=None)
+        except Exception as e:
+            logger.warning(f"[角色资料] {game_id} 请求失败: {type(e).__name__}: {e}")
+            return None
+
+        for _ in range(4):                       # 最多再等 ~20 秒
+            if not isinstance(data, dict):
+                return None
+            tid = str(data.get("task_id") or "")
+            st = str(data.get("status") or "").lower()
+            res = data.get("result") or data.get("data")
+            if isinstance(res, dict):
+                return res
+            if not tid:
+                return data if st not in ("queued", "pending", "running") else None
+            if st in ("failed", "error", "cancelled", "canceled"):
+                logger.warning(f"[角色资料] {game_id} 任务失败: {st}")
+                return None
+            await asyncio.sleep(5)
+            try:
+                async with aiohttp.ClientSession(
+                        timeout=aiohttp.ClientTimeout(total=10)) as s:
+                    async with s.get(
+                            base + "/api/v1/games/rocom/ingame/tasks/" + tid,
+                            headers=hdr) as r:
+                        if r.status != 200:
+                            return None
+                        data = await r.json(content_type=None)
+            except Exception:
+                return None
+        return None
+
+    async def _rocom_maybe_refresh(self, data: Dict[str, Any]) -> None:
+        """有 key 且缓存过期时，后台拉一次（不等结果）。"""
+        if not self._rocom_on():
+            return
+        roles = [r for r in (data.get("roles") or []) if isinstance(r, dict)]
+        gid = str((roles[0] if roles else {}).get("gameId") or "").strip()
+        if not gid:
+            return
+        cache = self._rocom_cache()
+        rec = cache.get(gid) or {}
+        if rec.get("fields") and time.time() - float(rec.get("at") or 0) < self.ROCOM_TTL:
+            return
+        running = getattr(self, "_rocom_running", None)
+        if running is None:
+            running = set()
+            self._rocom_running = running
+        if gid in running:
+            return
+        running.add(gid)
+
+        async def _job():
+            try:
+                payload = await self._rocom_fetch(gid)
+                fields = self._rocom_fields(payload) if payload else []
+                if fields:
+                    c = self._rocom_cache()
+                    c[gid] = {"at": time.time(), "fields": fields}
+                    self._rocom_save(c)
+                    logger.info(f"[角色资料] {gid} 采集到 {len(fields)} 项")
+                else:
+                    logger.info(f"[角色资料] {gid} 这次没拿到（接口排队或没权限）")
+            except Exception as e:
+                logger.warning(f"[角色资料] 采集失败: {type(e).__name__}: {e}")
+            finally:
+                running.discard(gid)
+
+        try:
+            asyncio.create_task(_job())
+        except Exception as e:
+            running.discard(gid)
+            logger.warning(f"[角色资料] 起任务失败: {type(e).__name__}: {e}")
+
+    def _rocom_rows(self, game_id: str) -> List[tuple]:
+        """读缓存给卡片用（这个是同步的，跑在线程里，绝不能发网络请求）。"""
+        if not game_id or not self._rocom_on():
+            return []
+        rec = self._rocom_cache().get(str(game_id)) or {}
+        fields = rec.get("fields") or []
+        if fields:
+            return [(str(k), str(v)) for k, v in fields]
+        return [("角色资料", "后台采集中，稍后再查一次就有了")]
+
     def _merchant_rows(self, data: Dict[str, Any],
                        mark: Optional[Dict[str, Any]] = None) -> List[tuple]:
         """商家卡的行。
@@ -971,6 +1136,9 @@ class LkMarketNotify(Star):
             first = False
         if first:                      # 一个都没有
             rows.append(("游戏UID", "未采集"))
+        elif self._rocom_on() and roles:
+            rows.extend(self._rocom_rows(
+                str((roles[0] or {}).get("gameId") or "")))
 
         if m.get("title"):
             rows.append(("称号", str(m["title"])))
@@ -2111,6 +2279,7 @@ class LkMarketNotify(Star):
                     avatar = await self._avatar_path(
                         str(data.get("seller") or ""),
                         (data.get("merchant") or {}).get("avatar") or "")
+                    await self._rocom_maybe_refresh(data)
                     png = await asyncio.to_thread(self._merchant_card, data, mark, avatar)
                 except Exception as e:
                     logger.warning(f"[出图] 商家卡失败: {type(e).__name__}: {e}")

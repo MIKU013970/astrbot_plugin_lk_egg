@@ -209,6 +209,18 @@
     "default": "",
     "hint": "留空自动找（Windows 微软雅黑 / Linux 文泉驿·思源黑体）。Linux、Docker 上如果系统没有中文字体，出图会退回文字，这里填个字体路径就行"
   },
+  "rocom_api_key": {
+    "description": "洛克魔法书 API Key（可选）",
+    "type": "string",
+    "default": "",
+    "hint": "查ID 时用来查这个玩家的等级 / 注册时间 / 家园等级 / 家园好感。在 https://rocom.shallow.ink 申请；不填就完全跳过，不影响其它功能"
+  },
+  "rocom_api_base": {
+    "description": "洛克魔法书 API 地址（一般不用改）",
+    "type": "string",
+    "default": "",
+    "hint": "留空用默认 https://wegame.shallow.ink"
+  },
   "admin_ids": {
     "description": "管理员 QQ 号（逗号分隔），只有他们能看发码记录；留空则仅私聊可用",
     "type": "string",
