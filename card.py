@@ -202,12 +202,12 @@ _ICON_INDEX: Optional[Dict[str, Dict[str, str]]] = None
 def _icon_index() -> Dict[str, Dict[str, str]]:
     global _ICON_INDEX
     if _ICON_INDEX is None:
-        _ICON_INDEX = {"pet": {}, "egg": {}, "pet_form": {}}
+        _ICON_INDEX = {"pet": {}, "egg": {}, "pet_form": {}, "egg_form": {}}
         try:
             p = ICON_DIR / "index.json"
             if p.is_file():
                 d = json.loads(p.read_text(encoding="utf-8"))
-                for k in ("pet", "egg", "pet_form"):
+                for k in ("pet", "egg", "pet_form", "egg_form"):
                     _ICON_INDEX[k] = d.get(k) or {}
         except Exception:
             pass
@@ -233,6 +233,26 @@ def icon_path(kind: str, name: str, form: str = "") -> Optional[str]:
             p = ICON_DIR / "pet" / f"{pf}.png"
             if p.is_file():
                 return str(p)
+    if kind == "egg" and n0 and f0:
+        # 同一只精灵的不同形态，蛋名可能一样但蛋图不一样
+        # （鸭吉吉 5 个形态都叫「鸭吉吉蛋」，图标却分别是 107009/107017/…）
+        # 索引键用的是**精灵名**，调用方可能传的是**蛋名**，先归一化再查
+        base_names = [n0, str(f0).split("（")[0].strip()]
+        b = n0
+        for suf in ("的蛋蛋", "的蛋", "蛋"):
+            if b.endswith(suf):
+                base_names.append(b[: -len(suf)])
+                break
+        forms = [f0, f0.replace("（", "(").split("(")[-1].rstrip("）) ").strip()]
+        for bn in base_names:
+            for fm in forms:
+                if not bn or not fm:
+                    continue
+                ef = (full.get("egg_form") or {}).get(f"{bn}|{fm}")
+                if ef:
+                    p = ICON_DIR / "egg" / f"{ef}.png"
+                    if p.is_file():
+                        return str(p)
     idx = full.get(kind) or {}
     n = n0
     if not n or not idx:

@@ -75,7 +75,7 @@ def _card():
 
 _PLUGIN_DIR = Path(__file__).resolve().parent
 _PLUGIN_NAME = "astrbot_plugin_lk_egg"
-VERSION = "1.20.2"
+VERSION = "1.21.0"
 
 
 def _data_dir() -> Path:
@@ -138,7 +138,7 @@ def _save_state(state: Dict[str, Any]) -> None:
     "astrbot_plugin_lk_egg",
     "MIKU013970 & DeepSeek",
     "市集购买成功推送 + 新上架监控 + 黑白名单查询",
-    "1.20.2",
+    "1.21.0",
 )
 class LkMarketNotify(Star):
     def __init__(self, context: Context, config: AstrBotConfig = None):
@@ -561,10 +561,19 @@ class LkMarketNotify(Star):
         text = self._render_species(rec)
         lines: List[str] = []
         items: List[Dict[str, Any]] = []
+        eggs = self._distinct_eggs(rec)
         try:
-            data = await self._market_quote_raw(rec.get("精灵") or "")
-            lines = [str(x) for x in (data.get("lines") or []) if str(x).strip()][:8]
-            items = [x for x in (data.get("items") or []) if isinstance(x, dict)]
+            for egg_name, _forms in (eggs or [(rec.get("精灵") or "", [])]):
+                data = await self._market_quote_raw(egg_name)
+                seg = [str(x) for x in (data.get("lines") or []) if str(x).strip()][:8]
+                if not seg:
+                    continue
+                if len(eggs) > 1:            # 多蛋：标一下这是哪个蛋的行情
+                    lines.append(f"—— {egg_name} ——")
+                lines.extend(seg)
+                if not items:
+                    items = [x for x in (data.get("items") or []) if isinstance(x, dict)]
+                    items = [dict(x, _egg=egg_name) for x in items]
         except Exception as e:                       # 兜底：行情绝不能影响查蛋
             logger.warning(f"[查蛋行情] 渲染异常: {type(e).__name__}: {e}")
         if lines:
@@ -608,6 +617,11 @@ class LkMarketNotify(Star):
             out = []
             if prefix:
                 out.append(f"{prefix}{v.get('形态') or ''} · 区间 {v.get('区间数')}")
+                # 多蛋精灵：蛋名和默认形态不一样时要标出来（比如鸭吉吉的「燃了鸭」）
+                egg = str(v.get("蛋名") or "")
+                first_egg = str((variants[0] or {}).get("蛋名") or "")
+                if egg and egg != first_egg:
+                    out.append(f"   蛋名：{egg}（和其它形态不同）")
                 out.append(f"   蛋：{v['身高区间']} · {v['体重区间']}")
                 out.append(f"       小块头 {v['小块头过线值']} / 大块头 {v['大块头过线值']}")
             else:
@@ -684,6 +698,7 @@ class LkMarketNotify(Star):
             return None
         variants = rec.get("variants") or [rec]
         v = self._pick_variant(rec, query) if query else (variants[0] if variants else {})
+        eggs = self._distinct_eggs(rec)
         dex2 = v.get("图鉴编号") or rec.get("图鉴编号") or ""
         rows = self._species_rows(rec, dex2, query)
         boxes = None
@@ -709,11 +724,19 @@ class LkMarketNotify(Star):
             }
         dex = v.get("图鉴编号") or rec.get("图鉴编号") or ""
         bins = v.get("区间数") if len(variants) == 1 else None
+        tiles = None
+        if len(eggs) > 1:
+            # 多种蛋：每种蛋一格，写清蛋名和它对应的形态
+            tiles = []
+            for egg_name, eforms in eggs:
+                cap = [egg_name, f"{len(eforms)} 种形态" if eforms else ""]
+                tiles.append((c.icon_path("egg", egg_name, eforms[0] if eforms else ""),
+                              [x for x in cap if x]))
         return c.render_card(
             title=str(rec.get("精灵") or ""),
             subtitle=(f"图鉴 {dex}" if dex else ""),
             tag=(f"区间 {bins}" if bins not in (None, "", 0) else ""),
-            rows=rows, boxes=boxes, table=table,
+            rows=rows, boxes=boxes, table=table, tiles=tiles,
             head_icons=self._spe_icons(rec, v), **self._card_kwargs())
 
     def _identify_card(self, h: float, w: float,
@@ -1519,7 +1542,7 @@ class LkMarketNotify(Star):
             return None
         return h, w
 
-    def _match_species(self, h: float, w: float, limit: int = 5):
+    def _match_species(self, h: float, w: float, limit: int = 8):
         """在 ranges.json 里找身高体重都落在区间内的形态"""
         out = []
         sp = self.ranges.get("species") or {}
@@ -2548,6 +2571,27 @@ class LkMarketNotify(Star):
             elif form and form not in g["forms"]:
                 g["forms"].append(form)
         return out
+
+    def _distinct_eggs(self, rec: Dict[str, Any]) -> List[tuple]:
+        """这只精灵有几个**不同的蛋**，每个蛋对应哪些形态。
+
+        鸭吉吉 6 个形态其实只有 2 个蛋名（5 个共用「鸭吉吉蛋」、燃了鸭是「鸭吉吉的蛋蛋」），
+        但每个形态的蛋图标和体重区间都不一样（3012001/3036001/…）。
+        查行情要按蛋分别查，不然只出一列。
+        """
+        order: List[str] = []
+        forms_of: Dict[str, List[str]] = {}
+        for v in (rec.get("variants") or [rec]):
+            egg = str(v.get("蛋名") or rec.get("蛋名") or "").strip()
+            if not egg:
+                continue
+            if egg not in forms_of:
+                forms_of[egg] = []
+                order.append(egg)
+            fm = str(v.get("形态简称") or v.get("形态") or "").strip()
+            if fm:
+                forms_of[egg].append(fm)
+        return [(e, forms_of[e]) for e in order]
 
     def _pick_variant(self, rec: Dict[str, Any], query: str) -> Dict[str, Any]:
         """多形态精灵：按查询词挑对应形态。
