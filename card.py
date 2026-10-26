@@ -14,6 +14,7 @@ from __future__ import annotations
 
 import io
 import os
+import re
 from pathlib import Path
 from typing import Any, Dict, List, Optional, Sequence, Tuple
 
@@ -168,6 +169,30 @@ def find_font(custom: str = "") -> Optional[str]:
 
 # ---------------------------------------------------------------- 渲染
 
+
+def _png_bytes(img) -> bytes:
+    """编码 PNG。
+
+    先用最快的一档（不 optimize、compress_level=6）——optimize 要多花 7 倍时间，
+    却只小 1.6%，不划算。
+    超过 100 KB 的图（比如帮助菜单那种长卡片）再换成 128 色调色板压一遍：
+    文字卡只有几百种颜色，换调色板能小到 1/3，发图也快。
+    """
+    buf = io.BytesIO()
+    img.save(buf, "PNG", optimize=False, compress_level=6)
+    data = buf.getvalue()
+    if len(data) > 100_000:
+        try:
+            Image, _, _ = _pil()  # type: ignore[misc]
+            buf2 = io.BytesIO()
+            img.convert("P", palette=Image.ADAPTIVE, colors=128).save(
+                buf2, "PNG", optimize=True, compress_level=9)
+            if buf2.tell() < len(data):
+                data = buf2.getvalue()
+        except Exception:
+            pass
+    return data
+
 def _sizes(base: int) -> Dict[str, int]:
     return {k: max(9, base + off) for k, off in SIZE_RATIO.items()}
 
@@ -232,15 +257,7 @@ def render_card(
         raise RuntimeError("没装 Pillow")
     Image, ImageDraw, _ = pil
 
-    colors = parse_theme(theme) if not isinstance(theme, dict) or not theme else (
-        {**parse_theme(None), **{k: _to_rgb(v) for k, v in theme.items() if _to_rgb(v)}}
-    )
-    # theme 传进来可能已经是 parse_theme 的结果（值是元组），这里统一一下
-    fixed = {}
-    for k, v in THEME_DEFAULT.items():
-        rgb = _to_rgb(colors.get(k, v))
-        fixed[k] = rgb or _to_rgb(v)
-    colors = fixed
+    colors = _norm_theme(theme)
 
     sizes = _sizes(int(font_size))
     fonts = _fonts(font_path or find_font(""), sizes)
@@ -359,9 +376,7 @@ def render_card(
                         fill=colors["强调"] if i == 1 else col, anchor="ra")
             y += head_x_advance(head_h)
 
-    buf = io.BytesIO()
-    img.save(buf, "PNG", optimize=True)
-    return buf.getvalue()
+    return _png_bytes(img)
 
 
 def head_x_advance(head_h: int) -> int:
@@ -401,3 +416,222 @@ def render_identify_card(
         width=width,
         font_size=font_size,
     )
+
+# ---------------------------------------------------------------- 任意文字 → 卡片
+
+#: 分隔符用的字符集
+_DIV_CHARS = "-—=_*~"
+
+_COLSPLIT_RE = re.compile(r"^(\S.*?)\s{2,}(\S.*)$")
+_DIV_MID_RE = re.compile(r"^[-—=_*~]{2,}.*[-—=_*~]{2,}$")
+
+
+def _split_columns(line: str):
+    """'查询 火花      说明' → ('查询 火花', '说明')；拆不开就 None。"""
+    s = str(line or "")
+    if not s.strip():
+        return None
+    m = _COLSPLIT_RE.match(s.strip())
+    if not m:
+        return None
+    return m.group(1).strip(), m.group(2).strip()
+
+
+def _divider_label(line: str):
+    """'———— 在售 3 件 ————' → '在售 3 件'；不是分隔线就 None。"""
+    s = str(line or "").strip()
+    if not s:
+        return None
+    core = s.strip(_DIV_CHARS + " ")
+    if not core:
+        return "" if len(s) >= 3 else None
+    if _DIV_MID_RE.match(s):
+        return core
+    return None
+
+
+def _wrap(draw, text: str, font, limit: float):
+    """按像素宽度硬折行（中文没有词边界，逐字累加）。"""
+    text = "" if text is None else str(text)
+    if font is None or not text:
+        return [text]
+    out, cur = [], ""
+    for ch in text:
+        cand = cur + ch
+        try:
+            w = draw.textlength(cand, font=font)
+        except Exception:
+            w = 0
+        if w > limit and cur:
+            out.append(cur)
+            cur = ch
+        else:
+            cur = cand
+    out.append(cur)
+    return out or [""]
+
+
+def _norm_theme(theme) -> Dict[str, Tuple[int, int, int]]:
+    """把 theme（str 配置 / 已解析的 dict）统一成完整配色表。"""
+    colors = {}
+    if isinstance(theme, dict) and theme:
+        colors = dict(theme)
+    else:
+        colors = parse_theme(theme if isinstance(theme, str) else None)
+    fixed = {}
+    for k, default in THEME_DEFAULT.items():
+        rgb = _to_rgb(colors.get(k, default)) or _to_rgb(default)
+        fixed[k] = rgb
+    return fixed
+
+
+def render_text_card(
+    text: str,
+    theme=None,
+    font_path: str = "",
+    width: int = 700,
+    font_size: int = 18,
+    max_lines: int = 80,
+) -> bytes:
+    """把一段普通文字画成卡片，返回 PNG bytes。
+
+    认三种行：
+      - 第一行当标题（放大、加重）
+      - `———— 小节 ————` 当分隔线 + 居中标签
+      - `命令<两个以上空格>说明` 拆成两列，左列对齐
+    其余按正文折行。行数超过 max_lines 就截断并注明。
+    """
+    pil = _pil()
+    if not pil:
+        raise RuntimeError("没装 Pillow")
+    Image, ImageDraw, _ = pil
+
+    colors = _norm_theme(theme)
+    sizes = _sizes(int(font_size))
+    fonts = _fonts(font_path or find_font(""), sizes)
+
+    pad = max(14, round(width * 0.037))
+    inner = width - pad * 2
+    lh = sizes["正文"] + 12
+
+    raw = str(text or "").replace("\r\n", "\n").replace("\t", "    ").split("\n")
+    raw = [x.rstrip() for x in raw]
+    while raw and not raw[0].strip():
+        raw.pop(0)
+    while raw and not raw[-1].strip():
+        raw.pop()
+
+    title = None
+    body = raw
+    if len(raw) > 1 and _divider_label(raw[0]) is None:
+        title = raw[0].strip()
+        body = raw[1:]
+
+    probe = Image.new("RGB", (width, 10), colors["背景"])
+    pd = ImageDraw.Draw(probe)
+
+    # 两列基准：所有能拆的行的左列最大宽度
+    max_left = 0.0
+    for line in body:
+        cols = _split_columns(line)
+        if cols and fonts["正文"] is not None:
+            try:
+                max_left = max(max_left, pd.textlength(cols[0], font=fonts["正文"]))
+            except Exception:
+                pass
+    col_x = min(max_left + 18, inner * 0.62) if max_left else inner * 0.42
+    col_x = max(col_x, 60)
+
+    blocks = []
+    used = 0
+    for line in body:
+        if not line.strip():
+            blocks.append(("gap", 10))
+            continue
+        dl = _divider_label(line)
+        if dl is not None:
+            blocks.append(("div", dl))
+            used += 0
+            continue
+        cols = _split_columns(line)
+        if cols:
+            try:
+                left_w = pd.textlength(cols[0], font=fonts["正文"])
+            except Exception:
+                left_w = 0
+            if left_w <= col_x - 6:
+                wrapped = _wrap(pd, cols[1], fonts["正文"], inner - col_x)
+                blocks.append(("col", cols[0], wrapped))
+                used += len(wrapped)
+                if used > max_lines:
+                    break
+                continue
+        indent_ch = len(line) - len(line.lstrip())
+        ind = min(indent_ch * 3, 24)
+        wrapped = _wrap(pd, line.strip(), fonts["正文"], inner - ind)
+        blocks.append(("text", ind, wrapped))
+        used += len(wrapped)
+        if used > max_lines:
+            break
+
+    truncated = used > max_lines
+    if truncated:
+        blocks.append(("text", 0, ["……（后面还有内容，回复里看不全）"]))
+
+    # 估高度
+    h = pad
+    if title:
+        h += sizes["标题"] + 20
+    for b in blocks:
+        if b[0] == "gap":
+            h += b[1]
+        elif b[0] == "div":
+            h += sizes["次要"] + 22
+        else:
+            h += lh * len(b[2])
+    h += pad
+    h = max(h, pad * 2 + 40)
+
+    img = Image.new("RGB", (width, h), colors["背景"])
+    dr = ImageDraw.Draw(img)
+    dr.rounded_rectangle([6, 6, width - 7, h - 7], 16,
+                         fill=colors["卡片"], outline=colors["边框"], width=2)
+
+    x0, x1 = pad, width - pad
+    y = pad
+    if title:
+        dr.text((x0, y), _fit(dr, title, fonts["标题"], inner),
+                font=fonts["标题"], fill=colors["标题"])
+        y += sizes["标题"] + 20
+
+    for b in blocks:
+        if y > h - pad:
+            break
+        if b[0] == "gap":
+            y += b[1]
+        elif b[0] == "div":
+            label = b[1]
+            cy = y + sizes["次要"] // 2 + 4
+            dr.line([x0, cy, x1, cy], fill=colors["边框"], width=1)
+            if label:
+                tw = dr.textlength(label, font=fonts["次要"]) + 16
+                cx = x0 + (inner - tw) // 2
+                dr.rectangle([cx - 2, cy - sizes["次要"], cx + tw + 2, cy + sizes["次要"]],
+                             fill=colors["卡片"])
+                dr.text((cx + 8, cy - sizes["次要"] // 2 - 4), label,
+                        font=fonts["次要"], fill=colors["强调"])
+            y += sizes["次要"] + 22
+        elif b[0] == "col":
+            left, wrapped = b[1], b[2]
+            dr.text((x0, y), _fit(dr, left, fonts["正文"], col_x - 6),
+                    font=fonts["正文"], fill=colors["标题"])
+            for w_ in wrapped:
+                dr.text((x0 + col_x, y), w_, font=fonts["正文"], fill=colors["正文"])
+                y += lh
+        else:
+            ind, wrapped = b[1], b[2]
+            for w_ in wrapped:
+                dr.text((x0 + ind, y), w_, font=fonts["正文"], fill=colors["正文"])
+                y += lh
+
+    return _png_bytes(img)

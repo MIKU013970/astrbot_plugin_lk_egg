@@ -127,7 +127,7 @@ def _save_state(state: Dict[str, Any]) -> None:
     "astrbot_plugin_lk_egg",
     "MIKU013970 & DeepSeek",
     "市集购买成功推送 + 新上架监控 + 黑白名单查询",
-    "1.12.1",
+    "1.13.0",
 )
 class LkMarketNotify(Star):
     def __init__(self, context: Context, config: AstrBotConfig = None):
@@ -744,6 +744,23 @@ class LkMarketNotify(Star):
                 logger.warning(f"[出图] 发图失败，退回文字: {type(e).__name__}: {e}")
         return event.plain_result(text)
 
+    def _text_card(self, text: str) -> Optional[bytes]:
+        """把任意一段文字画成卡片（和查蛋同款样式）。"""
+        c = _card()
+        if c is None or not c.available():
+            return None
+        return c.render_text_card(text, **self._card_kwargs())
+
+    async def _say(self, event: Any, text: str):
+        """所有文字回复的统一出口：能出图就出图，出不了发文字。"""
+        png = None
+        if self._image_reply_on():
+            try:
+                png = self._text_card(text)
+            except Exception as e:
+                logger.warning(f"[出图] 文字卡失败，退回文字: {type(e).__name__}: {e}")
+        return await self._reply(event, text, png)
+
     # ---------------------------------------------------------------- 新上架提醒
     def _watch(self) -> List[str]:
         ids = [str(x).strip().upper() for x in (self.state.get("watch") or []) if x]
@@ -988,23 +1005,23 @@ class LkMarketNotify(Star):
 
     MENU = (
         "🥚 蛋神助手 · 可用指令\n"
-        "—————— 查蛋（主功能）——————\n"
+        "—————— 查蛋 ——————\n"
         "查询 火花               区间数/蛋组/进化链/身高体重/过线值\n"
-        "查询 火神               进化链上任意名字都行（火神/焰火/火花）\n"
-        "查询 鸭吉吉             多形态的精灵会把每种规格都列出来\n"
-        "/34/3.617               身高/体重 查蛋（34cm 3.617kg）\n"
-        "/34/3617                整数按克算（3617g）\n"
-        "—————— 发码 ——————\n"
-        "发码                     从最早的 10 个码里随机发 1 个\n"
-        "发码 EGG-XXXX-XXXX       直接发这个码\n"
-        "发码记录                 看最近发了哪些码（仅管理员）\n"
-        "（码不够时可在配置里开 auto_buy_enabled 自动补货）\n"
-        "输入兑换码 EGG-XXXX      同上（两个名字都行）\n"
+        "查询 火神               进化链上任意名字都行\n"
+        "查询 鸭吉吉             多形态会列出每种规格\n"
+        "0.32 2.12               身高体重查蛋（空格分隔，身高按米算）\n"
+        "34/3.617                身高厘米 + 体重千克（斜杠也行）\n"
+        "34 3617                 整数体重按克算\n"
+        "（查蛋时会附带行情：大婉/小婉/大粗/小粗 的今日成交与最低积分）\n"
         "—————— 查助手（商家）——————\n"
         "查ID Z10014514          昵称/上架/售出/好评差评/货架明细\n"
-        "查询ID Z10014514        同上（两个名字都能用）\n"
-        "查ID 咕咕            也能用平台昵称查\n"
-        "查ID Z10014514          游戏UID（已建索引的才有）\n"
+        "查ID z10014514          大小写都行\n"
+        "查 id z10014514         命令词拆开、小写也行\n"
+        "查IDZ10014514           命令词和 ID 粘一起也行\n"
+        "查ID 10014514           纯数字会自动补 Z 再查一次\n"
+        "查ID 134961358          游戏ID（已建索引的才有）\n"
+        "查ID 咕咕               用平台昵称查\n"
+        "查询ID xxx              和 查ID 完全一样\n"
         "—————— 名单 ——————\n"
         "标 Z10014514 黑 备注     加黑名单（备注可省略）\n"
         "标 Z10014514 白 备注     加白名单\n"
@@ -1012,10 +1029,18 @@ class LkMarketNotify(Star):
         "黑名单 / 白名单          列全部\n"
         "—————— 新上架提醒 ——————\n"
         "新上架 添加 Z10014514    开始监控这个商家\n"
-        "新上架 删除 Z10014514 / 新上架 列表\n"
+        "新上架 删除 Z10014514    取消监控\n"
+        "新上架 列表              看监控列表\n"
+        "—————— 发码 ——————\n"
+        "发码                     从最早的 10 个码里随机发 1 个\n"
+        "发码 EGG-XXXX-XXXX       直接发这个码\n"
+        "发码记录                 看最近发了哪些码（仅管理员）\n"
         "—————— 推送 ——————\n"
         "蛋推送绑定 / 解绑 / 测试 / 状态 / 重置\n"
-        "（提示：直接发精灵名字的功能已关闭，请用「查询 名字」）"
+        "—————— 其它 ——————\n"
+        "帮助 / 菜单              看这张卡片\n"
+        "回复默认都是图片         配置里关掉 reply_as_image 就发文字\n"
+        "（提示：直接发精灵名字的功能已关闭，请用「查询 名字」）\n"
     )
 
     FORMAT_HINTS = {
@@ -1081,14 +1106,14 @@ class LkMarketNotify(Star):
         if sub in ("列表", "list", ""):
             watch = self._watch()
             if not watch:
-                yield event.plain_result("还没有监控任何商家。\n用：蛋监控 添加 Z10014514（换成真实助手ID）")
+                yield await self._say(event, "还没有监控任何商家。\n用：蛋监控 添加 Z10014514（换成真实助手ID）")
                 return
             lines = [f"监控中的商家（{len(watch)} 个）"]
             for sid in watch[:20]:
                 info = await self._seller_info(sid)
                 nick = (info or {}).get("nickname") or "—"
                 lines.append(f"· {nick}（{sid}）在售 {(info or {}).get('listed', '—')} 件")
-            yield event.plain_result("\n".join(lines))
+            yield await self._say(event, "\n".join(lines))
             return
 
         if sub in ("添加", "add"):
@@ -1101,7 +1126,7 @@ class LkMarketNotify(Star):
                     self.state["watch"].append(x)
                     added.append(x)
             _save_state(self.state)
-            yield event.plain_result(
+            yield await self._say(event, 
                 ("已添加监控：" + "、".join(added) + f"\n共 {len(self.state['watch'])} 个")
                 if added else "没识别到要添加的助手ID（Z 开头）")
             return
@@ -1117,11 +1142,11 @@ class LkMarketNotify(Star):
                 else:
                     missing.append(x)
             _save_state(self.state)
-            yield event.plain_result(
+            yield await self._say(event, 
                 ("已删除监控：" + "、".join(removed)) if removed else "列表里没有这些 ID")
             return
 
-        yield event.plain_result("用法：\n蛋监控 添加 Z10014514\n蛋监控 删除 Z10014514\n蛋监控 列表")
+        yield await self._say(event, "用法：\n蛋监控 添加 Z10014514\n蛋监控 删除 Z10014514\n蛋监控 列表")
 
     # ---------------------------------------------------------------- 指令：黑白名单
     @filter.command("标")
@@ -1129,33 +1154,33 @@ class LkMarketNotify(Star):
         """标 Z10014514 黑 欠钱不还"""
         args = self._cmd_parts(event)
         if len(args) < 3:
-            yield event.plain_result("用法：标 Z10014514 黑 备注写这里\n（黑=黑名单，白=白名单，备注可省略）")
+            yield await self._say(event, "用法：标 Z10014514 黑 备注写这里\n（黑=黑名单，白=白名单，备注可省略）")
             return
         sid = args[1].upper()
         kind = args[2]
         if kind not in ("黑", "白"):
-            yield event.plain_result("第二个参数只能是「黑」或「白」")
+            yield await self._say(event, "第二个参数只能是「黑」或「白」")
             return
         note = " ".join(args[3:])
         by = getattr(event, "unified_msg_origin", "") or ""
         rec = self._set_mark(sid, kind, note, by)
-        yield event.plain_result(await self._describe_mark(sid, rec))
+        yield await self._say(event, await self._describe_mark(sid, rec))
 
     @filter.command("取消标")
     async def cmd_unmark(self, event: AstrMessageEvent):
         args = self._cmd_parts(event)
         if len(args) < 2:
-            yield event.plain_result("用法：取消标 Z10014514")
+            yield await self._say(event, "用法：取消标 Z10014514")
             return
         sid = args[1].upper()
-        yield event.plain_result(f"已取消 {sid} 的标记" if self._del_mark(sid)
+        yield await self._say(event, f"已取消 {sid} 的标记" if self._del_mark(sid)
                                  else f"{sid} 不在名单里")
 
     @filter.command("黑名单")
     async def cmd_blacklist(self, event: AstrMessageEvent):
         rows = self._marks_of("黑")
         if not rows:
-            yield event.plain_result("黑名单是空的")
+            yield await self._say(event, "黑名单是空的")
             return
         lines = [f"黑名单（{len(rows)} 个）"]
         for sid, rec in rows[:30]:
@@ -1165,13 +1190,13 @@ class LkMarketNotify(Star):
             lines.append(f"· {nick}（{sid}）{note}")
         if len(rows) > 30:
             lines.append(f"…… 还有 {len(rows) - 30} 个")
-        yield event.plain_result("\n".join(lines))
+        yield await self._say(event, "\n".join(lines))
 
     @filter.command("白名单")
     async def cmd_whitelist(self, event: AstrMessageEvent):
         rows = self._marks_of("白")
         if not rows:
-            yield event.plain_result("白名单是空的")
+            yield await self._say(event, "白名单是空的")
             return
         lines = [f"白名单（{len(rows)} 个）"]
         for sid, rec in rows[:30]:
@@ -1181,11 +1206,11 @@ class LkMarketNotify(Star):
             lines.append(f"· {nick}（{sid}）{note}")
         if len(rows) > 30:
             lines.append(f"…… 还有 {len(rows) - 30} 个")
-        yield event.plain_result("\n".join(lines))
+        yield await self._say(event, "\n".join(lines))
 
     @filter.command("帮助")
     async def cmd_help(self, event: AstrMessageEvent):
-        yield event.plain_result(self.MENU)
+        yield await self._say(event, self.MENU)
 
     @filter.command("新上架")
     async def cmd_watch_alias(self, event: AstrMessageEvent):
@@ -1205,14 +1230,14 @@ class LkMarketNotify(Star):
         if sub in ("列表", "list", ""):
             watch = self._watch()
             if not watch:
-                yield event.plain_result(self.FORMAT_HINTS.get("新上架", "格式：\n新上架 添加 Z10014514\n新上架 删除 Z10014514\n新上架 列表"))
+                yield await self._say(event, self.FORMAT_HINTS.get("新上架", "格式：\n新上架 添加 Z10014514\n新上架 删除 Z10014514\n新上架 列表"))
                 return
             lines = [f"监控中的商家（{len(watch)} 个）"]
             for sid in watch[:20]:
                 info = await self._seller_info(sid)
                 lines.append(f"· {(info or {}).get('nickname') or '—'}（{sid}）"
                              f"在售 {(info or {}).get('listed', '—')} 件")
-            yield event.plain_result("\n".join(lines))
+            yield await self._say(event, "\n".join(lines))
             return
 
         if sub in ("添加", "add"):
@@ -1238,7 +1263,7 @@ class LkMarketNotify(Star):
             if not rest:
                 parts = ["没写要监控谁。\n格式：新上架 添加 Z10014514"]
             parts.append(f"当前共 {total} 个")
-            yield event.plain_result("\n".join(parts))
+            yield await self._say(event, "\n".join(parts))
             return
 
         if sub in ("删除", "del", "remove"):
@@ -1260,10 +1285,10 @@ class LkMarketNotify(Star):
             if not rest:
                 parts = ["没写要删除谁。\n格式：新上架 删除 Z10014514"]
             parts.append(f"当前共 {len(self.state['watch'])} 个")
-            yield event.plain_result("\n".join(parts))
+            yield await self._say(event, "\n".join(parts))
             return
 
-        yield event.plain_result(self.FORMAT_HINTS.get("新上架", "格式：\n新上架 添加 Z10014514\n新上架 删除 Z10014514\n新上架 列表"))
+        yield await self._say(event, self.FORMAT_HINTS.get("新上架", "格式：\n新上架 添加 Z10014514\n新上架 删除 Z10014514\n新上架 列表"))
 
     # 只发了关键词、没带参数 → 直接教格式
     @filter.regex(r"^\s*[\u4e00-\u9fa5A-Za-z0-9·]{2,12}\s*$")
@@ -1312,23 +1337,23 @@ class LkMarketNotify(Star):
             note = " ".join(parts[2:])
             by = getattr(event, "unified_msg_origin", "") or ""
             rec = self._set_mark(sid, parts[1], note, by)
-            yield event.plain_result(await self._describe_mark(sid, rec))
+            yield await self._say(event, await self._describe_mark(sid, rec))
             return
         # 单纯 Z 号 → 查商家
         data = await self._api("/api/merchant?q=" + urllib.parse.quote(sid))
         if data and data.get("ok"):
             mark = self._marks().get(sid)
-            yield event.plain_result(self._merchant_block(data, mark))
+            yield await self._say(event, self._merchant_block(data, mark))
             return
         if data and data.get("blocked_by"):
-            yield event.plain_result(
+            yield await self._say(event, 
                 f"查不到 {sid}：这个商家屏蔽了你的账号（{'、'.join(data['blocked_by'])}）。")
             return
         mark = self._marks().get(sid)
         if mark:
-            yield event.plain_result(await self._describe_mark(sid, mark))
+            yield await self._say(event, await self._describe_mark(sid, mark))
             return
-        yield event.plain_result(
+        yield await self._say(event, 
             f"没查到商家 {sid}。\n如果是精灵名，用：查询 火花")
 
     # ---------------------------------------------------------------- 发码记录 / 每日自动发
@@ -1581,11 +1606,11 @@ class LkMarketNotify(Star):
     async def cmd_code_log(self, event: AstrMessageEvent):
         """发码记录 —— 只有管理员能看"""
         if not self._is_admin(event):
-            yield event.plain_result("发码记录只有管理员能看。\n（在配置里把 QQ 号填进 admin_ids）")
+            yield await self._say(event, "发码记录只有管理员能看。\n（在配置里把 QQ 号填进 admin_ids）")
             return
         log = self._code_log()
         if not log:
-            yield event.plain_result("还没有发码记录")
+            yield await self._say(event, "还没有发码记录")
             return
         today = time.strftime("%Y-%m-%d")
         today_n = sum(1 for x in log
@@ -1593,7 +1618,7 @@ class LkMarketNotify(Star):
         if self._cmd_args(event).strip() in ("清空", "clear"):
             self.state["code_log"] = []
             _save_state(self.state)
-            yield event.plain_result("已清空发码记录")
+            yield await self._say(event, "已清空发码记录")
             return
         lines = [f"发码记录（共 {len(log)} 条 · 今天 {today_n} 个）"]
         for x in log[-15:][::-1]:
@@ -1602,7 +1627,7 @@ class LkMarketNotify(Star):
             lines.append(f"· {when} · {x['code']} → 群 {x['group']}（{x.get('way', '')}）{egg}")
         if len(log) > 15:
             lines.append(f"…… 只显示最近 15 条")
-        yield event.plain_result("\n".join(lines))
+        yield await self._say(event, "\n".join(lines))
 
     @filter.command("发码")
     async def cmd_give_code(self, event: AstrMessageEvent):
@@ -1659,7 +1684,7 @@ class LkMarketNotify(Star):
 
         groups = self._code_groups()
         if not groups:
-            yield event.plain_result(
+            yield await self._say(event, 
                 "还没配置群号。\n"
                 "去 AstrBot WebUI → 插件 → 本插件 → 配置 → `code_groups` 填群号（多个用逗号隔开）")
             return
@@ -1685,7 +1710,7 @@ class LkMarketNotify(Star):
                 cfg_pool = self._code_pool()[:10]
                 pool = [{"code": x, "name": ""} for x in cfg_pool]
             if not pool:
-                yield event.plain_result(
+                yield await self._say(event, 
                     "没有可发的兑换码。\n"
                     "控制台没连上、或者当前没有可领的码。\n"
                     "也可以直接指定：发码 EGG-XXXX-XXXX")
@@ -1702,12 +1727,12 @@ class LkMarketNotify(Star):
         if ok:
             for _c in codes:
                 self._log_code(_c, egg_name, group_id, "手动")
-            yield event.plain_result(
+            yield await self._say(event, 
                 f"已发放：{text}\n"
                 f"发到群：{group_id}（从 {len(groups)} 个群里随机选）")
         else:
             tried = "、".join(self._group_umos(group_id)[:3])
-            yield event.plain_result(
+            yield await self._say(event, 
                 f"发到群 {group_id} 失败。\n"
                 f"试过：{tried}\n"
                 f"检查：① 群号对不对 ② 机器人在不在那个群 ③ 配置里的 platform 是否和适配器一致")
@@ -1741,7 +1766,7 @@ class LkMarketNotify(Star):
         """查ID 的核心：ID 大小写归一 + 纯数字补 Z 重试。"""
         q = str(q or "").strip()
         if not q:
-            return event.plain_result(
+            return await self._say(event, 
                 "格式：查ID Z10014514\n也可以用昵称：查ID 咕咕\n（大小写、空格都随意）")
 
         # 助手ID 大小写都行，统一成大写再查
@@ -1759,23 +1784,23 @@ class LkMarketNotify(Star):
         if isinstance(data, dict) and data.get("ok"):
             mark = self._marks().get((data.get("seller") or "").upper())
             out = self._merchant_block(data, mark)
-            return event.plain_result(out + ("\n" + note if note else ""))
+            return await self._say(event, out + ("\n" + note if note else ""))
         if isinstance(data, dict) and data.get("blocked_by"):
-            return event.plain_result(
+            return await self._say(event, 
                 f"查不到「{q}」：这个商家屏蔽了你的账号（{'、'.join(data['blocked_by'])}）。\n"
                 f"换个没被屏蔽的账号再查；挂单本身在市集还能看到。")
         err = str((data or {}).get("error") or "") if isinstance(data, dict) else ""
         if err:
             # 「还没建索引」其实是没查到，不是出错，措辞跟着走
             if "索引" in err:
-                return event.plain_result(
+                return await self._say(event, 
                     f"没查到商家「{q}」。\n{err}\n如果他是精灵名，用：查询 {q}")
-            return event.plain_result(f"查不到「{q}」：{err[:60]}")
+            return await self._say(event, f"查不到「{q}」：{err[:60]}")
 
         mark = self._marks().get(qid.upper())
         if mark:
-            return event.plain_result(await self._describe_mark(qid.upper(), mark))
-        return event.plain_result(f"没查到商家「{q}」。\n如果他是精灵名，用：查询 {q}")
+            return await self._say(event, await self._describe_mark(qid.upper(), mark))
+        return await self._say(event, f"没查到商家「{q}」。\n如果他是精灵名，用：查询 {q}")
 
     @filter.command("查ID")
     async def cmd_lookup_id(self, event: AstrMessageEvent):
@@ -1806,7 +1831,7 @@ class LkMarketNotify(Star):
         """查询 火花（进化链上的名字都行）"""
         q = self._cmd_args(event)
         if not q:
-            yield event.plain_result(
+            yield await self._say(event, 
                 "格式：查询 火花\n也可以直接发精灵名字：火神")
             return
         hw = self._parse_hw(q)
@@ -1816,7 +1841,7 @@ class LkMarketNotify(Star):
             return
         rec = self._find_species(q)
         if not rec:
-            yield event.plain_result(
+            yield await self._say(event, 
                 f"图鉴里没有「{q}」。\n也可以发「身高/体重」，比如 34/3.617 或 0.34 3.617")
             return
         _t, _p = await self._species_payload(rec)
@@ -1828,14 +1853,14 @@ class LkMarketNotify(Star):
         """在哪个会话发这条指令，就把推送目标绑定到哪个会话（推荐）。"""
         umo = getattr(event, "unified_msg_origin", "") or ""
         if not umo:
-            yield event.plain_result("拿不到当前会话标识，请在私聊/群里重新发送一次")
+            yield await self._say(event, "拿不到当前会话标识，请在私聊/群里重新发送一次")
             return
         umos = self.state.get("umos") or []
         if umo not in umos:
             umos.append(umo)
         self.state["umos"] = umos[-10:]
         _save_state(self.state)
-        yield event.plain_result(
+        yield await self._say(event, 
             f"✅ 已绑定推送目标\n{umo}\n之后买到蛋会推送到这里（共 {len(self.state['umos'])} 个目标）"
         )
 
@@ -1845,7 +1870,7 @@ class LkMarketNotify(Star):
         umos = [u for u in (self.state.get("umos") or []) if u != umo]
         self.state["umos"] = umos
         _save_state(self.state)
-        yield event.plain_result(f"已解绑当前会话，剩余 {len(umos)} 个目标")
+        yield await self._say(event, f"已解绑当前会话，剩余 {len(umos)} 个目标")
 
     @filter.command("蛋推送测试")
     async def cmd_test(self, event: AstrMessageEvent):
@@ -1856,7 +1881,7 @@ class LkMarketNotify(Star):
                   "claimed_at": int(time.time() * 1000),
                   "height_cm": 34, "weight_g": 3617, "state": "available"}
         n = await self._send(self._render(sample, sample_guess))
-        yield event.plain_result(f"已向 {n} 个目标发送测试消息" if n
+        yield await self._say(event, f"已向 {n} 个目标发送测试消息" if n
                                  else "发送失败，看 AstrBot 日志里的 warn 行")
 
     @filter.command("蛋推送状态")
@@ -1878,14 +1903,14 @@ class LkMarketNotify(Star):
         ]
         if data and data.get("stale"):
             lines.append("⚠ 控制台用的是缓存数据（远端接口暂时不可用）")
-        yield event.plain_result("\n".join(lines))
+        yield await self._say(event, "\n".join(lines))
 
     @filter.command("蛋推送重置")
     async def cmd_reset(self, event: AstrMessageEvent):
         keep_umos = self.state.get("umos") or []
         self.state = {"seen": [], "started": 0, "umos": keep_umos}
         _save_state(self.state)
-        yield event.plain_result("已清空推送记录（绑定关系保留），下一轮会把现有记录当新的处理")
+        yield await self._say(event, "已清空推送记录（绑定关系保留），下一轮会把现有记录当新的处理")
 
 
 
