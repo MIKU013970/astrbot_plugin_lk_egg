@@ -133,7 +133,7 @@ def _save_state(state: Dict[str, Any]) -> None:
     "astrbot_plugin_lk_egg",
     "MIKU013970 & DeepSeek",
     "市集购买成功推送 + 新上架监控 + 黑白名单查询",
-    "1.14.1",
+    "1.14.2",
 )
 class LkMarketNotify(Star):
     def __init__(self, context: Context, config: AstrBotConfig = None):
@@ -1121,7 +1121,7 @@ class LkMarketNotify(Star):
         "/查询火花               不加空格也行（前面带斜线）\n"
         "查询 火神               进化链上任意名字都行\n"
         "查询 鸭吉吉             多形态会列出每种规格\n"
-        "查询 治愈兔 最近        最近 10 笔成交（历史 也行）\n"
+        "查询 治愈兔 最近        最近成交：4 种牌子各 10 笔（历史 也行）\n"
         "0.32 2.12               身高体重查蛋（空格分隔，身高按米算）\n"
         "34/3.617                身高厘米 + 体重千克（斜杠也行）\n"
         "34 3617                 整数体重按克算\n"
