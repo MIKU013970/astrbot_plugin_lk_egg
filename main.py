@@ -133,7 +133,7 @@ def _save_state(state: Dict[str, Any]) -> None:
     "astrbot_plugin_lk_egg",
     "MIKU013970 & DeepSeek",
     "市集购买成功推送 + 新上架监控 + 黑白名单查询",
-    "1.13.1",
+    "1.14.0",
 )
 class LkMarketNotify(Star):
     def __init__(self, context: Context, config: AstrBotConfig = None):
@@ -662,9 +662,11 @@ class LkMarketNotify(Star):
         table = None
         if items:
             table = {
-                "columns": ["", "今日成交", "最低积分", "在售"],
+                "columns": ["", "今日成交", "中位价", "最低积分", "在售"],
                 "items": [(str(it.get("key") or ""),
                            str(it.get("today", 0)),
+                           "-" if it.get("median") in (None, "")
+                           else str(it.get("median")),
                            str(it.get("low", 0)),
                            str(it.get("listed", 0))) for it in items[:6]],
             }
@@ -1083,12 +1085,15 @@ class LkMarketNotify(Star):
         "🥚 蛋神助手 · 可用指令\n"
         "—————— 查蛋 ——————\n"
         "查询 火花               区间数/蛋组/进化链/身高体重/过线值\n"
+        "查蛋 火花               跟「查询」完全一样\n"
+        "/查询火花               不加空格也行（前面带斜线）\n"
         "查询 火神               进化链上任意名字都行\n"
         "查询 鸭吉吉             多形态会列出每种规格\n"
+        "查询 治愈兔 最近        最近 10 笔成交（历史 也行）\n"
         "0.32 2.12               身高体重查蛋（空格分隔，身高按米算）\n"
         "34/3.617                身高厘米 + 体重千克（斜杠也行）\n"
         "34 3617                 整数体重按克算\n"
-        "（查蛋时会附带行情：大婉/小婉/大粗/小粗 的今日成交与最低积分）\n"
+        "（查蛋附带行情：大婉/小婉/大粗/小粗 的今日成交 · 中位价 · 最低积分 · 在售）\n"
         "—————— 查助手（商家）——————\n"
         "查ID Z10014514          昵称/上架/售出/好评差评/货架明细\n"
         "查ID z10014514          大小写都行\n"
@@ -1120,7 +1125,8 @@ class LkMarketNotify(Star):
     )
 
     FORMAT_HINTS = {
-        "查询": "格式：查询 火花\n进化链上任意名字都行：查询 火神 / 查询 焰火",
+        "查询": "格式：查询 火花（查蛋 也一样）\n进化链上任意名字都行：查询 火神 / 查询 焰火\n查最近成交：查询 火花 最近",
+        "查蛋": "格式：查蛋 火花\n和「查询」完全一样，斜杠可加可不加",
         "发码": "格式：发码 EGG-XXXX-XXXX（先配置 code_groups 群号）",
         "输入兑换码": "格式：输入兑换码 EGG-XXXX-XXXX",
         "查ID": "格式：查ID Z10014514\n也可以用平台昵称：查ID 咕咕",
@@ -1162,7 +1168,7 @@ class LkMarketNotify(Star):
         return True
 
     # AstrBot 在派发前已经剥掉了 / 前缀，插件这边不能再校验前缀（否则恒为 False）
-    COMMAND_WORDS = ("查询ID", "查询", "查ID", "标", "取消标", "黑名单", "白名单",
+    COMMAND_WORDS = ("查询ID", "查询", "查蛋", "查ID", "标", "取消标", "黑名单", "白名单",
                      "新上架", "蛋监控", "帮助", "菜单", "蛋推送")
 
     def _looks_like_command(self, text: str) -> bool:
@@ -1901,25 +1907,141 @@ class LkMarketNotify(Star):
         yield await self._lookup_id_result(
             event, self._id_arg_from_text(getattr(event, "message_str", "")))
 
+    # ---------------------------------------------------------------- 精灵查询
+    #: 命令词：查询 / 查蛋，中间空格随便。「查ID / 查询ID」不抢。
+    _SP_CMD_RE = re.compile(r"^\s*(?:查\s*询|查\s*蛋)(?!\s*[Ii][Dd])(.*)$")
+    #: 尾巴上的「最近 / 历史」→ 改成查成交明细
+    _SP_RECENT_RE = re.compile(r"(?:最近成交|成交记录|最近|历史)$")
+
+    def _sp_arg_from_text(self, raw: str):
+        """从原始消息抠出查蛋参数。
+
+        返回 None 表示「不是查蛋指令」；否则返回 (参数, 是不是风险写法)。
+
+        风险写法 = 命令词后面既没有空格、也没看到斜线。
+        AstrBot 派发前就把 `/` 剥掉了（见 COMMAND_WORDS 上面那段注释），
+        所以「/查询火花」和「查询火花」在插件里长得一模一样，区分不了。
+        这种写法不直接拒绝，交给 _species_result 判断：只有认得出精灵名
+        或身高体重才回话，免得把闲聊吃掉。
+        """
+        s = str(raw or "").strip()
+        prefix = str(self._cfg("wake_prefix", "/") or "/")
+        had_prefix = False
+        if prefix and s.startswith(prefix):
+            s = s[len(prefix):].strip()
+            had_prefix = True
+        elif s.startswith("#"):
+            s = s.lstrip("#").strip()
+            had_prefix = True
+        m = self._SP_CMD_RE.match(s)
+        if not m:
+            return None
+        tail = m.group(1)
+        has_sep = tail[:1] in (" ", "\t", "\u3000")
+        arg = tail.strip()
+        if not arg:
+            return ("", False)
+        return (arg, not has_sep and not had_prefix)
+
+    def _sp_split_mode(self, arg: str):
+        """'红绒十字 最近' / '红绒十字历史' → ('红绒十字', 'recent')"""
+        a = str(arg or "").strip()
+        m = self._SP_RECENT_RE.search(a)
+        if not m or len(a) <= len(m.group(0)):
+            return a, "info"
+        return a[:m.start()].strip(), "recent"
+
+    def _sp_dedupe(self, event: Any) -> bool:
+        """命令入口和宽松正则入口可能都命中同一条消息，保证只回一次。"""
+        if getattr(event, "_lk_species_done", False):
+            return False
+        try:
+            event._lk_species_done = True
+        except Exception:
+            pass
+        return True
+
+    async def _species_result(self, event: Any, arg: str, risky: bool = False):
+        """精灵查询的统一出口。返回 None 表示「决定不吭声」。"""
+        q = str(arg or "").strip()
+        if not q:
+            return await self._say(
+                event,
+                "格式：查询 火花 / 查蛋 火花\n"
+                "· 加空格：带不带斜线都行（查询 火花、/查询 火花）\n"
+                "· 不加空格：前面最好带斜线（/查询火花）\n"
+                "· 查成交：查询 火花 最近（历史 也行）")
+        name, mode = self._sp_split_mode(q)
+        hw = self._parse_hw(q) if mode == "info" else None
+        rec = None if hw else self._find_species(name if mode == "recent" else q)
+        if risky and mode == "info" and not hw and not rec:
+            return None                     # 风险写法又认不出来 → 不吭声
+        if mode == "recent":
+            return await self._recent_reply(event, name)
+        if hw:
+            return await self._identify_reply(event, hw)
+        if not rec:
+            return await self._say(
+                event,
+                f"图鉴里没有「{q}」。\n也可以发「身高/体重」，"
+                f"比如 34/3.617 或 0.34 3.617")
+        text, png = await self._species_payload(rec)
+        return await self._reply(event, text, png)
+
+    async def _recent_reply(self, event: Any, name: str):
+        """最近成交：走控制台 /api/market/recent（底层是 getPrivateMarketTrend）。"""
+        q = str(name or "").strip()
+        if not q:
+            return await self._say(event, "格式：查询 火花 最近")
+        try:
+            data = await self._api("/api/market/recent?q=" + urllib.parse.quote(q))
+        except Exception as e:
+            return await self._say(event,
+                                   f"查成交记录失败：{type(e).__name__}: {e}")
+        if not isinstance(data, dict) or not data.get("ok"):
+            err = str((data or {}).get("error") or "") if isinstance(data, dict) else ""
+            return await self._say(
+                event,
+                f"没查到「{q}」的成交记录。"
+                + (f"\n{err[:90]}" if err else "\n换个名字试试：查询 治愈兔 最近"))
+        lines2 = [str(x) for x in (data.get("lines") or []) if str(x).strip()]
+        return await self._say(event, "\n".join(lines2) or f"{q}：暂无成交记录")
+
     @filter.command("查询")
     async def cmd_species(self, event: AstrMessageEvent):
-        """查询 火花（进化链上的名字都行）"""
-        q = self._cmd_args(event)
-        if not q:
-            yield await self._say(event, 
-                "格式：查询 火花\n也可以直接发精灵名字：火神")
+        """查询 火花 / 查询 火花 最近 —— 进化链上的名字都行"""
+        if not self._sp_dedupe(event):
             return
-        hw = self._parse_hw(q)
-        if hw:
-            yield await self._identify_reply(event, hw)
+        r = self._sp_arg_from_text(getattr(event, "message_str", ""))
+        if not r:
             return
-        rec = self._find_species(q)
-        if not rec:
-            yield await self._say(event, 
-                f"图鉴里没有「{q}」。\n也可以发「身高/体重」，比如 34/3.617 或 0.34 3.617")
+        res = await self._species_result(event, r[0], r[1])
+        if res is not None:
+            yield res
+
+    @filter.command("查蛋")
+    async def cmd_species_alias(self, event: AstrMessageEvent):
+        """查蛋 火花 —— 和 查询 完全一样"""
+        if not self._sp_dedupe(event):
             return
-        _t, _p = await self._species_payload(rec)
-        yield await self._reply(event, _t, _p)
+        r = self._sp_arg_from_text(getattr(event, "message_str", ""))
+        if not r:
+            return
+        res = await self._species_result(event, r[0], r[1])
+        if res is not None:
+            yield res
+
+    @filter.regex(r"^\s*[/#]?\s*(?:查\s*询|查\s*蛋)(?!\s*[Ii][Dd]).*$")
+    async def on_species_loose(self, event: AstrMessageEvent):
+        """兜底入口：/查询火花、/查蛋火花 这些 filter.command 派发不到的写法。"""
+        if not self._sp_dedupe(event):
+            return
+        r = self._sp_arg_from_text(getattr(event, "message_str", ""))
+        if not r:
+            return
+        res = await self._species_result(event, r[0], r[1])
+        if res is not None:
+            yield res
 
     # 直接发精灵名字也能查（只认图鉴里存在的名字，不认识的直接不理）
     @filter.command("蛋推送绑定")
