@@ -225,5 +225,11 @@
     "description": "管理员 QQ 号（逗号分隔），只有他们能看发码记录；留空则仅私聊可用",
     "type": "string",
     "default": ""
+  },
+  "show_activity_changes": {
+    "type": "bool",
+    "default": false,
+    "description": "商家卡显示「上次变动」",
+    "hint": "售出/好评/粉丝/在售/差评 数字最近一次变化的时间。这个时间是从数据变动倒推的「上次操作时间」，平台没有直接的「助手上次登录」字段。默认关闭。"
   }
 }

@@ -75,7 +75,7 @@ def _card():
 
 _PLUGIN_DIR = Path(__file__).resolve().parent
 _PLUGIN_NAME = "astrbot_plugin_lk_egg"
-VERSION = "1.26.0"
+VERSION = "1.26.1"
 
 
 def _data_dir() -> Path:
@@ -138,7 +138,7 @@ def _save_state(state: Dict[str, Any]) -> None:
     "astrbot_plugin_lk_egg",
     "MIKU013970 & DeepSeek",
     "市集购买成功推送 + 新上架监控 + 黑白名单查询",
-    "1.26.0",
+    "1.26.1",
 )
 class LkMarketNotify(Star):
     def __init__(self, context: Context, config: AstrBotConfig = None):
@@ -1425,7 +1425,9 @@ class LkMarketNotify(Star):
         _seen = data.get("last_seen")
         if _seen:
             rows.append(("上次采集", self._fmt_ts_hm(_seen)))
-        _act = [a for a in (data.get("activity") or []) if isinstance(a, dict)]
+        _act = []
+        if self._cfg("show_activity_changes", False):
+            _act = [a for a in (data.get("activity") or []) if isinstance(a, dict)]
         NAMES = {"sold": "售出", "likes": "好评", "followers": "粉丝",
                  "listed": "在售", "dislikes": "差评"}
         if _act:
