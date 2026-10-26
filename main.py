@@ -75,7 +75,7 @@ def _card():
 
 _PLUGIN_DIR = Path(__file__).resolve().parent
 _PLUGIN_NAME = "astrbot_plugin_lk_egg"
-VERSION = "1.32.0"
+VERSION = "1.32.1"
 
 
 def _data_dir() -> Path:
@@ -138,7 +138,7 @@ def _save_state(state: Dict[str, Any]) -> None:
     "astrbot_plugin_lk_egg",
     "MIKU013970 & DeepSeek",
     "市集购买成功推送 + 新上架监控 + 黑白名单查询",
-    "1.32.0",
+    "1.32.1",
 )
 class LkMarketNotify(Star):
     def __init__(self, context: Context, config: AstrBotConfig = None):
@@ -1016,7 +1016,11 @@ class LkMarketNotify(Star):
         c = _card()
         if c is None or not c.available():
             return None
-        v = v if isinstance(v, dict) else {}
+        if not isinstance(v, dict) or not v:
+            # 没指定形态就默认第一个形态（否则会落到"按名字"索引，
+            # 而那个索引是被最后一个形态覆盖过的 —— 蹦蹦种子就错成了象牙球）
+            _vs = rec.get("variants") or []
+            v = _vs[0] if _vs else {}
         pet = str(v.get("精灵") or rec.get("精灵") or "")
         egg = str(v.get("蛋名") or rec.get("蛋名") or pet)
         form0 = str(v.get("形态简称") or v.get("形态") or "")
