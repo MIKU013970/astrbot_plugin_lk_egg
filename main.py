@@ -75,7 +75,7 @@ def _card():
 
 _PLUGIN_DIR = Path(__file__).resolve().parent
 _PLUGIN_NAME = "astrbot_plugin_lk_egg"
-VERSION = "1.34.0"
+VERSION = "1.34.1"
 
 
 def _data_dir() -> Path:
@@ -138,7 +138,7 @@ def _save_state(state: Dict[str, Any]) -> None:
     "astrbot_plugin_lk_egg",
     "MIKU013970 & DeepSeek",
     "市集购买成功推送 + 新上架监控 + 黑白名单查询",
-    "1.34.0",
+    "1.34.1",
 )
 class LkMarketNotify(Star):
     def __init__(self, context: Context, config: AstrBotConfig = None):
@@ -2026,7 +2026,7 @@ class LkMarketNotify(Star):
         rec = self._set_mark(sid, kind, note, by)
         yield await self._say(event, await self._describe_mark(sid, rec))
 
-    @filter.regex(r"^\s*[/#]?\s*标\s*[Zz]\d{5,12}\s*(黑|白)(\s+.*)?$")
+    @filter.regex(r"^\s*[/#]?\s*标\s*[Zz]\d{5,12}\s*(黑|白).*$")
     async def on_mark_loose(self, event: AstrMessageEvent):
         """兜底入口：不带斜线的「标 Z10026057 黑 备注」。"""
         if not self._sp_dedupe(event):
@@ -2607,7 +2607,7 @@ class LkMarketNotify(Star):
     _ID_CMD_RE = re.compile(r"^\s*[/#]?\s*(?:查\s*[Ii][Dd]|查询\s*[Ii][Dd])\s*(.*)$")
     #: 「标 Z10026057 黑 备注」宽松匹配（不带斜线也能用）
     _MARK_LOOSE_RE = re.compile(
-        r"^\s*标\s*([Zz]\d{5,12})\s*(黑|白)(?:\s+(.*))?\s*$")
+        r"^\s*标\s*([Zz]\d{5,12})\s*(黑|白)\s*(.*)$")
 
     def _id_arg_from_text(self, raw: str) -> str:
         """从原始消息里抠参数：查IDZ100 / 查 id z100 / /查询ID xxx 都认。"""
