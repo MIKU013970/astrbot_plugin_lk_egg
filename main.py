@@ -73,7 +73,7 @@ def _card():
 
 _PLUGIN_DIR = Path(__file__).resolve().parent
 _PLUGIN_NAME = "astrbot_plugin_lk_egg"
-VERSION = "1.18.2"
+VERSION = "1.18.3"
 
 
 def _data_dir() -> Path:
@@ -136,7 +136,7 @@ def _save_state(state: Dict[str, Any]) -> None:
     "astrbot_plugin_lk_egg",
     "MIKU013970 & DeepSeek",
     "市集购买成功推送 + 新上架监控 + 黑白名单查询",
-    "1.18.2",
+    "1.18.3",
 )
 class LkMarketNotify(Star):
     def __init__(self, context: Context, config: AstrBotConfig = None):
@@ -2351,8 +2351,13 @@ class LkMarketNotify(Star):
                         (data.get("merchant") or {}).get("avatar") or "")
                     await self._rocom_maybe_refresh(data)
                     png = await asyncio.to_thread(self._merchant_card, data, mark, avatar)
+                    if png is None:
+                        # 渲染器说"画不了"（Pillow / card.py 缺失），得让人知道
+                        text += "\n（图片没出来：卡片渲染器不可用，发 /诊断 看详情）"
                 except Exception as e:
                     logger.warning(f"[出图] 商家卡失败: {type(e).__name__}: {e}")
+                    # 别把错误吞掉 —— 光看文字根本不知道为什么没图
+                    text += f"\n（图片没出来：{type(e).__name__}: {str(e)[:60]}）"
             return await self._reply(event, text, png)
         if isinstance(data, dict) and data.get("blocked_by"):
             return await self._say(event, 
@@ -2609,6 +2614,20 @@ class LkMarketNotify(Star):
             lines.append(f"试渲一张：{'OK %d 字节' % len(png) if png else '失败'}")
         except Exception as e:
             lines.append(f"试渲一张：抛异常 {type(e).__name__}: {str(e)[:60]}")
+        # 关键是这条：真跑一遍「查ID」那条卡片链路
+        try:
+            _d = await self._api("/api/merchant?q=Z10010025")
+            if isinstance(_d, dict) and _d.get("ok"):
+                try:
+                    _p = await asyncio.to_thread(self._merchant_card, _d, None, None)
+                    lines.append(f"商家卡渲染：{'OK %d 字节' % len(_p) if _p else '返回 None（渲染器不可用）'}")
+                except Exception as e:
+                    lines.append(f"商家卡渲染：抛异常 {type(e).__name__}: {str(e)[:80]}")
+            else:
+                _e = str((_d or {}).get("error") or "")[:60] if isinstance(_d, dict) else "无返回"
+                lines.append(f"取商家样本：失败（{_e}）")
+        except Exception as e:
+            lines.append(f"取商家样本：抛异常 {type(e).__name__}: {str(e)[:60]}")
         # 诊断结果**故意发文字**：出了问题才好复制，图片链路坏了也能看到
         yield event.plain_result("\n".join(lines))
 
