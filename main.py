@@ -75,7 +75,7 @@ def _card():
 
 _PLUGIN_DIR = Path(__file__).resolve().parent
 _PLUGIN_NAME = "astrbot_plugin_lk_egg"
-VERSION = "1.33.2"
+VERSION = "1.33.3"
 
 
 def _data_dir() -> Path:
@@ -138,7 +138,7 @@ def _save_state(state: Dict[str, Any]) -> None:
     "astrbot_plugin_lk_egg",
     "MIKU013970 & DeepSeek",
     "市集购买成功推送 + 新上架监控 + 黑白名单查询",
-    "1.33.2",
+    "1.33.3",
 )
 class LkMarketNotify(Star):
     def __init__(self, context: Context, config: AstrBotConfig = None):
@@ -731,11 +731,13 @@ class LkMarketNotify(Star):
         pet_name = str(rec.get("精灵") or "")
         tiles = None
         _tile_icon = int(self._card_kwargs().get("tile_icon") or 64)
+        _head_icon = 0
         if len(variants) > 1:
             # 多形态：每个形态一格，格子里是「该形态的精灵图 + 该形态的蛋图」拼起来，
             # 下面写形态名和蛋名 —— 这样每个形态都看得见，不只默认那一个
             tiles = []
-            _tile_icon = 108          # 多形态的格子是一张 2×2 拼图，要放大才看得清
+            _tile_icon = 140          # 多形态的格子是一张 2×2 拼图，要放大才看得清
+            _head_icon = 64           # 顶部那两个（精灵+蛋）维持原大小不变
             for _v in variants[:12]:
                 _f = str(_v.get("形态简称") or _v.get("形态") or "")
                 _pair = self._icon_grid([
@@ -755,7 +757,7 @@ class LkMarketNotify(Star):
             subtitle=(f"图鉴 {dex}" if dex else ""),
             tag=(f"区间 {bins}" if bins not in (None, "", 0) else ""),
             rows=rows, boxes=boxes, table=table, tiles=tiles,
-            tile_icon=_tile_icon,
+            tile_icon=_tile_icon, head_icon=_head_icon,
             head_icons=self._spe_icons(rec, v), **self._card_kwargs())
 
     def _icon_grid(self, paths: List[str], cell: int = 34) -> Optional[str]:

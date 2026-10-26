@@ -376,6 +376,7 @@ def render_card(
     tiles: Optional[Sequence[Sequence[Any]]] = None,
     tiles_per_row: int = 4,
     tile_icon: int = 64,
+    head_icon: int = 0,
     hits: Optional[Sequence[Sequence[Any]]] = None,
 ) -> bytes:
     """画一张卡片，返回 PNG bytes。
@@ -706,6 +707,7 @@ def render_text_card(
     max_lines: int = 80,
     head_icons: Optional[Sequence[str]] = None,
     tile_icon: int = 64,
+    head_icon: int = 0,
 ) -> bytes:
     """把一段普通文字画成卡片，返回 PNG bytes。
 
@@ -793,7 +795,7 @@ def render_text_card(
         blocks.append(("text", 0, ["……（后面还有内容，回复里看不全）"]))
 
     hi = [x for x in (head_icons or []) if x][:4]
-    hi_size = max(40, int(tile_icon)) if hi else 0
+    hi_size = max(40, int(head_icon or tile_icon)) if hi else 0
     hi_w = (len(hi) * hi_size + (len(hi) - 1) * 8 + 12) if hi else 0
     title_h = max(sizes["标题"] + 20, (hi_size + 10) if hi else 0)
 
