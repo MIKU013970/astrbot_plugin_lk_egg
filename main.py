@@ -75,7 +75,7 @@ def _card():
 
 _PLUGIN_DIR = Path(__file__).resolve().parent
 _PLUGIN_NAME = "astrbot_plugin_lk_egg"
-VERSION = "1.33.3"
+VERSION = "1.34.0"
 
 
 def _data_dir() -> Path:
@@ -138,7 +138,7 @@ def _save_state(state: Dict[str, Any]) -> None:
     "astrbot_plugin_lk_egg",
     "MIKU013970 & DeepSeek",
     "市集购买成功推送 + 新上架监控 + 黑白名单查询",
-    "1.33.3",
+    "1.34.0",
 )
 class LkMarketNotify(Star):
     def __init__(self, context: Context, config: AstrBotConfig = None):
@@ -742,7 +742,8 @@ class LkMarketNotify(Star):
                 _f = str(_v.get("形态简称") or _v.get("形态") or "")
                 _pair = self._icon_grid([
                     c.icon_path("pet", pet_name, _f),
-                    c.icon_path("egg", str(_v.get("蛋名") or ""), _f)])
+                    c.icon_path("egg", str(_v.get("蛋名") or ""), _f)],
+                    cell=max(60, _tile_icon // 2))
                 _cap = [x for x in (_f, str(_v.get("蛋名") or "")) if x]
                 tiles.append((_pair, _cap))
         elif len(eggs) > 1:
@@ -760,7 +761,7 @@ class LkMarketNotify(Star):
             tile_icon=_tile_icon, head_icon=_head_icon,
             head_icons=self._spe_icons(rec, v), **self._card_kwargs())
 
-    def _icon_grid(self, paths: List[str], cell: int = 34) -> Optional[str]:
+    def _icon_grid(self, paths: List[str], cell: int = 74) -> Optional[str]:
         """把最多 4 张图标拼成 2×2 一张小图（渲染器每个结果只吃一个图标路径）。
 
         排列按要求的顺序：普通一阶段 · 普通精灵蛋 · 异色一阶段 · 异色精灵蛋。
@@ -773,15 +774,18 @@ class LkMarketNotify(Star):
         try:
             from PIL import Image as _I
             canvas = _I.new("RGBA", (cell * 2, cell * 2), (0, 0, 0, 0))
+            hi_dir = Path(__file__).resolve().parent / "icons" / "hi"
             for i, p in enumerate(ps[:4]):
-                im = _I.open(p).convert("RGBA")
+                # 优先用高清版（icons/hi 里 256px 的原图），否则 96px 的放大就糊
+                hp = hi_dir / Path(p).name
+                im = _I.open(str(hp) if hp.is_file() else p).convert("RGBA")
                 im.thumbnail((cell, cell), _I.LANCZOS)
                 x = (i % 2) * cell + (cell - im.width) // 2
                 y = (i // 2) * cell + (cell - im.height) // 2
                 canvas.paste(im, (x, y), im)
             import tempfile
             fp = Path(tempfile.gettempdir()) / "lk_egg_cards" / (
-                "grid-" + hashlib.md5(str(ps).encode()).hexdigest()[:12] + ".png")
+                "grid-" + hashlib.md5(f"{cell}:{ps}".encode()).hexdigest()[:12] + ".png")
             fp.parent.mkdir(parents=True, exist_ok=True)
             if not fp.is_file():
                 canvas.save(fp, "PNG", optimize=True)
