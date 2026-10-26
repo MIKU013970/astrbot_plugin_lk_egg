@@ -202,12 +202,13 @@ _ICON_INDEX: Optional[Dict[str, Dict[str, str]]] = None
 def _icon_index() -> Dict[str, Dict[str, str]]:
     global _ICON_INDEX
     if _ICON_INDEX is None:
-        _ICON_INDEX = {"pet": {}, "egg": {}, "pet_form": {}, "egg_form": {}}
+        _ICON_INDEX = {"pet": {}, "egg": {}, "pet_form": {}, "egg_form": {},
+                       "pet_shiny": {}}
         try:
             p = ICON_DIR / "index.json"
             if p.is_file():
                 d = json.loads(p.read_text(encoding="utf-8"))
-                for k in ("pet", "egg", "pet_form", "egg_form"):
+                for k in ("pet", "egg", "pet_form", "egg_form", "pet_shiny"):
                     _ICON_INDEX[k] = d.get(k) or {}
         except Exception:
             pass
@@ -223,6 +224,29 @@ def icon_path(kind: str, name: str, form: str = "") -> Optional[str]:
     full = _icon_index()
     n0 = str(name or "").strip()
     f0 = str(form or "").strip()
+    if kind == "shiny":
+        # 异色宠物图：assets/pets/<id>/shiny.png
+        sm = full.get("pet_shiny") or {}
+        base_names = [n0]
+        b = n0
+        for suf in ("的蛋蛋", "的蛋", "蛋"):
+            if b.endswith(suf):
+                base_names.append(b[: -len(suf)])
+                break
+        cands = []
+        for bn in base_names:
+            if not bn:
+                continue
+            if f0:
+                cands.append(f"{bn}|{f0}")
+            cands.append(bn)
+        for k in cands:
+            sl = sm.get(k)
+            if sl:
+                p = ICON_DIR / "shiny" / f"{sl}.png"
+                if p.is_file():
+                    return str(p)
+        return None
     if kind == "pet" and n0 and f0:
         pf = (full.get("pet_form") or {}).get(f"{n0}|{f0}")
         if not pf:                       # 形态名可能带「名字（形态）」这种写法

@@ -75,7 +75,7 @@ def _card():
 
 _PLUGIN_DIR = Path(__file__).resolve().parent
 _PLUGIN_NAME = "astrbot_plugin_lk_egg"
-VERSION = "1.22.0"
+VERSION = "1.23.0"
 
 
 def _data_dir() -> Path:
@@ -138,7 +138,7 @@ def _save_state(state: Dict[str, Any]) -> None:
     "astrbot_plugin_lk_egg",
     "MIKU013970 & DeepSeek",
     "市集购买成功推送 + 新上架监控 + 黑白名单查询",
-    "1.22.0",
+    "1.23.0",
 )
 class LkMarketNotify(Star):
     def __init__(self, context: Context, config: AstrBotConfig = None):
@@ -958,7 +958,14 @@ class LkMarketNotify(Star):
         return hashlib.sha1(raw.encode("utf-8")).hexdigest()
 
     def _spe_icons(self, rec: Any, v: Any = None):
-        """精灵一阶段图 + 蛋图（拿不到就返回 None）。"""
+        """查具体精灵时标题前的图标，顺序固定：
+
+            普通一阶段 → 普通精灵蛋 → 异色一阶段 → 异色精灵蛋
+
+        异色那两个**只在查精灵时**出现（查蛋结果、货架、行情都不带）。
+        异色宠物图来自 wiki 的 assets/pets/<id>/shiny.png；
+        异色蛋图只有活动蛋才有（目前 10 只 + 龙须派那类），没有就只出 3 个。
+        """
         c = _card()
         if c is None or not c.available():
             return None
@@ -967,6 +974,17 @@ class LkMarketNotify(Star):
         egg = str(v.get("蛋名") or rec.get("蛋名") or pet)
         form0 = str(v.get("形态简称") or v.get("形态") or "")
         out = [c.icon_path("pet", pet, form0), c.icon_path("egg", egg)]
+        # 异色
+        shiny_pet = c.icon_path("shiny", pet, form0)
+        if shiny_pet:
+            out.append(shiny_pet)
+            shiny_egg = None
+            for en, _forms in self._distinct_eggs(rec):
+                if "异色" in en:
+                    shiny_egg = c.icon_path("egg", en, form0)
+                    break
+            if shiny_egg:
+                out.append(shiny_egg)
         out = [x for x in out if x]
         return out or None
 
