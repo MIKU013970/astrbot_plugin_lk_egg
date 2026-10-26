@@ -75,7 +75,7 @@ def _card():
 
 _PLUGIN_DIR = Path(__file__).resolve().parent
 _PLUGIN_NAME = "astrbot_plugin_lk_egg"
-VERSION = "1.21.0"
+VERSION = "1.22.0"
 
 
 def _data_dir() -> Path:
@@ -138,7 +138,7 @@ def _save_state(state: Dict[str, Any]) -> None:
     "astrbot_plugin_lk_egg",
     "MIKU013970 & DeepSeek",
     "市集购买成功推送 + 新上架监控 + 黑白名单查询",
-    "1.21.0",
+    "1.22.0",
 )
 class LkMarketNotify(Star):
     def __init__(self, context: Context, config: AstrBotConfig = None):
@@ -623,7 +623,9 @@ class LkMarketNotify(Star):
                 if egg and egg != first_egg:
                     out.append(f"   蛋名：{egg}（和其它形态不同）")
                 out.append(f"   蛋：{v['身高区间']} · {v['体重区间']}")
-                out.append(f"       小块头 {v['小块头过线值']} / 大块头 {v['大块头过线值']}")
+                # 异色形态来自官方蛋数据，没有「过线值」，有才打
+                if v.get("小块头过线值") and v.get("大块头过线值"):
+                    out.append(f"       小块头 {v['小块头过线值']} / 大块头 {v['大块头过线值']}")
             else:
                 out.append(f"身高区间：{v['身高区间']}")
                 out.append(f"体重区间：{v['体重区间']}")
@@ -1594,7 +1596,10 @@ class LkMarketNotify(Star):
         lines = [head, f"可能孵出（{len(hits)} 种）："]
         for i, x in enumerate(hits, 1):
             size = self._size_of(h, w, x)
-            lines.append(f"{i}. {x['精灵']} · 区间 {x['区间数']} · {size}")
+            bins = x.get("区间数")
+            lines.append(f"{i}. {x['精灵']}"
+                         + (f" · 区间 {bins}" if bins not in (None, "", 0) else "")
+                         + f"{' · ' if bins not in (None, '', 0) else ' · '}{size}")
             lines.append(f"   蛋名 {x['蛋名']} · 蛋组 {x['蛋组']} · {x.get('公母') or '未知'}")
             lines.append(f"   身高 {x['身高区间']} · 体重 {x['体重区间']}")
         return "\n".join(lines)
