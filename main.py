@@ -73,7 +73,7 @@ def _card():
 
 _PLUGIN_DIR = Path(__file__).resolve().parent
 _PLUGIN_NAME = "astrbot_plugin_lk_egg"
-VERSION = "1.18.3"
+VERSION = "1.18.4"
 
 
 def _data_dir() -> Path:
@@ -136,7 +136,7 @@ def _save_state(state: Dict[str, Any]) -> None:
     "astrbot_plugin_lk_egg",
     "MIKU013970 & DeepSeek",
     "市集购买成功推送 + 新上架监控 + 黑白名单查询",
-    "1.18.3",
+    "1.18.4",
 )
 class LkMarketNotify(Star):
     def __init__(self, context: Context, config: AstrBotConfig = None):
@@ -1898,21 +1898,11 @@ class LkMarketNotify(Star):
             yield await self._say(event, await self._describe_mark(sid, rec))
             return
         # 单纯 Z 号 → 查商家
-        data = await self._api("/api/merchant?q=" + urllib.parse.quote(sid))
-        if data and data.get("ok"):
-            mark = self._marks().get(sid)
-            yield await self._say(event, self._merchant_block(data, mark))
-            return
-        if data and data.get("blocked_by"):
-            yield await self._say(event, 
-                f"查不到 {sid}：这个商家屏蔽了你的账号（{'、'.join(data['blocked_by'])}）。")
-            return
-        mark = self._marks().get(sid)
-        if mark:
-            yield await self._say(event, await self._describe_mark(sid, mark))
-            return
-        yield await self._say(event, 
-            f"没查到商家 {sid}。\n如果是精灵名，用：查询 火花")
+        # 和「查ID」走同一条路：头像 / 游戏UID / 货架图标格全都要有。
+        # （以前这里自己抄了一份文字实现，所以直接发 Z 号出来的还是旧样式）
+        res = await self._lookup_id_result(event, sid)
+        if res is not None:
+            yield res
 
     # ---------------------------------------------------------------- 发码记录 / 每日自动发
     def _code_log(self) -> list:
