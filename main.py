@@ -75,7 +75,7 @@ def _card():
 
 _PLUGIN_DIR = Path(__file__).resolve().parent
 _PLUGIN_NAME = "astrbot_plugin_lk_egg"
-VERSION = "1.25.1"
+VERSION = "1.25.2"
 
 
 def _data_dir() -> Path:
@@ -138,7 +138,7 @@ def _save_state(state: Dict[str, Any]) -> None:
     "astrbot_plugin_lk_egg",
     "MIKU013970 & DeepSeek",
     "市集购买成功推送 + 新上架监控 + 黑白名单查询",
-    "1.25.1",
+    "1.25.2",
 )
 class LkMarketNotify(Star):
     def __init__(self, context: Context, config: AstrBotConfig = None):
@@ -1343,6 +1343,16 @@ class LkMarketNotify(Star):
         return [("角色资料", "后台采集中，稍后再查一次就有了")]
 
     @staticmethod
+    def _cand_text(c: Dict[str, Any]) -> str:
+        """候选一行的文字：助手ID · 在售 N · 好评 N · 差评 N"""
+        out = str(c.get("seller") or "")
+        lst = c.get("listed")
+        out += f" · 在售 {int(lst) if lst not in (None, '') else 0}"
+        out += f" · 好评 {int(c.get('likes') or 0)}"
+        out += f" · 差评 {int(c.get('dislikes') or 0)}"
+        return out
+
+    @staticmethod
     def _sort_candidates(data: Dict[str, Any]) -> List[Dict[str, Any]]:
         """同昵称候选排序：**有在售的排前面**，再按 在售 → 售出 → 好评 降序。"""
         cands = [c for c in (data.get("candidates") or []) if isinstance(c, dict)]
@@ -1350,7 +1360,7 @@ class LkMarketNotify(Star):
         def key(c: Dict[str, Any]):
             listed = int(c.get("listed") or 0)
             return (0 if listed > 0 else 1, -listed,
-                    -int(c.get("sold") or 0), -int(c.get("likes") or 0))
+                    -int(c.get("likes") or 0), int(c.get("dislikes") or 0))
 
         return sorted(cands, key=key)
 
@@ -1408,7 +1418,7 @@ class LkMarketNotify(Star):
                 cid = str(c.get("seller") or "")
                 if not cid or cid == seller:
                     continue
-                rows.append(("同名候选" if first else "", cid))
+                rows.append(("同名候选" if first else "", self._cand_text(c)))
                 first = False
 
         # 这个商家绑过的游戏ID 有没有换绑 / 改名
@@ -2545,7 +2555,7 @@ class LkMarketNotify(Star):
                 if others:
                     text += "\n———— 同名候选（共 %d 个，有在售的排前面）————" % len(_cands)
                     for c in others:
-                        text += f"\n· {c.get('seller')}"
+                        text += f"\n· {self._cand_text(c)}"
             _chs = [c for c in (data.get("uid_changes") or []) if isinstance(c, dict)][:6]
             if _chs:
                 text += "\n———— 绑定变更 ——​——"
