@@ -133,7 +133,7 @@ def _save_state(state: Dict[str, Any]) -> None:
     "astrbot_plugin_lk_egg",
     "MIKU013970 & DeepSeek",
     "市集购买成功推送 + 新上架监控 + 黑白名单查询",
-    "1.14.2",
+    "1.15.0",
 )
 class LkMarketNotify(Star):
     def __init__(self, context: Context, config: AstrBotConfig = None):
@@ -708,7 +708,8 @@ class LkMarketNotify(Star):
             title=str(rec.get("精灵") or ""),
             subtitle=(f"图鉴 {dex}" if dex else ""),
             tag=(f"区间 {bins}" if bins not in (None, "", 0) else ""),
-            rows=rows, boxes=boxes, table=table, **self._card_kwargs())
+            rows=rows, boxes=boxes, table=table,
+            head_icons=self._spe_icons(rec, v), **self._card_kwargs())
 
     def _identify_card(self, h: float, w: float,
                        hits: Optional[List[Dict[str, Any]]] = None) -> Optional[bytes]:
@@ -733,9 +734,34 @@ class LkMarketNotify(Star):
                 "sex": x.get("公母"),
                 "hw": f"{x.get('身高区间')} · {x.get('体重区间')}",
             })
-        return c.render_identify_card(
-            head=f"身高 {h:g} cm · 体重 {w / 1000:.3f} kg",
-            hits=payload, **self._card_kwargs())
+        tiles = []
+        for x in hits[:8]:
+            nm = str(x.get("精灵") or "")
+            cap = [nm, str(x.get("size") or "")]
+            tiles.append((c.icon_path("pet", nm), [y for y in cap if y]))
+        rows: List[tuple] = []
+        if not hits:
+            rows = [("结果", "没有匹配的精灵蛋"),
+                    ("", "可能是输入格式不对，或者这颗蛋不是图鉴里的品种")]
+        for i, x in enumerate(hits[:6], 1):
+            nm = str(x.get("精灵") or "")
+            bins = x.get("区间数")
+            head_v = (f"区间 {bins} · " if bins not in (None, "", 0) else "")
+            rows.append((f"{i}. {nm}", head_v + str(self._size_of(h, w, x))))
+            sub = " · ".join(y for y in (
+                (f"蛋名 {x.get('蛋名')}" if x.get("蛋名") else ""),
+                str(x.get("蛋组") or ""), str(x.get("公母") or "")) if y)
+            if sub:
+                rows.append(("", sub))
+            hw = f"{x.get('身高区间') or ''} · {x.get('体重区间') or ''}".strip(" ·")
+            if hw:
+                rows.append(("", hw))
+        return c.render_card(
+            title="身高体重查蛋",
+            subtitle=f"身高 {h:g} cm · 体重 {w / 1000:.3f} kg",
+            rows=rows,
+            tiles=(tiles or None), tiles_per_row=4,
+            **self._card_kwargs())
 
     def _temp_png(self, png: bytes) -> str:
         """落到临时文件（协议端要按路径读），顺手清掉 1 小时前的旧图。"""
@@ -799,28 +825,101 @@ class LkMarketNotify(Star):
                 logger.warning(f"[出图] 发图失败，退回文字: {type(e).__name__}: {e}")
         return event.plain_result(text)
 
-    def _card_key(self, text: str) -> str:
-        """缓存键：内容 + 影响画面的那几个配置。改配置就不会拿到旧图。"""
+    def _card_key(self, text: str, icons=None) -> str:
+        """缓存键：内容 + 图标 + 影响画面的那几个配置。改配置就不会拿到旧图。"""
         kw = self._card_kwargs()
         raw = "\x1f".join([
             str(kw.get("theme") or ""),
             str(kw.get("font_path") or ""),
             str(kw.get("width")),
             str(kw.get("font_size")),
+            "|".join(str(x) for x in (icons or [])),
             str(text or ""),
         ])
         return hashlib.sha1(raw.encode("utf-8")).hexdigest()
 
-    def _text_card(self, text: str) -> Optional[bytes]:
+    def _spe_icons(self, rec: Any, v: Any = None):
+        """精灵一阶段图 + 蛋图（拿不到就返回 None）。"""
+        c = _card()
+        if c is None or not c.available():
+            return None
+        v = v if isinstance(v, dict) else {}
+        pet = str(v.get("精灵") or rec.get("精灵") or "")
+        egg = str(v.get("蛋名") or rec.get("蛋名") or pet)
+        out = [c.icon_path("pet", pet), c.icon_path("egg", egg)]
+        out = [x for x in out if x]
+        return out or None
+
+    def _shelf_tiles(self, items) -> List[tuple]:
+        """货架按精灵归类：每种精灵只出一张蛋图，图下写最低价（重复的标 ×N）。"""
+        c = _card()
+        if c is None or not c.available():
+            return []
+        groups: Dict[str, Dict[str, Any]] = {}
+        order: List[str] = []
+        for it in (items or []):
+            name = str((it or {}).get("name") or "").strip()
+            if not name:
+                continue
+            key = re.sub(r"(的蛋|蛋)$", "", name) or name
+            try:
+                pts = int((it or {}).get("points"))
+            except (TypeError, ValueError):
+                pts = None
+            g = groups.get(key)
+            if g is None:
+                groups[key] = {"name": name, "min": pts, "n": 1}
+                order.append(key)
+            else:
+                g["n"] += 1
+                if pts is not None and (g["min"] is None or pts < g["min"]):
+                    g["min"] = pts
+        out = []
+        for k in order:
+            g = groups[k]
+            cap = (f"{g['min']} 分" if g["min"] is not None else "—")
+            cap2 = (f"×{g['n']}" if g["n"] > 1 else "")
+            out.append((c.icon_path("egg", g["name"] or k), [cap, cap2]))
+        return out
+
+    def _merchant_card(self, data: Dict[str, Any],
+                       mark: Optional[Dict[str, Any]] = None) -> Optional[bytes]:
+        """商家卡：统计 + 货架按精灵分类的蛋图网格。"""
+        c = _card()
+        if c is None or not c.available():
+            return None
+        m = data.get("merchant") or {}
+        seller = data.get("seller") or m.get("seller") or "—"
+        nick = m.get("nickname") or m.get("displayName") or seller
+        items = data.get("listings") or []
+        listed = m.get("listed")
+        listed = len(items) if listed in (None, "", 0) and items else listed
+        mark_txt = "无"
+        if mark:
+            mark_txt = "黑名单" if mark.get("t") == "黑" else "白名单"
+            if mark.get("note"):
+                mark_txt += f" · {mark['note']}"
+        rows = [("助手ID", seller),
+                ("标记", mark_txt),
+                ("上架", listed if listed is not None else 0),
+                ("售出", m.get("sold") or 0),
+                ("好评", m.get("likes") or 0),
+                ("差评", m.get("dislikes") or 0)]
+        tiles = self._shelf_tiles(items)
+        return c.render_card(title=nick, subtitle=str(seller), rows=rows,
+                             tiles=(tiles or None), tiles_per_row=4,
+                             **self._card_kwargs())
+
+    def _text_card(self, text: str, icons=None) -> Optional[bytes]:
         """把任意一段文字画成卡片（和查蛋同款样式）。命中缓存直接返回。"""
         c = _card()
         if c is None or not c.available():
             return None
-        key = self._card_key(text)
+        key = self._card_key(text, icons)
         hit = _CARD_CACHE.get(key)
         if hit is not None:
             return hit
-        png = c.render_text_card(text, **self._card_kwargs())
+        png = c.render_text_card(text, head_icons=icons, **self._card_kwargs())
         if png:
             while len(_CARD_CACHE) >= _CARD_CACHE_MAX:
                 try:
@@ -848,7 +947,7 @@ class LkMarketNotify(Star):
                 return
         logger.info(f"[出图] 预生成完成：{done} 张，缓存共 {len(_CARD_CACHE)} 张")
 
-    async def _say(self, event: Any, text: str):
+    async def _say(self, event: Any, text: str, icons=None):
         """所有文字回复的统一出口：能出图就出图，出不了发文字。
 
         渲染放到线程里跑 —— 一张卡片 30 毫秒，同步画会把整个事件循环堵住。
@@ -856,7 +955,7 @@ class LkMarketNotify(Star):
         png = None
         if self._image_reply_on():
             try:
-                png = await asyncio.to_thread(self._text_card, text)
+                png = await asyncio.to_thread(self._text_card, text, icons)
             except Exception as e:
                 logger.warning(f"[出图] 文字卡失败，退回文字: {type(e).__name__}: {e}")
         return await self._reply(event, text, png)
@@ -1897,7 +1996,14 @@ class LkMarketNotify(Star):
         if isinstance(data, dict) and data.get("ok"):
             mark = self._marks().get((data.get("seller") or "").upper())
             out = self._merchant_block(data, mark)
-            return await self._say(event, out + ("\n" + note if note else ""))
+            text = out + ("\n" + note if note else "")
+            png = None
+            if self._image_reply_on():
+                try:
+                    png = await asyncio.to_thread(self._merchant_card, data, mark)
+                except Exception as e:
+                    logger.warning(f"[出图] 商家卡失败: {type(e).__name__}: {e}")
+            return await self._reply(event, text, png)
         if isinstance(data, dict) and data.get("blocked_by"):
             return await self._say(event, 
                 f"查不到「{q}」：这个商家屏蔽了你的账号（{'、'.join(data['blocked_by'])}）。\n"
@@ -2037,7 +2143,12 @@ class LkMarketNotify(Star):
                 f"没查到「{q}」的成交记录。"
                 + (f"\n{err[:90]}" if err else "\n换个名字试试：查询 治愈兔 最近"))
         lines2 = [str(x) for x in (data.get("lines") or []) if str(x).strip()]
-        return await self._say(event, "\n".join(lines2) or f"{q}：暂无成交记录")
+        icons = None
+        c = _card()
+        if c is not None and c.available():
+            p = c.icon_path("egg", q)
+            icons = [p] if p else None
+        return await self._say(event, "\n".join(lines2) or f"{q}：暂无成交记录", icons)
 
     @filter.command("查询")
     async def cmd_species(self, event: AstrMessageEvent):

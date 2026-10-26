@@ -13,6 +13,7 @@
 from __future__ import annotations
 
 import io
+import json
 import os
 import re
 from pathlib import Path
@@ -193,6 +194,71 @@ def _png_bytes(img) -> bytes:
             pass
     return data
 
+#: 图标目录（和 card.py 同级）
+ICON_DIR = Path(__file__).resolve().parent / "icons"
+_ICON_INDEX: Optional[Dict[str, Dict[str, str]]] = None
+
+
+def _icon_index() -> Dict[str, Dict[str, str]]:
+    global _ICON_INDEX
+    if _ICON_INDEX is None:
+        _ICON_INDEX = {"pet": {}, "egg": {}}
+        try:
+            p = ICON_DIR / "index.json"
+            if p.is_file():
+                d = json.loads(p.read_text(encoding="utf-8"))
+                for k in ("pet", "egg"):
+                    _ICON_INDEX[k] = d.get(k) or {}
+        except Exception:
+            pass
+    return _ICON_INDEX
+
+
+def icon_path(kind: str, name: str) -> Optional[str]:
+    """名字 → 图标文件路径。kind='pet'（精灵）| 'egg'（蛋）。找不到返回 None。"""
+    idx = _icon_index().get(kind) or {}
+    n = str(name or "").strip()
+    if not n or not idx:
+        return None
+    cands = [n]
+    if n.endswith("的蛋"):
+        cands.append(n[:-2])
+        cands.append(n[:-2] + "蛋")
+    elif n.endswith("蛋"):
+        cands.append(n[:-1])
+    else:
+        cands.extend([n + "蛋", n + "的蛋"])
+    slug = None
+    for c in cands:
+        slug = idx.get(c)
+        if slug:
+            break
+    if not slug:
+        return None
+    f = ICON_DIR / kind / f"{slug}.png"
+    return str(f) if f.is_file() else None
+
+
+def has_icons() -> bool:
+    """图标库装了没（打包时可能没带）。"""
+    return bool((_icon_index().get("egg") or {}) or (_icon_index().get("pet") or {}))
+
+
+def _load_icon(path, size: int):
+    """读一张图标，缩放到 size×size，返回 RGBA 图；读不了返回 None。"""
+    pil = _pil()
+    if not pil or not path:
+        return None
+    Image, _, _ = pil
+    try:
+        im = Image.open(str(path)).convert("RGBA")
+        if im.size != (size, size):
+            im = im.resize((size, size), Image.LANCZOS)
+        return im
+    except Exception:
+        return None
+
+
 def _sizes(base: int) -> Dict[str, int]:
     return {k: max(9, base + off) for k, off in SIZE_RATIO.items()}
 
@@ -245,12 +311,18 @@ def render_card(
     font_path: str = "",
     width: int = 700,
     font_size: int = 18,
+    head_icons: Optional[Sequence[str]] = None,
+    tiles: Optional[Sequence[Sequence[Any]]] = None,
+    tiles_per_row: int = 4,
+    tile_icon: int = 64,
 ) -> bytes:
     """画一张卡片，返回 PNG bytes。
 
-    rows  : [(左, 右), ...]                    普通键值行
-    boxes : [(标签, 内容, (r,g,b)), ...]       两列色块（大小头那种）
-    table : {"columns": [...], "items": [四个值的元组, ...]}  行情表
+    rows  : [(左, 右), ...]                       普通键值行
+    boxes : [(标签, 内容, (r,g,b)), ...]          两列色块（大小头那种）
+    table : {"columns": [...], "items": [...]}    行情表
+    head_icons : 标题行右上角的图（精灵图 / 蛋图），最多 4 张
+    tiles : [(图标路径, [说明行...]), ...]         图标格（货架分类那种）
     """
     pil = _pil()
     if not pil:
@@ -258,7 +330,6 @@ def render_card(
     Image, ImageDraw, _ = pil
 
     colors = _norm_theme(theme)
-
     sizes = _sizes(int(font_size))
     fonts = _fonts(font_path or find_font(""), sizes)
 
@@ -272,23 +343,37 @@ def render_card(
     boxes = list(boxes or [])
     tcols = list((table or {}).get("columns") or [])
     titems = list((table or {}).get("items") or [])
+    hi = [x for x in (head_icons or []) if x][:4]
+    tl = [x for x in (tiles or []) if x]
 
-    # ---- 先估个高度，画的时候用两遍法：先量后画
-    def measure(im_draw) -> int:
+    hi_size = max(40, int(tile_icon)) if hi else 0
+    title_h = max(sizes["标题"] + 22, (hi_size + 12) if hi else 0)
+
+    tile_ico = int(tile_icon)
+    tile_line = sizes["更小"] + 6
+    per_row = max(1, int(tiles_per_row))
+    tile_w = inner // per_row
+    tile_h = (tile_ico + tile_line * 2 + 12) if tl else 0
+    tile_rows = ((len(tl) + per_row - 1) // per_row) if tl else 0
+
+    probe = Image.new("RGB", (width, 10), colors["背景"])
+    pd = ImageDraw.Draw(probe)
+
+    def measure(_d) -> int:
         y = pad
-        y += sizes["标题"] + 22                       # 标题行
-        if rows or boxes or titems:
+        y += title_h
+        if rows or boxes or titems or tl:
             y += 10
         y += lh_row * len(rows)
         if boxes:
             y += 10 + box_h * ((len(boxes) + 1) // 2)
         if tcols or titems:
             y += 12 + head_h + head_h * len(titems)
+        if tl:
+            y += 12 + tile_h * tile_rows
         y += pad
         return y
 
-    probe = Image.new("RGB", (width, 10), colors["背景"])
-    pd = ImageDraw.Draw(probe)
     height = measure(pd)
 
     img = Image.new("RGB", (width, height), colors["背景"])
@@ -299,20 +384,34 @@ def render_card(
     x0, x1 = pad, width - pad
     y = pad
 
-    # 标题 + 副标题
-    dr.text((x0, y), _fit(dr, title, fonts["标题"], inner * 0.62), font=fonts["标题"], fill=colors["标题"])
+    # 标题（给右上角头像留出右边距）
+    title_right = inner * 0.62 if not hi else max(inner * 0.3, inner - len(hi) * (hi_size + 10) - 8)
+    dr.text((x0, y), _fit(dr, title, fonts["标题"], title_right),
+            font=fonts["标题"], fill=colors["标题"])
     tw = dr.textlength(str(title), font=fonts["标题"]) if fonts["标题"] else 0
     if subtitle:
         dr.text((x0 + tw + 12, y + sizes["标题"] - sizes["次要"] - 4),
-                _fit(dr, subtitle, fonts["次要"], inner * 0.3),
+                _fit(dr, subtitle, fonts["次要"], title_right * 0.6),
                 font=fonts["次要"], fill=colors["次要"])
-    if tag:
+    if tag and not hi:
         tgw = dr.textlength(str(tag), font=fonts["次要"]) + 20
-        dr.rounded_rectangle([x1 - tgw, y + 2, x1, y + sizes["次要"] + 24], 12, fill=colors["标签底"])
+        dr.rounded_rectangle([x1 - tgw, y + 2, x1, y + sizes["次要"] + 24], 12,
+                             fill=colors["标签底"])
         dr.text((x1 - tgw + 10, y + 8), str(tag), font=fonts["次要"], fill=colors["强调"])
-    y += sizes["标题"] + 22
 
-    if rows or boxes or titems:
+    # 右上角图标（从右往左贴）
+    if hi:
+        hx = x1
+        for pth in reversed(hi):
+            ic = _load_icon(pth, hi_size)
+            if ic is None:
+                continue
+            hx -= hi_size
+            img.paste(ic, (hx, y), ic)
+            hx -= 10
+    y += title_h
+
+    if rows or boxes or titems or tl:
         dr.line([x0, y, x1, y], fill=colors["边框"], width=1)
         y += 10
 
@@ -352,8 +451,8 @@ def render_card(
         y += 12
         n_num = max(1, len(tcols) - 1 or 3)
         num_area = inner * 0.62
-        start = x1 - num_area
-        right_x = [start + num_area * (i + 1) / n_num for i in range(n_num)]
+        num_start = x1 - num_area
+        right_x = [num_start + num_area * (i + 1) / n_num for i in range(n_num)]
 
         for i, cname in enumerate(tcols):
             if i == 0:
@@ -366,7 +465,7 @@ def render_card(
         for item in titems:
             values = list(item)
             dr.rounded_rectangle([x0 - 4, y - 2, x1 + 4, y + head_h - 8], 8,
-                                 fill=colors["标签底"] if colors["标签底"] else None)
+                                 fill=colors["标签底"])
             if values:
                 dr.text((x0 + 4, y), _fit(dr, values[0], fonts["名字"], inner * 0.3),
                         font=fonts["名字"], fill=colors["标题"])
@@ -374,10 +473,28 @@ def render_card(
                 col = colors["强调"] if i == 1 else colors["正文"]
                 dr.text((right_x[i], y), str(val), font=fonts["数字"],
                         fill=colors["强调"] if i == 1 else col, anchor="ra")
-            y += head_x_advance(head_h)
+            y += head_h
+
+    # 图标格（货架按精灵分类那种）
+    if tl:
+        y += 12
+        for i, tile in enumerate(tl):
+            col = i % per_row
+            rw = i // per_row
+            tx = x0 + col * tile_w
+            ty = y + rw * tile_h
+            icon = _load_icon(tile[0] if len(tile) > 0 else None, tile_ico)
+            if icon is not None:
+                img.paste(icon, (tx + (tile_w - tile_ico) // 2, ty), icon)
+            caps = list(tile[1] or [])[:2] if len(tile) > 1 else []
+            cy = ty + tile_ico + 4
+            for cap in caps:
+                dr.text((tx + tile_w // 2, cy),
+                        _fit(dr, cap, fonts["更小"], tile_w - 8),
+                        font=fonts["更小"], fill=colors["正文"], anchor="ma")
+                cy += tile_line
 
     return _png_bytes(img)
-
 
 def head_x_advance(head_h: int) -> int:
     return head_h
@@ -492,6 +609,8 @@ def render_text_card(
     width: int = 700,
     font_size: int = 18,
     max_lines: int = 80,
+    head_icons: Optional[Sequence[str]] = None,
+    tile_icon: int = 64,
 ) -> bytes:
     """把一段普通文字画成卡片，返回 PNG bytes。
 
@@ -578,10 +697,14 @@ def render_text_card(
     if truncated:
         blocks.append(("text", 0, ["……（后面还有内容，回复里看不全）"]))
 
+    hi = [x for x in (head_icons or []) if x][:4]
+    hi_size = max(40, int(tile_icon)) if hi else 0
+    title_h = max(sizes["标题"] + 20, (hi_size + 12) if hi else 0)
+
     # 估高度
     h = pad
     if title:
-        h += sizes["标题"] + 20
+        h += title_h
     for b in blocks:
         if b[0] == "gap":
             h += b[1]
@@ -600,9 +723,19 @@ def render_text_card(
     x0, x1 = pad, width - pad
     y = pad
     if title:
-        dr.text((x0, y), _fit(dr, title, fonts["标题"], inner),
+        dr.text((x0, y), _fit(dr, title, fonts["标题"], inner * (0.6 if hi else 1.0)),
                 font=fonts["标题"], fill=colors["标题"])
-        y += sizes["标题"] + 20
+    if hi:
+        hx = x1
+        for pth in reversed(hi):
+            ic = _load_icon(pth, hi_size)
+            if ic is None:
+                continue
+            hx -= hi_size
+            img.paste(ic, (hx, y), ic)
+            hx -= 10
+    if title or hi:
+        y += title_h
 
     for b in blocks:
         if y > h - pad:
