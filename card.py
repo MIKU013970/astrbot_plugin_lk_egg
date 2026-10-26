@@ -202,22 +202,39 @@ _ICON_INDEX: Optional[Dict[str, Dict[str, str]]] = None
 def _icon_index() -> Dict[str, Dict[str, str]]:
     global _ICON_INDEX
     if _ICON_INDEX is None:
-        _ICON_INDEX = {"pet": {}, "egg": {}}
+        _ICON_INDEX = {"pet": {}, "egg": {}, "pet_form": {}}
         try:
             p = ICON_DIR / "index.json"
             if p.is_file():
                 d = json.loads(p.read_text(encoding="utf-8"))
-                for k in ("pet", "egg"):
+                for k in ("pet", "egg", "pet_form"):
                     _ICON_INDEX[k] = d.get(k) or {}
         except Exception:
             pass
     return _ICON_INDEX
 
 
-def icon_path(kind: str, name: str) -> Optional[str]:
-    """名字 → 图标文件路径。kind='pet'（精灵）| 'egg'（蛋）。找不到返回 None。"""
-    idx = _icon_index().get(kind) or {}
-    n = str(name or "").strip()
+def icon_path(kind: str, name: str, form: str = "") -> Optional[str]:
+    """名字 → 图标文件路径。kind='pet'（精灵）| 'egg'（蛋）。找不到返回 None。
+
+    多形态精灵（鸭吉吉 6 种、海枝枝 4 种…）在宠物库里是**不同的 petId、不同的图**，
+    所以传了 form 就先按「名字|形态」精确找，找不到再退回按名字找。
+    """
+    full = _icon_index()
+    n0 = str(name or "").strip()
+    f0 = str(form or "").strip()
+    if kind == "pet" and n0 and f0:
+        pf = (full.get("pet_form") or {}).get(f"{n0}|{f0}")
+        if not pf:                       # 形态名可能带「名字（形态）」这种写法
+            short = f0.replace(n0, "").strip("（）() ")
+            if short:
+                pf = (full.get("pet_form") or {}).get(f"{n0}|{short}")
+        if pf:
+            p = ICON_DIR / "pet" / f"{pf}.png"
+            if p.is_file():
+                return str(p)
+    idx = full.get(kind) or {}
+    n = n0
     if not n or not idx:
         return None
     cands = [n]

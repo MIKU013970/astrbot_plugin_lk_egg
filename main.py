@@ -75,7 +75,7 @@ def _card():
 
 _PLUGIN_DIR = Path(__file__).resolve().parent
 _PLUGIN_NAME = "astrbot_plugin_lk_egg"
-VERSION = "1.20.0"
+VERSION = "1.20.1"
 
 
 def _data_dir() -> Path:
@@ -138,7 +138,7 @@ def _save_state(state: Dict[str, Any]) -> None:
     "astrbot_plugin_lk_egg",
     "MIKU013970 & DeepSeek",
     "市集购买成功推送 + 新上架监控 + 黑白名单查询",
-    "1.20.0",
+    "1.20.1",
 )
 class LkMarketNotify(Star):
     def __init__(self, context: Context, config: AstrBotConfig = None):
@@ -758,7 +758,8 @@ class LkMarketNotify(Star):
             hw = f"{x.get('身高区间') or ''} · {x.get('体重区间') or ''}".strip(" ·")
             if hw:
                 subs.append(hw)
-            hs.append((c.icon_path("pet", nm), f"{i}. {nm}", head_v, subs))
+            form0 = (forms[0] if forms else "") or str(x.get("形态简称") or "")
+            hs.append((c.icon_path("pet", nm, form0), f"{i}. {nm}", head_v, subs))
         return c.render_card(
             title="身高体重查蛋",
             subtitle=f"身高 {h:g} cm · 体重 {w / 1000:.3f} kg",
@@ -839,25 +840,21 @@ class LkMarketNotify(Star):
                 return str(fp)
         except Exception:
             pass
-        running = getattr(self, "_avatar_running", None)
-        if running is None:
-            running = set()
-            self._avatar_running = running
-        key = str(seller or u)
-        if key in running:
-            return None
-        running.add(key)
-
-        async def _job():
-            try:
-                await self._avatar_fetch_job(seller, u)
-            finally:
-                running.discard(key)
-
+        # 同步拉，最多 2.5 秒。
+        # 实测控制台代理缓存命中只要 0.02 秒；个别商家 URL 少端口会卡到 20 秒，
+        # 那种就放弃（下次再说），绝不为了它让整条查ID 等 20 秒。
         try:
-            asyncio.create_task(_job())
+            data = await asyncio.wait_for(
+                self._fetch_bytes("/api/avatar?u=" + urllib.parse.quote(u, safe="")),
+                timeout=2.5)
         except Exception:
-            running.discard(key)
+            data = None
+        if data and len(data) >= 200:
+            try:
+                fp.write_bytes(data)
+                return str(fp)
+            except Exception:
+                return None
         return None
 
     def _temp_png(self, png: bytes) -> str:
@@ -943,7 +940,8 @@ class LkMarketNotify(Star):
         v = v if isinstance(v, dict) else {}
         pet = str(v.get("精灵") or rec.get("精灵") or "")
         egg = str(v.get("蛋名") or rec.get("蛋名") or pet)
-        out = [c.icon_path("pet", pet), c.icon_path("egg", egg)]
+        form0 = str(v.get("形态简称") or v.get("形态") or "")
+        out = [c.icon_path("pet", pet, form0), c.icon_path("egg", egg)]
         out = [x for x in out if x]
         return out or None
 
