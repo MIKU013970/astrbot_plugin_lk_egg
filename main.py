@@ -75,7 +75,7 @@ def _card():
 
 _PLUGIN_DIR = Path(__file__).resolve().parent
 _PLUGIN_NAME = "astrbot_plugin_lk_egg"
-VERSION = "1.20.1"
+VERSION = "1.20.2"
 
 
 def _data_dir() -> Path:
@@ -138,7 +138,7 @@ def _save_state(state: Dict[str, Any]) -> None:
     "astrbot_plugin_lk_egg",
     "MIKU013970 & DeepSeek",
     "市集购买成功推送 + 新上架监控 + 黑白名单查询",
-    "1.20.1",
+    "1.20.2",
 )
 class LkMarketNotify(Star):
     def __init__(self, context: Context, config: AstrBotConfig = None):
@@ -1316,9 +1316,12 @@ class LkMarketNotify(Star):
         seller = str(data.get("seller") or m.get("seller") or "—")
         nick = m.get("nickname") or m.get("displayName") or seller
         tiles = self._shelf_tiles(data.get("listings") or [])
+        # 没设平台头像的商家（占大多数，都是"玩家xxxx""访客"这种默认号）
+        # 用「神奇的蛋」的图兜底，卡片左边就不会空一块
+        head = avatar or c.icon_path("egg", "神奇蛋")
         return c.render_card(title=str(nick), rows=self._merchant_rows(data, mark),
                              tiles=(tiles or None), tiles_per_row=4,
-                             head_icons=([avatar] if avatar else None),
+                             head_icons=([head] if head else None),
                              **self._card_kwargs())
 
     def _text_card(self, text: str, icons=None) -> Optional[bytes]:
