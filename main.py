@@ -75,7 +75,7 @@ def _card():
 
 _PLUGIN_DIR = Path(__file__).resolve().parent
 _PLUGIN_NAME = "astrbot_plugin_lk_egg"
-VERSION = "1.29.0"
+VERSION = "1.30.0"
 
 
 def _data_dir() -> Path:
@@ -138,7 +138,7 @@ def _save_state(state: Dict[str, Any]) -> None:
     "astrbot_plugin_lk_egg",
     "MIKU013970 & DeepSeek",
     "市集购买成功推送 + 新上架监控 + 黑白名单查询",
-    "1.29.0",
+    "1.30.0",
 )
 class LkMarketNotify(Star):
     def __init__(self, context: Context, config: AstrBotConfig = None):
@@ -1467,6 +1467,11 @@ class LkMarketNotify(Star):
                     continue
                 rows.append(("同名候选" if first else "", self._cand_text(c)))
                 first = False
+
+        # 卖家自己在助手上填的备注/留言（他自己写的，别删）
+        _note = str(m.get("note") or "").strip()
+        if _note:
+            rows.append(("卖家留言", _note[:80] + ("…" if len(_note) > 80 else "")))
 
         # 上次采集 / 上次在助手上操作（数据变动倒推）
         _seen = data.get("last_seen")
