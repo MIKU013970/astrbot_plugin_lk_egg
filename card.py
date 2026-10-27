@@ -204,12 +204,13 @@ def _icon_index() -> Dict[str, Dict[str, str]]:
     global _ICON_INDEX
     if _ICON_INDEX is None:
         _ICON_INDEX = {"pet": {}, "egg": {}, "pet_form": {}, "egg_form": {},
-                       "pet_shiny": {}}
+                       "pet_shiny": {}, "pet_stage1": {}}
         try:
             p = ICON_DIR / "index.json"
             if p.is_file():
                 d = json.loads(p.read_text(encoding="utf-8"))
-                for k in ("pet", "egg", "pet_form", "egg_form", "pet_shiny"):
+                for k in ("pet", "egg", "pet_form", "egg_form", "pet_shiny",
+                          "pet_stage1"):
                     _ICON_INDEX[k] = d.get(k) or {}
         except Exception:
             pass

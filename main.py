@@ -75,7 +75,7 @@ def _card():
 
 _PLUGIN_DIR = Path(__file__).resolve().parent
 _PLUGIN_NAME = "astrbot_plugin_lk_egg"
-VERSION = "1.37.0"
+VERSION = "1.37.1"
 
 
 def _data_dir() -> Path:
@@ -138,7 +138,7 @@ def _save_state(state: Dict[str, Any]) -> None:
     "astrbot_plugin_lk_egg",
     "MIKU013970 & DeepSeek",
     "市集购买成功推送 + 新上架监控 + 黑白名单查询",
-    "1.37.0",
+    "1.37.1",
 )
 class LkMarketNotify(Star):
     def __init__(self, context: Context, config: AstrBotConfig = None):
@@ -1059,7 +1059,12 @@ class LkMarketNotify(Star):
         form0 = str(v.get("形态简称") or v.get("形态") or "")
         out = [self._stage1_path(pet, form0), c.icon_path("egg", egg)]
         # 异色
-        shiny_pet = c.icon_path("shiny", pet, form0)
+        try:
+            _s1n = json.loads((_PLUGIN_DIR / "stage1name.json").read_text(encoding="utf-8"))
+        except Exception:
+            _s1n = {}
+        shiny_pet = (c.icon_path("shiny", _s1n.get(pet, pet), form0)
+                     or c.icon_path("shiny", pet, form0))
         if shiny_pet:
             out.append(shiny_pet)
             shiny_egg = None
