@@ -75,7 +75,7 @@ def _card():
 
 _PLUGIN_DIR = Path(__file__).resolve().parent
 _PLUGIN_NAME = "astrbot_plugin_lk_egg"
-VERSION = "1.45.0"
+VERSION = "1.46.0"
 
 
 def _data_dir() -> Path:
@@ -138,7 +138,7 @@ def _save_state(state: Dict[str, Any]) -> None:
     "astrbot_plugin_lk_egg",
     "MIKU013970 & DeepSeek",
     "市集购买成功推送 + 新上架监控 + 黑白名单查询",
-    "1.45.0",
+    "1.46.0",
 )
 class LkMarketNotify(Star):
     def __init__(self, context: Context, config: AstrBotConfig = None):
@@ -672,6 +672,33 @@ class LkMarketNotify(Star):
             return None
         return c.icon_path("pet_stage1", name, form) or c.icon_path("pet", name, form)
 
+    def _form_sprite_path(self, rec: Dict[str, Any], v: Dict[str, Any]) -> Optional[str]:
+        """形态自己有独立图鉴号 / 独立立绘时，用形态自己的图（最高形态图）。
+
+        睡铃雪影娃娃（图鉴 440）、果实立方人（图鉴 466）这种「活动特殊形态」其实是
+        最高形态那一档的立绘，出现在 大耳帽兜 / 立方人 的图鉴里时不能再用一阶段图。
+        普通形态（西瓜碧玺的样子、鸭吉吉各形态…）图鉴号跟本体一样，继续走一阶段图。
+        """
+        c = _card()
+        if c is None or not isinstance(v, dict) or not v:
+            return None
+        form = str(v.get("形态简称") or "").strip()
+        my_dex = str(v.get("图鉴编号") or "").strip()
+        if not form or not my_dex:
+            return None
+        base_dex = ""
+        for x in (rec.get("variants") or []):
+            d = str(x.get("图鉴编号") or "").strip()
+            if d and str(x.get("形态简称") or "").strip() != form:
+                base_dex = d
+                break
+        if not base_dex or base_dex == my_dex:
+            return None                      # 同号 → 就是普通形态，照旧用一阶段图
+        name = str(rec.get("精灵") or "")
+        return (c.icon_path("pet", name, form)
+                or c.icon_path("pet", form)
+                or c.icon_path("pet_stage1", form))
+
     def _card_kwargs(self) -> Dict[str, Any]:
         """把卡片相关配置整理成 card.render_card 的参数。"""
         try:
@@ -768,7 +795,7 @@ class LkMarketNotify(Star):
             for _v in _real_forms[:12]:
                 _f = str(_v.get("形态简称") or _v.get("形态") or "")
                 _pair = self._icon_grid([
-                    self._stage1_path(pet_name, _f),
+                    self._form_sprite_path(rec, _v) or self._stage1_path(pet_name, _f),
                     c.icon_path("egg", str(_v.get("蛋名") or ""), _f)],
                     cell=max(60, _tile_icon // 2))
                 _cap = [x for x in (_f, str(_v.get("蛋名") or "")) if x]
@@ -1074,7 +1101,8 @@ class LkMarketNotify(Star):
         pet = str(v.get("精灵") or rec.get("精灵") or "")
         egg = str(v.get("蛋名") or rec.get("蛋名") or pet)
         form0 = str(v.get("形态简称") or v.get("形态") or "")
-        out = [self._stage1_path(pet, form0), c.icon_path("egg", egg)]
+        out = [self._form_sprite_path(rec, v) or self._stage1_path(pet, form0),
+               c.icon_path("egg", egg)]
         # 异色
         try:
             _s1n = json.loads((_PLUGIN_DIR / "stage1name.json").read_text(encoding="utf-8"))
@@ -1899,6 +1927,9 @@ class LkMarketNotify(Star):
         "查询 火神               进化链上任意名字都行\n"
         "查询 鸭吉吉             多形态会列出每种规格\n"
         "查询 治愈兔 最近        最近成交：4 种牌子各 10 笔（历史 也行）\n"
+        "查询 拟人组             按蛋组列全部精灵（一阶段名称）\n"
+        "查询 拟人 / 查询 海洋    不带「组」也认\n"
+        "查询 组                 看有哪些蛋组、各多少只\n"
         "0.32 2.12               身高体重查蛋（空格分隔，身高按米算）\n"
         "34/3.617                身高厘米 + 体重千克（斜杠也行）\n"
         "34 3617                 整数体重按克算\n"
@@ -1937,7 +1968,7 @@ class LkMarketNotify(Star):
     )
 
     FORMAT_HINTS = {
-        "查询": "格式：查询 火花（查蛋 也一样）\n进化链上任意名字都行：查询 火神 / 查询 焰火\n查最近成交：查询 火花 最近",
+        "查询": "格式：查询 火花（查蛋 也一样）\n进化链上任意名字都行：查询 火神 / 查询 焰火\n查蛋组：查询 拟人组 / 查询 拟人 / 查询 海洋\n查最近成交：查询 火花 最近",
         "查蛋": "格式：查蛋 火花\n和「查询」完全一样，斜杠可加可不加",
         "发码": "格式：发码 EGG-XXXX-XXXX（先配置 code_groups 群号）",
         "输入兑换码": "格式：输入兑换码 EGG-XXXX-XXXX",
@@ -2213,7 +2244,11 @@ class LkMarketNotify(Star):
             return
         rec = self._find_species(raw)
         if not rec:
-            return                      # 不是精灵名就闭嘴
+            grp = self._match_group(raw)      # 私聊直接发「拟人组」也能出清单
+            if grp is None:
+                return                    # 不是精灵名 / 组名就闭嘴
+            yield await self._group_reply(event, grp)
+            return
         _t, _p = await self._species_payload(rec)
         yield await self._reply(event, _t, _p)
 
@@ -2867,6 +2902,114 @@ class LkMarketNotify(Star):
             return ("", False)
         return (arg, not has_sep and not had_prefix)
 
+    # ---------------------------------------------------------------- 蛋组
+    #: 「查询 拟人组」「查询 拟人」「查询拟人蛋组」都认
+    GROUP_TAILS = ("蛋组", "组别", "组")
+    #: 「查询 组」这种，列全部组名
+    GROUP_LIST_WORDS = {"组", "组别", "蛋组", "所有组", "全部组", "组列表", "蛋组列表"}
+    #: 数据里这些不是真蛋组（空 / 占位）
+    GROUP_JUNK = {"", "—", "-", "－", "--", "无", "未知", "待定", "?", "？", "其他"}
+
+    def _all_groups(self) -> Dict[str, List[Dict[str, Any]]]:
+        """蛋组名 → 属于它的记录列表（一次性建好，数据是静态的）。"""
+        cached = getattr(self, "_group_cache", None)
+        if cached is not None:
+            return cached
+        out: Dict[str, List[Dict[str, Any]]] = {}
+        for rec in (self.ranges.get("species") or {}).values():
+            seen = []
+            for holder in [rec] + list(rec.get("variants") or []):
+                for g in re.split(r"[/／、,，]", str(holder.get("蛋组") or "")):
+                    g = g.strip()
+                    if g in self.GROUP_JUNK:
+                        continue
+                    if g and g not in seen:
+                        seen.append(g)
+            for g in seen:
+                out.setdefault(g, []).append(rec)
+        try:
+            self._group_cache = out
+        except Exception:
+            pass
+        return out
+
+    @staticmethod
+    def _chain_head(rec: Dict[str, Any]) -> str:
+        """进化链一阶段名（记录标题不一定是一阶段，比如 立方人 / 罗隐 这些形态条目）。"""
+        chain = str(rec.get("进化链") or "")
+        parts = [p.strip() for p in re.split(r"\s*[→>]\s*", chain) if p.strip()]
+        head = re.sub(r"[（(].*?[)）]", "", parts[0]).strip() if parts else ""
+        return head or str(rec.get("精灵") or "").strip()
+
+    def _match_group(self, q: str) -> Optional[str]:
+        """把查询词归一成蛋组名：拟人组 / 拟人 / 拟人蛋组 / 组别 都行。"""
+        s = str(q or "").strip()
+        if not s:
+            return None
+        groups = self._all_groups()
+        if s in self.GROUP_LIST_WORDS:
+            return ""                        # 空串 = 要一份组名清单
+        if s in groups:
+            return s
+        for tail in self.GROUP_TAILS:
+            if s.endswith(tail) and len(s) > len(tail):
+                head = s[: -len(tail)].strip()
+                if head:
+                    if head in groups:
+                        return head
+                    if head + "组" in groups:
+                        return head + "组"
+        if s + "组" in groups:
+            return s + "组"
+        return None
+
+    def _group_heads(self, group: str) -> Dict[str, Optional[str]]:
+        """组内精灵：一阶段名 → 图鉴号（同一条进化链只留一条）。"""
+        heads: Dict[str, Optional[str]] = {}
+        for rec in (self._all_groups().get(group) or []):
+            nm = self._chain_head(rec)
+            if not nm:
+                continue
+            if nm not in heads:
+                heads[nm] = None
+            if heads[nm] is None:
+                for v in rec.get("variants") or [rec]:
+                    d = str(v.get("图鉴编号") or rec.get("图鉴编号") or "").strip()
+                    if d:
+                        heads[nm] = d
+                        break
+        return heads
+
+    def _group_reply_text(self, group: str) -> str:
+        """某个蛋组的全部精灵（只列进化链一阶段名称）。"""
+        groups = self._all_groups()
+        if group == "":
+            rows = sorted(((g, len(self._group_heads(g))) for g in groups),
+                          key=lambda kv: (-kv[1], kv[0]))
+            body = " · ".join(f"{g} {n}" for g, n in rows)
+            return (f"🧬 蛋组一共 {len(rows)} 个：\n{body}\n\n"
+                    f"查法：查询 拟人组 / 查询 拟人 / 查询 海洋")
+        heads = self._group_heads(group)
+        if not heads:
+            return f"「{group}」这个组暂时没有收录的精灵。"
+
+        def _key(item):
+            nm, d = item
+            try:
+                return (0, int(str(d).lstrip("0") or 0), nm)
+            except (TypeError, ValueError):
+                return (1, 0, nm)
+
+        lines = [f"🧬 {group} · {len(heads)} 只（一阶段名称）"]
+        for i, (nm, d) in enumerate(sorted(heads.items(), key=_key), 1):
+            lines.append(f"{i:>2}. {nm}{('  ' + str(d)) if d else ''}")
+        lines.append("")
+        lines.append(f"发「查询 {group}」随时看这个组；发「查询 名字」看单只的蛋数据")
+        return "\n".join(lines)
+
+    async def _group_reply(self, event: Any, group: str):
+        return await self._say(event, self._group_reply_text(group))
+
     def _sp_split_mode(self, arg: str):
         """'红绒十字 最近' / '红绒十字历史' → ('红绒十字', 'recent')"""
         a = str(arg or "").strip()
@@ -3019,7 +3162,11 @@ class LkMarketNotify(Star):
                 "格式：查询 火花 / 查蛋 火花\n"
                 "· 加空格：带不带斜线都行（查询 火花、/查询 火花）\n"
                 "· 不加空格：前面最好带斜线（/查询火花）\n"
-                "· 查成交：查询 火花 最近（历史 也行）")
+                "· 查成交：查询 火花 最近（历史 也行）\n"
+                "· 查蛋组：查询 拟人组 / 查询 拟人 / 查询 海洋")
+        grp = self._match_group(q)
+        if grp is not None:
+            return await self._group_reply(event, grp)
         name, mode = self._sp_split_mode(q)
         hw = self._parse_hw(q) if mode == "info" else None
         rec = None if hw else self._find_species(name if mode == "recent" else q)
