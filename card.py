@@ -510,9 +510,18 @@ def render_card(
     dr.text((tx, y), title_txt, font=fonts["标题"], fill=colors["标题"])
     tw = dr.textlength(title_txt, font=fonts["标题"]) if fonts["标题"] else 0
     if subtitle:
-        dr.text((tx + tw + 12, y + sizes["标题"] - sizes["次要"] - 4),
-                _fit(dr, subtitle, fonts["次要"], max(40, inner - hi_w - tw - 30)),
-                font=fonts["次要"], fill=colors["次要"])
+        _st = _fit(dr, subtitle, fonts["次要"], max(40, inner - hi_w - tw - 30))
+        _sx = tx + tw + 12
+        _sy = y + sizes["标题"] - sizes["次要"] - 4
+        if "\x01" in _st or "\x02" in _st:
+            # 分段着色：\x01=深绿（可同乘等强调），\x02=红
+            for _sg in _split_gender(_st.replace("\x01", "♂").replace("\x02", "♀")):
+                _c2 = (colors["次要"] if _sg[0] == "t"
+                       else ((26, 148, 84) if _sg[1] == "♂" else (200, 55, 65)))
+                dr.text((_sx, _sy), _sg[1], font=fonts["次要"], fill=_c2)
+                _sx += dr.textlength(_sg[1], font=fonts["次要"])
+        else:
+            dr.text((_sx, _sy), _st, font=fonts["次要"], fill=colors["次要"])
     if tag:
         tgw = dr.textlength(str(tag), font=fonts["次要"]) + 20
         dr.rounded_rectangle([x1 - tgw, y + 2, x1, y + sizes["次要"] + 24], 12,

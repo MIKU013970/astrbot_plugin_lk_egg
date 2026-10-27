@@ -75,7 +75,7 @@ def _card():
 
 _PLUGIN_DIR = Path(__file__).resolve().parent
 _PLUGIN_NAME = "astrbot_plugin_lk_egg"
-VERSION = "1.41.1"
+VERSION = "1.42.0"
 
 
 def _data_dir() -> Path:
@@ -138,7 +138,7 @@ def _save_state(state: Dict[str, Any]) -> None:
     "astrbot_plugin_lk_egg",
     "MIKU013970 & DeepSeek",
     "市集购买成功推送 + 新上架监控 + 黑白名单查询",
-    "1.41.1",
+    "1.42.0",
 )
 class LkMarketNotify(Star):
     def __init__(self, context: Context, config: AstrBotConfig = None):
@@ -782,7 +782,9 @@ class LkMarketNotify(Star):
                               [x for x in cap if x]))
         return c.render_card(
             title=str(rec.get("精灵") or ""),
-            subtitle=(f"图鉴 {dex}" if dex else ""),
+            subtitle=" · ".join(x for x in (
+                (f"图鉴 {dex}" if dex else ""),
+                ("\x01可同乘" if rec.get("同乘") else "")) if x),
             tag=(f"区间 {bins}" if bins not in (None, "", 0) else ""),
             rows=rows, boxes=boxes, table=table, tiles=tiles,
             tile_icon=_tile_icon, head_icon=_head_icon,
