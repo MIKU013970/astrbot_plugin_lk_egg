@@ -75,7 +75,7 @@ def _card():
 
 _PLUGIN_DIR = Path(__file__).resolve().parent
 _PLUGIN_NAME = "astrbot_plugin_lk_egg"
-VERSION = "1.47.0"
+VERSION = "1.48.0"
 
 
 def _data_dir() -> Path:
@@ -138,7 +138,7 @@ def _save_state(state: Dict[str, Any]) -> None:
     "astrbot_plugin_lk_egg",
     "MIKU013970 & DeepSeek",
     "市集购买成功推送 + 新上架监控 + 黑白名单查询",
-    "1.47.0",
+    "1.48.0",
 )
 class LkMarketNotify(Star):
     def __init__(self, context: Context, config: AstrBotConfig = None):
@@ -767,20 +767,22 @@ class LkMarketNotify(Star):
         dex2 = v.get("图鉴编号") or rec.get("图鉴编号") or ""
         rows = self._species_rows(rec, dex2, query)
         boxes = None
-        _rf = [x for x in variants if "异色" not in str(x.get("蛋名") or "")]
-        # 单形态，或多形态但数据全同 → 都要出彩色框；
-        # 混了活动专属形态时不合并，过线值已经跟在每个形态下面了，不再重复出框
+        # 只有能生蛋的形态参与「区间 / 过线」这套算法；活动获取的那种（睡铃雪影娃娃）
+        # 买不到蛋，身高体重和过线值都不印，也就不参与底下的彩色框判断
+        _rf = [x for x in variants
+               if "异色" not in str(x.get("蛋名") or "")
+               and not self._form_own_dex(rec, x)]
+        # 单形态，或多形态但数据全同 → 都要出彩色框
         _bsig = {(str(x.get("身高区间") or ""), str(x.get("体重区间") or ""),
                   str(x.get("区间数") or "")) for x in _rf}
-        _has_act = any(self._form_own_dex(rec, x) for x in _rf)
-        if len(_rf) <= 1 or (len(_bsig) == 1 and not _has_act):
-            v = _rf[0] if _rf else v
+        if len(_rf) <= 1 or len(_bsig) == 1:
+            _bv = _rf[0] if _rf else v          # 别覆盖 v：它决定头部图标和副标题
             boxes = [
                 ("小块头",
-                 f"过线 {v.get('小块头过线值') or '—'}  极限 {v.get('小块头极限值') or '—'}",
+                 f"过线 {_bv.get('小块头过线值') or '—'}  极限 {_bv.get('小块头极限值') or '—'}",
                  (78, 138, 186)),
                 ("大块头",
-                 f"过线 {v.get('大块头过线值') or '—'}  极限 {v.get('大块头极限值') or '—'}",
+                 f"过线 {_bv.get('大块头过线值') or '—'}  极限 {_bv.get('大块头极限值') or '—'}",
                  (194, 88, 40)),
             ]
         table = None
@@ -795,7 +797,9 @@ class LkMarketNotify(Star):
                            str(it.get("listed", 0))) for it in items[:6]],
             }
         dex = v.get("图鉴编号") or rec.get("图鉴编号") or ""
-        _real_v = [x for x in variants if "异色" not in str(x.get("蛋名") or "")]
+        _real_v = [x for x in variants
+                   if "异色" not in str(x.get("蛋名") or "")
+                   and not self._form_own_dex(rec, x)]
         # 副标题的图鉴号：以「能生蛋的那只」为主；形态自己是独立号就补在后面
         _base_dex = ""
         for _x in _real_v:
@@ -3150,9 +3154,11 @@ class LkMarketNotify(Star):
             return rows
         # 底部只列「真·多形态」：
         #   - 纯异色变体不算形态（它只体现在上面第 3/4 个图标）
-        #   - 普通单形态 / 普通+异色 → 一律不列
+        #   - 只能活动获取的形态（睡铃雪影娃娃 / 果实立方人）整块不列：
+        #     它们买不到蛋，身高体重区间 / 过线值 这些数据没有意义
         _real_forms = [v for v in variants
-                       if "异色" not in str(v.get("蛋名") or "")]
+                       if "异色" not in str(v.get("蛋名") or "")
+                       and not self._form_own_dex(rec, v)]
         if len(_real_forms) <= 1:
             # 只有普通（或普通+异色）：按单形态展示，别把区间/过线值丢了
             _v = _real_forms[0] if _real_forms else {}
@@ -3160,36 +3166,27 @@ class LkMarketNotify(Star):
                      ("体重区间", _v.get("体重区间") or "")]
             return rows
         # 多形态但数据（身高/体重/区间数）完全一样 → 只显示一遍，另起一行列形态名
-        # 例外：里面混了活动专属形态（睡铃雪影娃娃 / 果实立方人 这种独立图鉴号）就不合并，
-        #       得单独列出来，才能标「活动获取」并各自带过线值
         _sigs = {(str(x.get("身高区间") or ""), str(x.get("体重区间") or ""),
                   str(x.get("区间数") or "")) for x in _real_forms}
-        _has_act = any(self._form_own_dex(rec, x) for x in _real_forms)
-        if len(_sigs) == 1 and not _has_act:
+        # 「形态」这行：3 种及以下写名字，4 种以上只写数量
+        _forms_txt = (" / ".join(self._form_label(x) for x in _real_forms)
+                      if len(_real_forms) <= 3 else f"{len(_real_forms)} 种")
+        if len(_sigs) == 1:
             _v = _real_forms[0]
-            _names = " / ".join(str(x.get("形态简称") or x.get("形态") or "")
-                                for x in _real_forms)
-            rows += [("形态", _names),
+            rows += [("形态", _forms_txt),
                      ("身高区间", _v.get("身高区间") or ""),
                      ("体重区间", _v.get("体重区间") or "")]
             return rows
-        # 「形态」这行：2~3 种不写（下面就列出来了）；4 种以上写形态名字
-        if len(_real_forms) >= 4:
-            rows.append(("形态", " / ".join(self._form_label(x) for x in _real_forms)))
-        variants = _real_forms + [v for v in variants
-                                  if "异色" in str(v.get("蛋名") or "")][:0]
-        default_egg = str(variants[0].get("蛋名") or "")
-        for i, cand in enumerate(variants[:8], 1):
+        rows.append(("形态", _forms_txt))
+        default_egg = str(_real_forms[0].get("蛋名") or "")
+        for i, cand in enumerate(_real_forms[:8], 1):
             nm = self._form_label(cand)
-            # 活动专属形态（睡铃雪影娃娃 / 果实立方人）：没有市售蛋区间，不显示区间数
-            _act = bool(self._form_own_dex(rec, cand))
-            bins = None if _act else cand.get("区间数")
-            body = (("" if _act else (f"区间 {bins} · " if bins not in (None, "", 0) else ""))
-                    + str(cand.get("身高区间") or "")
-                    + (f" · {cand.get('体重区间')}" if cand.get("体重区间") else "")
-                    + ("（活动获取）" if _act else ""))
-            rows.append((f"{i}. {nm}", body))
-            # 每个形态的过线值 / 极限值跟在它下面
+            bins = cand.get("区间数")
+            rows.append((f"{i}. {nm}",
+                         (f"区间 {bins} · " if bins not in (None, "", 0) else "")
+                         + str(cand.get("身高区间") or "")
+                         + (f" · {cand.get('体重区间')}" if cand.get("体重区间") else "")))
+            # 每个形态的过线值 / 极限值跟在它下面（都是这颗蛋自己的数）
             for _lab, _k1, _k2 in (("小块头", "小块头过线值", "小块头极限值"),
                                    ("大块头", "大块头过线值", "大块头极限值")):
                 _a, _b = str(cand.get(_k1) or "").strip(), str(cand.get(_k2) or "").strip()
