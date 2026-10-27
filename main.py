@@ -75,7 +75,7 @@ def _card():
 
 _PLUGIN_DIR = Path(__file__).resolve().parent
 _PLUGIN_NAME = "astrbot_plugin_lk_egg"
-VERSION = "1.36.0"
+VERSION = "1.36.1"
 
 
 def _data_dir() -> Path:
@@ -138,7 +138,7 @@ def _save_state(state: Dict[str, Any]) -> None:
     "astrbot_plugin_lk_egg",
     "MIKU013970 & DeepSeek",
     "市集购买成功推送 + 新上架监控 + 黑白名单查询",
-    "1.36.0",
+    "1.36.1",
 )
 class LkMarketNotify(Star):
     def __init__(self, context: Context, config: AstrBotConfig = None):
@@ -2310,11 +2310,31 @@ class LkMarketNotify(Star):
         sched = self.state.get("code_sched") or {}
         if sched.get("date") != _today or len(sched.get("times") or []) != count:
             import random as _r2
-            _times = sorted(_r2.randint(_lo, max(_lo + 1, _hi - 1)) for _ in range(count))
+            # 硬规则：同一个小时里不能出现两条。
+            # 做法：把窗口按小时切成若干段，随机挑 count 个不同的小时段，
+            # 再在每段里随机取一分钟 —— 11:59 和 12:01 之间隔 2 分钟也算合规。
+            _buckets = []
+            # 注意：结束时刻那一分钟不算（08:00~20:00 实际取到 19:59），
+            # 否则 20:00 会变成一个每天都中的固定槽
+            for _h in range(_lo // 60, max(_lo // 60 + 1, (_hi - 1) // 60 + 1)):
+                _a = max(_lo, _h * 60)
+                _b = min(_hi - 1, _h * 60 + 59)
+                if _a <= _b:
+                    _buckets.append((_a, _b))
+            _times = []
+            if len(_buckets) >= count:
+                for _a, _b in _r2.sample(_buckets, count):
+                    _times.append(_r2.randint(_a, _b))
+            else:                       # 窗口小时数不够，退化成整段随机（尽量拉开）
+                _span = max(1, _hi - _lo)
+                _times = [_lo + int(_span * (i + 0.5) / count)
+                          + _r2.randint(-20, 20) for i in range(count)]
+            _times = sorted(max(_lo, min(_hi, x)) for x in _times)
             self.state["code_sched"] = {"date": _today, "times": _times}
             _save_state(self.state)
             sched = self.state["code_sched"]
-            logger.info(f"[发码] 今天的随机时刻（分钟）：{_times}")
+            _fmt = [f"{x // 60:02d}:{x % 60:02d}" for x in _times]
+            logger.info(f"[发码] 今天的随机时刻（每小时最多 1 条）：{_fmt}")
         due = sum(1 for _t in (sched.get("times") or []) if _nowm >= _t)
         if quota_sent >= due:
             return 0                     # 还没到点，下个 tick 再看
