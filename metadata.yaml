@@ -3,7 +3,7 @@ display_name: 洛克王国查精灵蛋
 desc: >-
   输入精灵名字或「身高/体重」，查出这是什么蛋：区间数、身高体重区间、
   小块头与大块头的过线值和极限值、蛋组、进化链；多形态精灵会列出全部规格。
-version: 1.43.4
+version: 1.43.5
 author: MIKU013970 & DeepSeek
 repo: https://github.com/MIKU013970/astrbot_plugin_lk_egg
 short_desc: 查精灵蛋 · 区间 / 过线值 / 蛋组 / 进化链 · 发码到群
