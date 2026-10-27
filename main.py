@@ -75,7 +75,7 @@ def _card():
 
 _PLUGIN_DIR = Path(__file__).resolve().parent
 _PLUGIN_NAME = "astrbot_plugin_lk_egg"
-VERSION = "1.40.4"
+VERSION = "1.41.0"
 
 
 def _data_dir() -> Path:
@@ -138,7 +138,7 @@ def _save_state(state: Dict[str, Any]) -> None:
     "astrbot_plugin_lk_egg",
     "MIKU013970 & DeepSeek",
     "市集购买成功推送 + 新上架监控 + 黑白名单查询",
-    "1.40.4",
+    "1.41.0",
 )
 class LkMarketNotify(Star):
     def __init__(self, context: Context, config: AstrBotConfig = None):
@@ -718,7 +718,12 @@ class LkMarketNotify(Star):
         dex2 = v.get("图鉴编号") or rec.get("图鉴编号") or ""
         rows = self._species_rows(rec, dex2, query)
         boxes = None
-        if len(variants) <= 1:
+        _rf = [x for x in variants if "异色" not in str(x.get("蛋名") or "")]
+        # 单形态，或多形态但数据全同 → 都要出彩色框
+        _bsig = {(str(x.get("身高区间") or ""), str(x.get("体重区间") or ""),
+                  str(x.get("区间数") or "")) for x in _rf}
+        if len(_rf) <= 1 or len(_bsig) == 1:
+            v = _rf[0] if _rf else v
             boxes = [
                 ("小块头",
                  f"过线 {v.get('小块头过线值') or '—'}  极限 {v.get('小块头极限值') or '—'}",
@@ -735,30 +740,40 @@ class LkMarketNotify(Star):
                            str(it.get("today", 0)),
                            "-" if it.get("median") in (None, "")
                            else str(it.get("median")),
-                           str(it.get("low", 0)),
+                           _mark_low(it.get("low", 0), it.get("median")),
                            str(it.get("listed", 0))) for it in items[:6]],
             }
         dex = v.get("图鉴编号") or rec.get("图鉴编号") or ""
-        bins = v.get("区间数") if len(variants) == 1 else None
+        # 区间数：单形态（含普通+异色）都要显示，多形态时才由各行自己带
+        _real_v = [x for x in variants if "异色" not in str(x.get("蛋名") or "")]
+        _sig2 = {(str(x.get("身高区间") or ""), str(x.get("体重区间") or ""),
+                  str(x.get("区间数") or "")) for x in _real_v}
+        if len(_real_v) <= 1 or len(_sig2) == 1:
+            bins = (_real_v[0] if _real_v else v).get("区间数")
+        else:
+            bins = None
         pet_name = str(rec.get("精灵") or "")
         tiles = None
         _tile_icon = int(self._card_kwargs().get("tile_icon") or 64)
         _head_icon = 0
-        if len(variants) > 1:
+        _real_forms = [v for v in variants
+                       if "异色" not in str(v.get("蛋名") or "")]
+        # 底部图标格：只给真·多形态（>=2 个非异色形态）；纯异色/单形态不出格
+        if len(_real_forms) > 1:
             # 多形态：每个形态一格，格子里是「该形态的精灵图 + 该形态的蛋图」拼起来，
             # 下面写形态名和蛋名 —— 这样每个形态都看得见，不只默认那一个
             tiles = []
             _tile_icon = 140          # 多形态的格子是一张 2×2 拼图，要放大才看得清
             _head_icon = 64           # 顶部那两个（精灵+蛋）维持原大小不变
-            for _v in variants[:12]:
+            for _v in _real_forms[:12]:
                 _f = str(_v.get("形态简称") or _v.get("形态") or "")
                 _pair = self._icon_grid([
-                    c.icon_path("pet", pet_name, _f),
+                    self._stage1_path(pet_name, _f),
                     c.icon_path("egg", str(_v.get("蛋名") or ""), _f)],
                     cell=max(60, _tile_icon // 2))
                 _cap = [x for x in (_f, str(_v.get("蛋名") or "")) if x]
                 tiles.append((_pair, _cap))
-        elif len(eggs) > 1:
+        elif False:      # 多蛋图标格也停用（下面不再出现任何蛋图）
             # 多种蛋：每种蛋一格，写清蛋名和它对应的形态
             tiles = []
             for egg_name, eforms in eggs:
@@ -2937,16 +2952,47 @@ class LkMarketNotify(Star):
                       query: str = "") -> List[tuple]:
         """图鉴卡的行。多形态会列全部形态（以前只显示第一个）。"""
         variants = rec.get("variants") or [rec]
-        rows: List[tuple] = [("蛋组", rec.get("蛋组") or ""),
-                             ("公母", rec.get("公母") or "未知"),
+        _gd = str(rec.get("公母") or "未知")
+        # 公母加性别符号：♂ 蓝 / ♀ 红（符号用颜色区分，文字保持原色）
+        if "雄性" in _gd or "雌性" in _gd:
+            _gd = _gd.replace("雄性", "♂ 雄性").replace("雌性", "♀ 雌性")
+        _eg = str(rec.get("蛋组") or "")
+        if "未发现" in _eg:
+            _eg = "无法孵蛋"
+        rows: List[tuple] = [("蛋组", _eg),
+                             ("公母", _gd),
                              ("进化链", rec.get("进化链") or "")]
         if len(variants) <= 1:
             v = variants[0] if variants else {}
-            rows += [("蛋名", v.get("蛋名") or rec.get("蛋名") or ""),
-                     ("身高区间", v.get("身高区间") or ""),
+            rows += [("身高区间", v.get("身高区间") or ""),
                      ("体重区间", v.get("体重区间") or "")]
+
             return rows
-        rows.append(("形态", f"{len(variants)} 种"))
+        # 底部只列「真·多形态」：
+        #   - 纯异色变体不算形态（它只体现在上面第 3/4 个图标）
+        #   - 普通单形态 / 普通+异色 → 一律不列
+        _real_forms = [v for v in variants
+                       if "异色" not in str(v.get("蛋名") or "")]
+        if len(_real_forms) <= 1:
+            # 只有普通（或普通+异色）：按单形态展示，别把区间/过线值丢了
+            _v = _real_forms[0] if _real_forms else {}
+            rows += [("身高区间", _v.get("身高区间") or ""),
+                     ("体重区间", _v.get("体重区间") or "")]
+            return rows
+        # 多形态但数据（身高/体重/区间数）完全一样 → 只显示一遍，另起一行列形态名
+        _sigs = {(str(x.get("身高区间") or ""), str(x.get("体重区间") or ""),
+                  str(x.get("区间数") or "")) for x in _real_forms}
+        if len(_sigs) == 1:
+            _v = _real_forms[0]
+            _names = " / ".join(str(x.get("形态简称") or x.get("形态") or "")
+                                for x in _real_forms)
+            rows += [("形态", _names),
+                     ("身高区间", _v.get("身高区间") or ""),
+                     ("体重区间", _v.get("体重区间") or "")]
+            return rows
+        rows.append(("形态", f"{len(_real_forms)} 种"))
+        variants = _real_forms + [v for v in variants
+                                  if "异色" in str(v.get("蛋名") or "")][:0]
         default_egg = str(variants[0].get("蛋名") or "")
         for i, cand in enumerate(variants[:8], 1):
             nm = str(cand.get("形态简称") or cand.get("形态") or "")
@@ -2956,10 +3002,7 @@ class LkMarketNotify(Star):
                          + str(cand.get("身高区间") or "")
                          + (f" · {cand.get('体重区间')}" if cand.get("体重区间") else "")))
             # 每个形态的小块头 / 大块头 也要显示（以前只印了体重区间）
-            _sl = cand.get("小块头过线值")
-            _bl = cand.get("大块头过线值")
-            if _sl or _bl:
-                rows.append(("", f"小块头 {_sl or '—'} · 大块头 {_bl or '—'}"))
+
             egg = str(cand.get("蛋名") or "")
             if egg and egg != default_egg:
                 rows.append(("", f"蛋名 {egg}（和其它形态不同）"))
@@ -3312,5 +3355,20 @@ class LkMarketNotify(Star):
         yield await self._say(event, "已清空推送记录（绑定关系保留），下一轮会把现有记录当新的处理")
 
 
-
-
+def _mark_low(low, median) -> str:
+    """最低积分相对中位价染色标记：低于中位=绿(\x01)，高于=红(\x02)。"""
+    try:
+        lv = float(low)
+    except (TypeError, ValueError):
+        return str(low if low is not None else 0)
+    try:
+        mv = float(median)
+    except (TypeError, ValueError):
+        return str(int(lv))
+    if mv <= 0:
+        return str(int(lv))
+    if lv < mv:
+        return "\x01" + str(int(lv))
+    if lv > mv:
+        return "\x02" + str(int(lv))
+    return str(int(lv))

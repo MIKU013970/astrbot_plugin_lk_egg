@@ -250,7 +250,8 @@ def icon_path(kind: str, name: str, form: str = "") -> Optional[str]:
                     return str(p)
         return None
     if kind == "pet_stage1" and n0:
-        s1 = (full.get("pet_stage1") or {}).get(n0)
+        _p1 = full.get("pet_stage1") or {}
+        s1 = (_p1.get(f"{n0}|{f0}") if f0 else None) or _p1.get(n0)
         if s1:
             p = ICON_DIR / "pet" / f"{s1}.png"
             if p.is_file():
@@ -368,6 +369,23 @@ def _lazy_image():
     """
     return None
 
+
+
+def _split_gender(text: str):
+    """把文字按 ♂/♀ 切成 [("t", 普通文字), ("m", "♂"), ("f", "♀"), ...]。"""
+    out = []
+    buf = ""
+    for ch in str(text):
+        if ch in ("♂", "♀"):
+            if buf:
+                out.append(("t", buf))
+                buf = ""
+            out.append(("m" if ch == "♂" else "f", ch))
+        else:
+            buf += ch
+    if buf:
+        out.append(("t", buf))
+    return out
 
 def render_card(
     title: str,
@@ -513,8 +531,17 @@ def render_card(
             dr.text((x0, y + 3), _fit(dr, k, fonts["次要"], key_w - 8),
                     font=fonts["次要"], fill=colors["次要"])
         if v is not None and str(v) != "":
-            dr.text((x0 + key_w, y), _fit(dr, v, fonts["正文"], inner - key_w),
-                    font=fonts["正文"], fill=colors["正文"])
+            _vt = _fit(dr, v, fonts["正文"], inner - key_w)
+            # ♂ 蓝 / ♀ 红：按符号切段着色，其余仍是正文色
+            if "♂" in _vt or "♀" in _vt:
+                _cx = x0 + key_w
+                for _seg in _split_gender(_vt):
+                    _col = (colors["正文"] if _seg[0] == "t"
+                            else ((70, 140, 255) if _seg[1] == "♂" else (240, 80, 90)))
+                    dr.text((_cx, y), _seg[1], font=fonts["正文"], fill=_col)
+                    _cx += dr.textlength(_seg[1], font=fonts["正文"])
+            else:
+                dr.text((x0 + key_w, y), _vt, font=fonts["正文"], fill=colors["正文"])
         y += lh_row
 
     if boxes:
@@ -560,9 +587,17 @@ def render_card(
                 dr.text((x0 + 4, y), _fit(dr, values[0], fonts["名字"], inner * 0.3),
                         font=fonts["名字"], fill=colors["标题"])
             for i, val in enumerate(values[1:len(right_x) + 1]):
-                col = colors["强调"] if i == 1 else colors["正文"]
-                dr.text((right_x[i], y), str(val), font=fonts["数字"],
-                        fill=colors["强调"] if i == 1 else col, anchor="ra")
+                _sv = str(val)
+                _mark = _sv[:1] if _sv[:1] in ("\x01", "\x02") else ""
+                if _mark:
+                    _sv = _sv[1:]
+                _col = (colors["强调"] if i == 1 else colors["正文"])
+                if _mark == "\x01":
+                    _col = (60, 190, 110)          # 绿：比中位价低
+                elif _mark == "\x02":
+                    _col = (235, 85, 95)           # 红：比中位价高
+                dr.text((right_x[i], y), _sv, font=fonts["数字"],
+                        fill=_col, anchor="ra")
             y += head_h
 
     # ---- 每条结果：名字在左栏，图塞在名字下面那块空白里
