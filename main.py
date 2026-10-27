@@ -75,7 +75,7 @@ def _card():
 
 _PLUGIN_DIR = Path(__file__).resolve().parent
 _PLUGIN_NAME = "astrbot_plugin_lk_egg"
-VERSION = "1.37.3"
+VERSION = "1.37.4"
 
 
 def _data_dir() -> Path:
@@ -138,7 +138,7 @@ def _save_state(state: Dict[str, Any]) -> None:
     "astrbot_plugin_lk_egg",
     "MIKU013970 & DeepSeek",
     "市集购买成功推送 + 新上架监控 + 黑白名单查询",
-    "1.37.3",
+    "1.37.4",
 )
 class LkMarketNotify(Star):
     def __init__(self, context: Context, config: AstrBotConfig = None):
@@ -2953,7 +2953,13 @@ class LkMarketNotify(Star):
             bins = cand.get("区间数")
             rows.append((f"{i}. {nm}",
                          (f"区间 {bins} · " if bins not in (None, "", 0) else "")
-                         + str(cand.get("体重区间") or "")))
+                         + str(cand.get("身高区间") or "")
+                         + (f" · {cand.get('体重区间')}" if cand.get("体重区间") else "")))
+            # 每个形态的小块头 / 大块头 也要显示（以前只印了体重区间）
+            _sl = cand.get("小块头过线值")
+            _bl = cand.get("大块头过线值")
+            if _sl or _bl:
+                rows.append(("", f"小块头 {_sl or '—'} · 大块头 {_bl or '—'}"))
             egg = str(cand.get("蛋名") or "")
             if egg and egg != default_egg:
                 rows.append(("", f"蛋名 {egg}（和其它形态不同）"))

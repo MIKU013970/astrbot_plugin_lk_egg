@@ -599,12 +599,15 @@ def render_card(
                         font=fonts["更小"], fill=colors["正文"], anchor="ma")
                 cy += tile_line
 
-    # 底部版本号水印（浅灰小字，方便判断是哪一版）
+    # 底部版本号水印（画在图片最下方居中，浅灰但看得见）
     if card_version:
         try:
             _vd = ImageDraw.Draw(img)
-            _vf = _load_font(font_path, 15)
-            _vd.text((4, 4), f"v{card_version}", font=_vf, fill=(115, 115, 115))
+            _vf = _load_font(font_path, 17)
+            _txt = f"v{card_version}"
+            _tw = _vd.textlength(_txt, font=_vf)
+            _vd.text(((img.width - _tw) / 2, img.height - 20), _txt,
+                     font=_vf, fill=(150, 150, 150))
         except Exception:
             pass
     return _png_bytes(img)
@@ -882,12 +885,15 @@ def render_text_card(
                 dr.text((x0 + ind, y), w_, font=fonts["正文"], fill=colors["正文"])
                 y += lh
 
-    # 底部版本号水印（浅灰小字，方便判断是哪一版）
+    # 底部版本号水印（画在图片最下方居中，浅灰但看得见）
     if card_version:
         try:
             _vd = ImageDraw.Draw(img)
-            _vf = _load_font(font_path, 15)
-            _vd.text((4, 4), f"v{card_version}", font=_vf, fill=(115, 115, 115))
+            _vf = _load_font(font_path, 17)
+            _txt = f"v{card_version}"
+            _tw = _vd.textlength(_txt, font=_vf)
+            _vd.text(((img.width - _tw) / 2, img.height - 20), _txt,
+                     font=_vf, fill=(150, 150, 150))
         except Exception:
             pass
     return _png_bytes(img)
