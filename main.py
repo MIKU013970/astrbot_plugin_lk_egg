@@ -75,7 +75,7 @@ def _card():
 
 _PLUGIN_DIR = Path(__file__).resolve().parent
 _PLUGIN_NAME = "astrbot_plugin_lk_egg"
-VERSION = "1.35.2"
+VERSION = "1.35.3"
 
 
 def _data_dir() -> Path:
@@ -138,7 +138,7 @@ def _save_state(state: Dict[str, Any]) -> None:
     "astrbot_plugin_lk_egg",
     "MIKU013970 & DeepSeek",
     "市集购买成功推送 + 新上架监控 + 黑白名单查询",
-    "1.35.2",
+    "1.35.3",
 )
 class LkMarketNotify(Star):
     def __init__(self, context: Context, config: AstrBotConfig = None):
@@ -440,6 +440,8 @@ class LkMarketNotify(Star):
     #: 只在原数据是「未知」或空的时候才覆盖 —— 官方以后补齐了就以官方为准。
     GENDER_OVERRIDE = {
         "云梦豚的蛋": "雄性 50% / 雌性 50%",
+        "长江豚的蛋": "雄性 50% / 雌性 50%",
+        "江豚的蛋": "雄性 50% / 雌性 50%",
     }
 
     def _apply_gender_fix(self, data: Dict[str, Any]) -> None:
