@@ -422,7 +422,15 @@ def render_card(
     hl = [x for x in (hits or []) if x]
 
     tile_ico = int(tile_icon)
-    hi_size = tile_ico
+    # 头部图标：默认用 head_icon（不受多形态 tile_icon=140 影响），
+    # 而且图标数量多时按「总宽不超过卡片 42%」自动收窄，避免把标题挤掉
+    hi_base = int(head_icon or 64)
+    if hi:
+        _maxw = int(width * 0.42)
+        _fitw = (_maxw - (len(hi) - 1) * 8 - 12) // max(1, len(hi))
+        hi_size = max(36, min(hi_base, _fitw))
+    else:
+        hi_size = hi_base
     hi_w = (len(hi) * hi_size + (len(hi) - 1) * 8 + 12) if hi else 0
     title_h = max(sizes["标题"] + 22, (hi_size + 10) if hi else 0)
 
