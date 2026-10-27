@@ -75,7 +75,7 @@ def _card():
 
 _PLUGIN_DIR = Path(__file__).resolve().parent
 _PLUGIN_NAME = "astrbot_plugin_lk_egg"
-VERSION = "1.36.3"
+VERSION = "1.37.0"
 
 
 def _data_dir() -> Path:
@@ -138,7 +138,7 @@ def _save_state(state: Dict[str, Any]) -> None:
     "astrbot_plugin_lk_egg",
     "MIKU013970 & DeepSeek",
     "市集购买成功推送 + 新上架监控 + 黑白名单查询",
-    "1.36.3",
+    "1.37.0",
 )
 class LkMarketNotify(Star):
     def __init__(self, context: Context, config: AstrBotConfig = None):
@@ -665,6 +665,13 @@ class LkMarketNotify(Star):
         return "\n".join(lines)
 
     # ---------------------------------------------------------------- 出图
+    def _stage1_path(self, name: str, form: str = "") -> Optional[str]:
+        """一阶段精灵图（查蛋结果要显示一阶段，不是最终形态）。"""
+        c = _card()
+        if c is None:
+            return None
+        return c.icon_path("pet_stage1", name, form) or c.icon_path("pet", name, form)
+
     def _card_kwargs(self) -> Dict[str, Any]:
         """把卡片相关配置整理成 card.render_card 的参数。"""
         try:
@@ -676,6 +683,7 @@ class LkMarketNotify(Star):
         except (TypeError, ValueError):
             wd = 700
         return {
+            "card_version": VERSION,
             "theme": str(self._cfg("card_theme", "") or ""),
             "font_path": str(self._cfg("card_font_path", "") or ""),
             "width": max(320, min(1200, wd)),
@@ -843,7 +851,7 @@ class LkMarketNotify(Star):
             form0 = (forms[0] if forms else "") or str(x.get("形态简称") or "")
             # 顺序：普通一阶段 → 普通精灵蛋 → 异色一阶段 → 异色精灵蛋
             egg_nm = str(x.get("蛋名") or "")
-            four = [c.icon_path("pet", nm, form0), c.icon_path("egg", egg_nm, form0)]
+            four = [self._stage1_path(nm, form0), c.icon_path("egg", egg_nm, form0)]
             shiny_pet = c.icon_path("shiny", nm, form0)
             if shiny_pet:
                 four.append(shiny_pet)
@@ -1049,7 +1057,7 @@ class LkMarketNotify(Star):
         pet = str(v.get("精灵") or rec.get("精灵") or "")
         egg = str(v.get("蛋名") or rec.get("蛋名") or pet)
         form0 = str(v.get("形态简称") or v.get("形态") or "")
-        out = [c.icon_path("pet", pet, form0), c.icon_path("egg", egg)]
+        out = [self._stage1_path(pet, form0), c.icon_path("egg", egg)]
         # 异色
         shiny_pet = c.icon_path("shiny", pet, form0)
         if shiny_pet:

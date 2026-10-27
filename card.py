@@ -179,6 +179,7 @@ def _png_bytes(img) -> bytes:
     超过 100 KB 的图（比如帮助菜单那种长卡片）再换成 128 色调色板压一遍：
     文字卡只有几百种颜色，换调色板能小到 1/3，发图也快。
     """
+
     buf = io.BytesIO()
     img.save(buf, "PNG", optimize=False, compress_level=6)
     data = buf.getvalue()
@@ -247,6 +248,12 @@ def icon_path(kind: str, name: str, form: str = "") -> Optional[str]:
                 if p.is_file():
                     return str(p)
         return None
+    if kind == "pet_stage1" and n0:
+        s1 = (full.get("pet_stage1") or {}).get(n0)
+        if s1:
+            p = ICON_DIR / "pet" / f"{s1}.png"
+            if p.is_file():
+                return str(p)
     if kind == "pet" and n0 and f0:
         pf = (full.get("pet_form") or {}).get(f"{n0}|{f0}")
         if not pf:                       # 形态名可能带「名字（形态）」这种写法
@@ -377,6 +384,7 @@ def render_card(
     tiles_per_row: int = 4,
     tile_icon: int = 64,
     head_icon: int = 0,
+    card_version: str = "",
     hits: Optional[Sequence[Sequence[Any]]] = None,
 ) -> bytes:
     """画一张卡片，返回 PNG bytes。
@@ -590,6 +598,14 @@ def render_card(
                         font=fonts["更小"], fill=colors["正文"], anchor="ma")
                 cy += tile_line
 
+    # 底部版本号水印（浅灰小字，方便判断是哪一版）
+    if card_version:
+        try:
+            _vd = ImageDraw.Draw(img)
+            _vf = _load_font(font_path, 15)
+            _vd.text((4, 4), f"v{card_version}", font=_vf, fill=(115, 115, 115))
+        except Exception:
+            pass
     return _png_bytes(img)
 
 def head_x_advance(head_h: int) -> int:
@@ -708,6 +724,7 @@ def render_text_card(
     head_icons: Optional[Sequence[str]] = None,
     tile_icon: int = 64,
     head_icon: int = 0,
+    card_version: str = "",
 ) -> bytes:
     """把一段普通文字画成卡片，返回 PNG bytes。
 
@@ -864,4 +881,12 @@ def render_text_card(
                 dr.text((x0 + ind, y), w_, font=fonts["正文"], fill=colors["正文"])
                 y += lh
 
+    # 底部版本号水印（浅灰小字，方便判断是哪一版）
+    if card_version:
+        try:
+            _vd = ImageDraw.Draw(img)
+            _vf = _load_font(font_path, 15)
+            _vd.text((4, 4), f"v{card_version}", font=_vf, fill=(115, 115, 115))
+        except Exception:
+            pass
     return _png_bytes(img)
