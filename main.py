@@ -75,7 +75,7 @@ def _card():
 
 _PLUGIN_DIR = Path(__file__).resolve().parent
 _PLUGIN_NAME = "astrbot_plugin_lk_egg"
-VERSION = "1.35.6"
+VERSION = "1.36.0"
 
 
 def _data_dir() -> Path:
@@ -138,7 +138,7 @@ def _save_state(state: Dict[str, Any]) -> None:
     "astrbot_plugin_lk_egg",
     "MIKU013970 & DeepSeek",
     "市集购买成功推送 + 新上架监控 + 黑白名单查询",
-    "1.35.6",
+    "1.36.0",
 )
 class LkMarketNotify(Star):
     def __init__(self, context: Context, config: AstrBotConfig = None):
@@ -2259,8 +2259,8 @@ class LkMarketNotify(Star):
 
     def _in_window(self) -> bool:
         now = time.strftime("%H:%M")
-        start = str(self._cfg("daily_code_start", "08:30") or "08:30")
-        end = str(self._cfg("daily_code_end", "10:00") or "10:00")
+        start = str(self._cfg("daily_code_start", "08:00") or "08:00")
+        end = str(self._cfg("daily_code_end", "20:00") or "20:00")
         return start <= now <= end
 
     async def _daily_code_once(self) -> int:
@@ -2287,9 +2287,46 @@ class LkMarketNotify(Star):
         if remain <= 0:
             return 0
 
+        # ---- 今天已经发了几条（算额度）----
         sent_today = self._sent_today()
+        hist_codes = {x["code"] for x in self._code_log()}
+
+        # ---- 12 小时线性铺开：当前「应该」已发几条 ----
+        # 例如窗口 08:00~20:00、目标 10 个 → 10:00 应发约 1.7 个
+        # ---- 每天随机抽 count 个时刻，到点才发（真·随机，不是匀速）----
+        _today = time.strftime("%Y-%m-%d")
+
+        def _m(x: str) -> int:
+            hh, mm = str(x).split(":")
+            return int(hh) * 60 + int(mm)
+
+        try:
+            _s = str(self._cfg("daily_code_start", "08:00") or "08:00")
+            _e = str(self._cfg("daily_code_end", "20:00") or "20:00")
+            _lo, _hi = _m(_s), _m(_e)
+            _nowm = _m(time.strftime("%H:%M"))
+        except Exception:
+            _lo, _hi, _nowm = 480, 1200, 0
+        sched = self.state.get("code_sched") or {}
+        if sched.get("date") != _today or len(sched.get("times") or []) != count:
+            import random as _r2
+            _times = sorted(_r2.randint(_lo, max(_lo + 1, _hi - 1)) for _ in range(count))
+            self.state["code_sched"] = {"date": _today, "times": _times}
+            _save_state(self.state)
+            sched = self.state["code_sched"]
+            logger.info(f"[发码] 今天的随机时刻（分钟）：{_times}")
+        due = sum(1 for _t in (sched.get("times") or []) if _nowm >= _t)
+        if quota_sent >= due:
+            return 0                     # 还没到点，下个 tick 再看
+        # 落后很多就补，但一次最多发 1 个，避免刷屏
+        batch = 1
+
+        # ---- 候选：可领的（已兑换的不会出现在 available 里）----
+        # 规则：发过但没被兑换的 → 允许再发；发过且已被兑换的 → 已自动排除
         codes = [c for c in await self._fetch_available_codes()
-                 if keyword in c["name"] and c["code"] not in sent_today]
+                 if keyword in c["name"]]
+        import random as _rnd
+        _rnd.shuffle(codes)              # 随机挑，不要总是同几个
 
         # 不够就先去市集补（默认关闭，要手动开 auto_buy_enabled）
         if len(codes) < remain:
@@ -2312,7 +2349,7 @@ class LkMarketNotify(Star):
 
         if not codes:
             return 0
-        picked = codes[:remain]                   # 时间最早的 N 个（受当天额度限制）
+        picked = codes[:max(1, min(batch, remain))]   # 一次最多 1 个
         import random as _random
         ok = 0
         for c in picked:
