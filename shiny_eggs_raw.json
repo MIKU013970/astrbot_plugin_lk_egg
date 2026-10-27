@@ -1,0 +1,512 @@
+{
+ "150004": {
+  "name": "双灯鱼的蛋",
+  "icon": "https://wegame.shallow.ink/api/v1/resources/wiki/assets/items/bag/150004.png",
+  "desc": "经过孵化可以得到“异色”外观、“爱分享”特长、“了不起”天分、且拥有量身定制个体资质的双灯鱼。"
+ },
+ "150102": {
+  "name": "恶魔狼的蛋",
+  "icon": "https://wegame.shallow.ink/api/v1/resources/wiki/assets/items/bag/150102.png",
+  "desc": "经过孵化可以得到“异色”外观、“了不起”天分的恶魔狼。"
+ },
+ "150103": {
+  "name": "奇丽草的蛋",
+  "icon": "https://wegame.shallow.ink/api/v1/resources/wiki/assets/items/bag/150103.png",
+  "desc": "经过孵化可以得到“异色”外观、“了不起”天分的奇丽草。"
+ },
+ "150104": {
+  "name": "格兰种子的蛋",
+  "icon": "https://wegame.shallow.ink/api/v1/resources/wiki/assets/items/bag/150104.png",
+  "desc": "经过孵化可以得到“异色”外观、“了不起”天分的格兰种子。"
+ },
+ "150105": {
+  "name": "治愈兔的蛋",
+  "icon": "https://wegame.shallow.ink/api/v1/resources/wiki/assets/items/bag/150105.png",
+  "desc": "经过孵化可以得到“异色”外观、“了不起”天分的治愈兔。"
+ },
+ "150106": {
+  "name": "大耳帽兜的蛋",
+  "icon": "https://wegame.shallow.ink/api/v1/resources/wiki/assets/items/bag/150106.png",
+  "desc": "经过孵化可以得到“异色”外观、“了不起”天分的大耳帽兜。"
+ },
+ "150107": {
+  "name": "空空颅的蛋",
+  "icon": "https://wegame.shallow.ink/api/v1/resources/wiki/assets/items/bag/150107.png",
+  "desc": "经过孵化可以得到“异色”外观、“了不起”天分的空空颅。"
+ },
+ "150108": {
+  "name": "拉特的蛋",
+  "icon": "https://wegame.shallow.ink/api/v1/resources/wiki/assets/items/bag/150108.png",
+  "desc": "经过孵化可以得到“异色”外观、“了不起”天分的拉特。"
+ },
+ "150109": {
+  "name": "粉粉星的蛋",
+  "icon": "https://wegame.shallow.ink/api/v1/resources/wiki/assets/items/bag/150109.png",
+  "desc": "经过孵化可以得到“异色”外观、“了不起”天分的粉粉星。"
+ },
+ "150110": {
+  "name": "贝瑟的蛋",
+  "icon": "https://wegame.shallow.ink/api/v1/resources/wiki/assets/items/bag/150110.png",
+  "desc": "经过孵化可以得到“异色”外观、“了不起”天分的贝瑟。"
+ },
+ "150111": {
+  "name": "呼呼猪的蛋",
+  "icon": "https://wegame.shallow.ink/api/v1/resources/wiki/assets/items/bag/150111.png",
+  "desc": "经过孵化可以得到“异色”外观、“了不起”天分的呼呼猪。"
+ },
+ "150112": {
+  "name": "粉星仔的蛋",
+  "icon": "https://wegame.shallow.ink/api/v1/resources/wiki/assets/items/bag/150112.png",
+  "desc": "经过孵化可以得到“异色”外观、“了不起”天分的粉星仔。"
+ },
+ "150113": {
+  "name": "双灯鱼的蛋",
+  "icon": "https://wegame.shallow.ink/api/v1/resources/wiki/assets/items/bag/150113.png",
+  "desc": "经过孵化可以得到“异色”外观、“了不起”天分的双灯鱼。"
+ },
+ "150114": {
+  "name": "柴渣虫的蛋",
+  "icon": "https://wegame.shallow.ink/api/v1/resources/wiki/assets/items/bag/150114.png",
+  "desc": "经过孵化可以得到“异色”外观、“了不起”天分的柴渣虫。"
+ },
+ "150115": {
+  "name": "月牙雪熊的蛋",
+  "icon": "https://wegame.shallow.ink/api/v1/resources/wiki/assets/items/bag/150115.png",
+  "desc": "经过孵化可以得到“异色”外观、“了不起”天分的月牙雪熊。"
+ },
+ "150116": {
+  "name": "嗜光嗡嗡的蛋",
+  "icon": "https://wegame.shallow.ink/api/v1/resources/wiki/assets/items/bag/150116.png",
+  "desc": "经过孵化可以得到“异色”外观、“了不起”天分的嗜光嗡嗡。"
+ },
+ "150117": {
+  "name": "机械方方的蛋",
+  "icon": "https://wegame.shallow.ink/api/v1/resources/wiki/assets/items/bag/150117.png",
+  "desc": "经过孵化可以得到“异色”外观、“了不起”天分的机械方方。"
+ },
+ "150401": {
+  "name": "恶魔狼的蛋",
+  "icon": "https://wegame.shallow.ink/api/v1/resources/wiki/assets/items/bag/150401.png",
+  "desc": "击败精灵首领·恶魔狼王后，发现的珍贵精灵蛋，经过孵化可以得到“异色”外观、“了不起”天分的恶魔狼。"
+ },
+ "150402": {
+  "name": "奇丽草的蛋",
+  "icon": "https://wegame.shallow.ink/api/v1/resources/wiki/assets/items/bag/150402.png",
+  "desc": "击败精灵首领·奇丽果后，发现的珍贵精灵蛋，经过孵化可以得到“异色”外观、“了不起”天分的奇丽草。"
+ },
+ "150403": {
+  "name": "幽影树的蛋",
+  "icon": "https://wegame.shallow.ink/api/v1/resources/wiki/assets/items/bag/150403.png",
+  "desc": "击败精灵首领·幻影荆棘后，发现的珍贵精灵蛋，经过孵化可以得到“异色”外观、“了不起”天分的幽影树。"
+ },
+ "150404": {
+  "name": "大耳帽兜的蛋",
+  "icon": "https://wegame.shallow.ink/api/v1/resources/wiki/assets/items/bag/150404.png",
+  "desc": "击败精灵首领·雪影冰灵后，发现的珍贵精灵蛋，经过孵化可以得到“异色”外观、“了不起”天分的大耳帽兜。"
+ },
+ "150405": {
+  "name": "空空颅的蛋",
+  "icon": "https://wegame.shallow.ink/api/v1/resources/wiki/assets/items/bag/150405.png",
+  "desc": "击败精灵首领·暗夜颅主后，发现的珍贵精灵蛋，经过孵化可以得到“异色”外观、“了不起”天分的空空颅。"
+ },
+ "150406": {
+  "name": "海盔虫的蛋",
+  "icon": "https://wegame.shallow.ink/api/v1/resources/wiki/assets/items/bag/150406.png",
+  "desc": "击败精灵首领·千棘海针后，发现的珍贵精灵蛋，经过孵化可以得到“异色”外观、“了不起”天分的海盔虫。"
+ },
+ "150407": {
+  "name": "逗逗的蛋",
+  "icon": "https://wegame.shallow.ink/api/v1/resources/wiki/assets/items/bag/150407.png",
+  "desc": "击败精灵首领·奇梦咪后，发现的珍贵精灵蛋，经过孵化可以得到“异色”外观、“了不起”天分的逗逗。"
+ },
+ "150408": {
+  "name": "小黑猫的蛋",
+  "icon": "https://wegame.shallow.ink/api/v1/resources/wiki/assets/items/bag/150408.png",
+  "desc": "击败精灵首领·黑猫密探后，发现的珍贵精灵蛋，经过孵化可以得到“异色”外观、“了不起”天分的小黑猫。"
+ },
+ "150701": {
+  "name": "绒绒的蛋",
+  "icon": "https://wegame.shallow.ink/api/v1/resources/wiki/assets/items/bag/150701.png",
+  "desc": "购买「拾光通行证-星光主题」闪耀契约礼券获得的珍贵精灵蛋，经过孵化可以得到“异色”外观、“了不起”天分、且拥有量身定制资质的绒绒。"
+ },
+ "150702": {
+  "name": "犀角鸟的蛋",
+  "icon": "https://wegame.shallow.ink/api/v1/resources/wiki/assets/items/bag/150702.png",
+  "desc": "购买「拾光通行证-月光主题」闪耀契约礼券获得的珍贵精灵蛋，经过孵化可以得到“异色”外观、“了不起”天分、且拥有量身定制资质的犀角鸟。"
+ },
+ "150703": {
+  "name": "珍贵精灵蛋",
+  "icon": "https://wegame.shallow.ink/api/v1/resources/wiki/assets/items/bag/150703.png",
+  "desc": "某种精灵的蛋，通过观察其花纹可以获得一些头绪，经过孵化可以得到“异色”外观的精灵。"
+ },
+ "150704": {
+  "name": "珍贵精灵蛋",
+  "icon": "https://wegame.shallow.ink/api/v1/resources/wiki/assets/items/bag/150704.png",
+  "desc": "某种精灵的蛋，通过观察其花纹可以获得一些头绪，经过孵化可以得到“异色”外观的精灵。"
+ },
+ "150705": {
+  "name": "珍贵精灵蛋",
+  "icon": "https://wegame.shallow.ink/api/v1/resources/wiki/assets/items/bag/150705.png",
+  "desc": "某种精灵的蛋，通过观察其花纹可以获得一些头绪，经过孵化可以得到“异色”外观的精灵。"
+ },
+ "150706": {
+  "name": "珍贵精灵蛋",
+  "icon": "https://wegame.shallow.ink/api/v1/resources/wiki/assets/items/bag/150706.png",
+  "desc": "某种精灵的蛋，通过观察其花纹可以获得一些头绪，经过孵化可以得到“异色”外观的精灵。"
+ },
+ "150707": {
+  "name": "珍贵精灵蛋",
+  "icon": "https://wegame.shallow.ink/api/v1/resources/wiki/assets/items/bag/150707.png",
+  "desc": "某种精灵的蛋，通过观察其花纹可以获得一些头绪，经过孵化可以得到“异色”外观的精灵。"
+ },
+ "150708": {
+  "name": "珍贵精灵蛋",
+  "icon": "https://wegame.shallow.ink/api/v1/resources/wiki/assets/items/bag/150708.png",
+  "desc": "某种精灵的蛋，通过观察其花纹可以获得一些头绪，经过孵化可以得到“异色”外观的精灵。"
+ },
+ "150709": {
+  "name": "珍贵精灵蛋",
+  "icon": "https://wegame.shallow.ink/api/v1/resources/wiki/assets/items/bag/150709.png",
+  "desc": "某种精灵的蛋，通过观察其花纹可以获得一些头绪，经过孵化可以得到“异色”外观的精灵。"
+ },
+ "150710": {
+  "name": "珍贵精灵蛋",
+  "icon": "https://wegame.shallow.ink/api/v1/resources/wiki/assets/items/bag/150710.png",
+  "desc": "某种精灵的蛋，通过观察其花纹可以获得一些头绪，经过孵化可以得到“异色”外观的精灵。"
+ },
+ "150711": {
+  "name": "珍贵精灵蛋",
+  "icon": "https://wegame.shallow.ink/api/v1/resources/wiki/assets/items/bag/150711.png",
+  "desc": "某种精灵的蛋，通过观察其花纹可以获得一些头绪，经过孵化可以得到“异色”外观的精灵。"
+ },
+ "150712": {
+  "name": "珍贵精灵蛋",
+  "icon": "https://wegame.shallow.ink/api/v1/resources/wiki/assets/items/bag/150712.png",
+  "desc": "某种精灵的蛋，通过观察其花纹可以获得一些头绪，经过孵化可以得到“异色”外观的精灵。"
+ },
+ "150713": {
+  "name": "珍贵精灵蛋",
+  "icon": "https://wegame.shallow.ink/api/v1/resources/wiki/assets/items/bag/150713.png",
+  "desc": "某种精灵的蛋，通过观察其花纹可以获得一些头绪，经过孵化可以得到“异色”外观的精灵。"
+ },
+ "150714": {
+  "name": "珍贵精灵蛋",
+  "icon": "https://wegame.shallow.ink/api/v1/resources/wiki/assets/items/bag/150714.png",
+  "desc": "某种精灵的蛋，通过观察其花纹可以获得一些头绪，经过孵化可以得到“异色”外观的精灵。"
+ },
+ "150715": {
+  "name": "珍贵精灵蛋",
+  "icon": "https://wegame.shallow.ink/api/v1/resources/wiki/assets/items/bag/150715.png",
+  "desc": "某种精灵的蛋，通过观察其花纹可以获得一些头绪，经过孵化可以得到“异色”外观的精灵。"
+ },
+ "150716": {
+  "name": "珍贵精灵蛋",
+  "icon": "https://wegame.shallow.ink/api/v1/resources/wiki/assets/items/bag/150716.png",
+  "desc": "某种精灵的蛋，通过观察其花纹可以获得一些头绪，经过孵化可以得到“异色”外观的精灵。"
+ },
+ "150717": {
+  "name": "珍贵精灵蛋",
+  "icon": "https://wegame.shallow.ink/api/v1/resources/wiki/assets/items/bag/150717.png",
+  "desc": "某种精灵的蛋，通过观察其花纹可以获得一些头绪，经过孵化可以得到“异色”外观的精灵。"
+ },
+ "150718": {
+  "name": "珍贵精灵蛋",
+  "icon": "https://wegame.shallow.ink/api/v1/resources/wiki/assets/items/bag/150718.png",
+  "desc": "某种精灵的蛋，通过观察其花纹可以获得一些头绪，经过孵化可以得到“异色”外观的精灵。"
+ },
+ "150719": {
+  "name": "珍贵精灵蛋",
+  "icon": "https://wegame.shallow.ink/api/v1/resources/wiki/assets/items/bag/150719.png",
+  "desc": "某种精灵的蛋，通过观察其花纹可以获得一些头绪，经过孵化可以得到“异色”外观的精灵。"
+ },
+ "150720": {
+  "name": "小雪人的蛋",
+  "icon": "https://wegame.shallow.ink/api/v1/resources/wiki/assets/items/bag/150720.png",
+  "desc": "购买「狂欢通行证-严冬主题」闪耀契约礼券获得的珍贵精灵蛋，经过孵化可以得到“异色”外观、“了不起”天分、且拥有量身定制资质的小雪人。"
+ },
+ "150721": {
+  "name": "爆焰仔的蛋",
+  "icon": "https://wegame.shallow.ink/api/v1/resources/wiki/assets/items/bag/150721.png",
+  "desc": "购买「狂欢通行证-盛夏主题」闪耀契约礼券获得的珍贵精灵蛋，经过孵化可以得到“异色”外观、“了不起”天分、且拥有量身定制资质的爆焰仔。"
+ },
+ "150722": {
+  "name": "珍贵精灵蛋",
+  "icon": "https://wegame.shallow.ink/api/v1/resources/wiki/assets/items/bag/150722.png",
+  "desc": "某种精灵的蛋，通过观察其花纹可以获得一些头绪，经过孵化可以得到“异色”外观的精灵。"
+ },
+ "150723": {
+  "name": "珍贵精灵蛋",
+  "icon": "https://wegame.shallow.ink/api/v1/resources/wiki/assets/items/bag/150723.png",
+  "desc": "某种精灵的蛋，通过观察其花纹可以获得一些头绪，经过孵化可以得到“异色”外观的精灵。"
+ },
+ "150724": {
+  "name": "珍贵精灵蛋",
+  "icon": "https://wegame.shallow.ink/api/v1/resources/wiki/assets/items/bag/150724.png",
+  "desc": "某种精灵的蛋，通过观察其花纹可以获得一些头绪，经过孵化可以得到“异色”外观的精灵。"
+ },
+ "150725": {
+  "name": "珍贵精灵蛋",
+  "icon": "https://wegame.shallow.ink/api/v1/resources/wiki/assets/items/bag/150725.png",
+  "desc": "某种精灵的蛋，通过观察其花纹可以获得一些头绪，经过孵化可以得到“异色”外观的精灵。"
+ },
+ "150726": {
+  "name": "珍贵精灵蛋",
+  "icon": "https://wegame.shallow.ink/api/v1/resources/wiki/assets/items/bag/150726.png",
+  "desc": "某种精灵的蛋，通过观察其花纹可以获得一些头绪，经过孵化可以得到“异色”外观的精灵。"
+ },
+ "150727": {
+  "name": "珍贵精灵蛋",
+  "icon": "https://wegame.shallow.ink/api/v1/resources/wiki/assets/items/bag/150727.png",
+  "desc": "某种精灵的蛋，通过观察其花纹可以获得一些头绪，经过孵化可以得到“异色”外观的精灵。"
+ },
+ "150728": {
+  "name": "珍贵精灵蛋",
+  "icon": "https://wegame.shallow.ink/api/v1/resources/wiki/assets/items/bag/150728.png",
+  "desc": "某种精灵的蛋，通过观察其花纹可以获得一些头绪，经过孵化可以得到“异色”外观的精灵。"
+ },
+ "150729": {
+  "name": "珍贵精灵蛋",
+  "icon": "https://wegame.shallow.ink/api/v1/resources/wiki/assets/items/bag/150729.png",
+  "desc": "某种精灵的蛋，通过观察其花纹可以获得一些头绪，经过孵化可以得到“异色”外观的精灵。"
+ },
+ "150730": {
+  "name": "珍贵精灵蛋",
+  "icon": "https://wegame.shallow.ink/api/v1/resources/wiki/assets/items/bag/150730.png",
+  "desc": "某种精灵的蛋，通过观察其花纹可以获得一些头绪，经过孵化可以得到“异色”外观的精灵。"
+ },
+ "150731": {
+  "name": "珍贵精灵蛋",
+  "icon": "https://wegame.shallow.ink/api/v1/resources/wiki/assets/items/bag/150731.png",
+  "desc": "某种精灵的蛋，通过观察其花纹可以获得一些头绪，经过孵化可以得到“异色”外观的精灵。"
+ },
+ "150732": {
+  "name": "珍贵精灵蛋",
+  "icon": "https://wegame.shallow.ink/api/v1/resources/wiki/assets/items/bag/150732.png",
+  "desc": "某种精灵的蛋，通过观察其花纹可以获得一些头绪，经过孵化可以得到“异色”外观的精灵。"
+ },
+ "150733": {
+  "name": "珍贵精灵蛋",
+  "icon": "https://wegame.shallow.ink/api/v1/resources/wiki/assets/items/bag/150733.png",
+  "desc": "某种精灵的蛋，通过观察其花纹可以获得一些头绪，经过孵化可以得到“异色”外观的精灵。"
+ },
+ "150734": {
+  "name": "珍贵精灵蛋",
+  "icon": "https://wegame.shallow.ink/api/v1/resources/wiki/assets/items/bag/150734.png",
+  "desc": "某种精灵的蛋，通过观察其花纹可以获得一些头绪，经过孵化可以得到“异色”外观的精灵。"
+ },
+ "150735": {
+  "name": "珍贵精灵蛋",
+  "icon": "https://wegame.shallow.ink/api/v1/resources/wiki/assets/items/bag/150735.png",
+  "desc": "某种精灵的蛋，通过观察其花纹可以获得一些头绪，经过孵化可以得到“异色”外观的精灵。"
+ },
+ "150736": {
+  "name": "珍贵精灵蛋",
+  "icon": "https://wegame.shallow.ink/api/v1/resources/wiki/assets/items/bag/150736.png",
+  "desc": "某种精灵的蛋，通过观察其花纹可以获得一些头绪，经过孵化可以得到“异色”外观的精灵。"
+ },
+ "150737": {
+  "name": "珍贵精灵蛋",
+  "icon": "https://wegame.shallow.ink/api/v1/resources/wiki/assets/items/bag/150737.png",
+  "desc": "某种精灵的蛋，通过观察其花纹可以获得一些头绪，经过孵化可以得到“异色”外观的精灵。"
+ },
+ "150751": {
+  "name": "恶魔叮的蛋",
+  "icon": "https://wegame.shallow.ink/api/v1/resources/wiki/assets/items/bag/150751.png",
+  "desc": "经过孵化可以得到“异色”外观、“了不起”天分的恶魔叮。"
+ },
+ "150752": {
+  "name": "小独角兽的蛋",
+  "icon": "https://wegame.shallow.ink/api/v1/resources/wiki/assets/items/bag/150752.png",
+  "desc": "经过孵化可以得到“异色”外观、“了不起”天分的小独角兽。"
+ },
+ "150753": {
+  "name": "幽影树的蛋",
+  "icon": "https://wegame.shallow.ink/api/v1/resources/wiki/assets/items/bag/150753.png",
+  "desc": "经过孵化可以得到“异色”外观、“了不起”天分的幽影树。"
+ },
+ "150754": {
+  "name": "灵狐的蛋",
+  "icon": "https://wegame.shallow.ink/api/v1/resources/wiki/assets/items/bag/150754.png",
+  "desc": "经过孵化可以得到“异色”外观、“了不起”天分的灵狐。"
+ },
+ "150755": {
+  "name": "小夜的蛋",
+  "icon": "https://wegame.shallow.ink/api/v1/resources/wiki/assets/items/bag/150755.png",
+  "desc": "经过孵化可以得到“异色”外观、“了不起”天分的小夜。"
+ },
+ "150756": {
+  "name": "菊花梨的蛋",
+  "icon": "https://wegame.shallow.ink/api/v1/resources/wiki/assets/items/bag/150756.png",
+  "desc": "经过孵化可以得到“异色”外观、“了不起”天分的菊花梨。"
+ },
+ "150757": {
+  "name": "牵线木偶的蛋",
+  "icon": "https://wegame.shallow.ink/api/v1/resources/wiki/assets/items/bag/150757.png",
+  "desc": "经过孵化可以得到“异色”外观、“了不起”天分的牵线木偶。"
+ },
+ "150758": {
+  "name": "嘟嘟煲的蛋",
+  "icon": "https://wegame.shallow.ink/api/v1/resources/wiki/assets/items/bag/150758.png",
+  "desc": "经过孵化可以得到“异色”外观、“了不起”天分的嘟嘟煲。"
+ },
+ "150759": {
+  "name": "小丑豆豆的蛋",
+  "icon": "https://wegame.shallow.ink/api/v1/resources/wiki/assets/items/bag/150759.png",
+  "desc": "经过孵化可以得到“异色”外观、“了不起”天分的小丑豆豆。"
+ },
+ "150760": {
+  "name": "公平鸽的蛋",
+  "icon": "https://wegame.shallow.ink/api/v1/resources/wiki/assets/items/bag/150760.png",
+  "desc": "经过孵化可以得到“异色”外观、“了不起”天分的公平鸽。"
+ },
+ "150761": {
+  "name": "加油海葵的蛋",
+  "icon": "https://wegame.shallow.ink/api/v1/resources/wiki/assets/items/bag/150761.png",
+  "desc": "经过孵化可以得到“异色”外观、“了不起”天分的加油海葵。"
+ },
+ "150762": {
+  "name": "烟花团的蛋",
+  "icon": "https://wegame.shallow.ink/api/v1/resources/wiki/assets/items/bag/150762.png",
+  "desc": "经过孵化可以得到“异色”外观、“了不起”天分的烟花团。"
+ },
+ "150763": {
+  "name": "咕咕帽的蛋",
+  "icon": "https://wegame.shallow.ink/api/v1/resources/wiki/assets/items/bag/150763.png",
+  "desc": "经过孵化可以得到“异色”外观、“了不起”天分的咕咕帽。"
+ },
+ "150764": {
+  "name": "小鼓象的蛋",
+  "icon": "https://wegame.shallow.ink/api/v1/resources/wiki/assets/items/bag/150764.png",
+  "desc": "经过孵化可以得到“异色”外观、“了不起”天分的小鼓象。"
+ },
+ "150765": {
+  "name": "猴麦仔的蛋",
+  "icon": "https://wegame.shallow.ink/api/v1/resources/wiki/assets/items/bag/150765.png",
+  "desc": "经过孵化可以得到“异色”外观、“了不起”天分的猴麦仔。"
+ },
+ "150766": {
+  "name": "炫光迪迪的蛋",
+  "icon": "https://wegame.shallow.ink/api/v1/resources/wiki/assets/items/bag/150766.png",
+  "desc": "经过孵化可以得到“异色”外观、“了不起”天分的炫光迪迪。"
+ },
+ "150767": {
+  "name": "咬咬小子的蛋",
+  "icon": "https://wegame.shallow.ink/api/v1/resources/wiki/assets/items/bag/150767.png",
+  "desc": "购买「幻梦通行证-守护的童话」闪耀契约礼券获得的珍贵精灵蛋，经过孵化可以得到“异色”外观、“了不起”天分、且支持自选性格、个体资质的咬咬小子。"
+ },
+ "150768": {
+  "name": "足尖元件的蛋",
+  "icon": "https://wegame.shallow.ink/api/v1/resources/wiki/assets/items/bag/150768.png",
+  "desc": "购买「幻梦通行证-救赎的童话」闪耀契约礼券获得的珍贵精灵蛋，经过孵化可以得到“异色”外观、“了不起”天分、且支持自选性格、个体资质的足尖元件。"
+ },
+ "150769": {
+  "name": "珍贵精灵蛋",
+  "icon": "https://wegame.shallow.ink/api/v1/resources/wiki/assets/items/bag/150769.png",
+  "desc": "某种精灵的蛋，通过观察其花纹可以获得一些头绪，经过孵化可以得到“异色”外观的精灵。"
+ },
+ "150770": {
+  "name": "珍贵精灵蛋",
+  "icon": "https://wegame.shallow.ink/api/v1/resources/wiki/assets/items/bag/150770.png",
+  "desc": "某种精灵的蛋，通过观察其花纹可以获得一些头绪，经过孵化可以得到“异色”外观的精灵。"
+ },
+ "150771": {
+  "name": "珍贵精灵蛋",
+  "icon": "https://wegame.shallow.ink/api/v1/resources/wiki/assets/items/bag/150771.png",
+  "desc": "某种精灵的蛋，通过观察其花纹可以获得一些头绪，经过孵化可以得到“异色”外观的精灵。"
+ },
+ "150772": {
+  "name": "珍贵精灵蛋",
+  "icon": "https://wegame.shallow.ink/api/v1/resources/wiki/assets/items/bag/150772.png",
+  "desc": "某种精灵的蛋，通过观察其花纹可以获得一些头绪，经过孵化可以得到“异色”外观的精灵。"
+ },
+ "150773": {
+  "name": "珍贵精灵蛋",
+  "icon": "https://wegame.shallow.ink/api/v1/resources/wiki/assets/items/bag/150773.png",
+  "desc": "某种精灵的蛋，通过观察其花纹可以获得一些头绪，经过孵化可以得到“异色”外观的精灵。"
+ },
+ "150774": {
+  "name": "珍贵精灵蛋",
+  "icon": "https://wegame.shallow.ink/api/v1/resources/wiki/assets/items/bag/150774.png",
+  "desc": "某种精灵的蛋，通过观察其花纹可以获得一些头绪，经过孵化可以得到“异色”外观的精灵。"
+ },
+ "150775": {
+  "name": "珍贵精灵蛋",
+  "icon": "https://wegame.shallow.ink/api/v1/resources/wiki/assets/items/bag/150775.png",
+  "desc": "某种精灵的蛋，通过观察其花纹可以获得一些头绪，经过孵化可以得到“异色”外观的精灵。"
+ },
+ "150776": {
+  "name": "珍贵精灵蛋",
+  "icon": "https://wegame.shallow.ink/api/v1/resources/wiki/assets/items/bag/150776.png",
+  "desc": "某种精灵的蛋，通过观察其花纹可以获得一些头绪，经过孵化可以得到“异色”外观的精灵。"
+ },
+ "150777": {
+  "name": "珍贵精灵蛋",
+  "icon": "https://wegame.shallow.ink/api/v1/resources/wiki/assets/items/bag/150777.png",
+  "desc": "某种精灵的蛋，通过观察其花纹可以获得一些头绪，经过孵化可以得到“异色”外观的精灵。"
+ },
+ "150778": {
+  "name": "珍贵精灵蛋",
+  "icon": "https://wegame.shallow.ink/api/v1/resources/wiki/assets/items/bag/150778.png",
+  "desc": "某种精灵的蛋，通过观察其花纹可以获得一些头绪，经过孵化可以得到“异色”外观的精灵。"
+ },
+ "150779": {
+  "name": "珍贵精灵蛋",
+  "icon": "https://wegame.shallow.ink/api/v1/resources/wiki/assets/items/bag/150779.png",
+  "desc": "某种精灵的蛋，通过观察其花纹可以获得一些头绪，经过孵化可以得到“异色”外观的精灵。"
+ },
+ "150780": {
+  "name": "珍贵精灵蛋",
+  "icon": "https://wegame.shallow.ink/api/v1/resources/wiki/assets/items/bag/150780.png",
+  "desc": "某种精灵的蛋，通过观察其花纹可以获得一些头绪，经过孵化可以得到“异色”外观的精灵。"
+ },
+ "150781": {
+  "name": "珍贵精灵蛋",
+  "icon": "https://wegame.shallow.ink/api/v1/resources/wiki/assets/items/bag/150781.png",
+  "desc": "某种精灵的蛋，通过观察其花纹可以获得一些头绪，经过孵化可以得到“异色”外观的精灵。"
+ },
+ "150782": {
+  "name": "珍贵精灵蛋",
+  "icon": "https://wegame.shallow.ink/api/v1/resources/wiki/assets/items/bag/150782.png",
+  "desc": "某种精灵的蛋，通过观察其花纹可以获得一些头绪，经过孵化可以得到“异色”外观的精灵。"
+ },
+ "150783": {
+  "name": "珍贵精灵蛋",
+  "icon": "https://wegame.shallow.ink/api/v1/resources/wiki/assets/items/bag/150783.png",
+  "desc": "某种精灵的蛋，通过观察其花纹可以获得一些头绪，经过孵化可以得到“异色”外观的精灵。"
+ },
+ "150784": {
+  "name": "珍贵精灵蛋",
+  "icon": "https://wegame.shallow.ink/api/v1/resources/wiki/assets/items/bag/150784.png",
+  "desc": "某种精灵的蛋，通过观察其花纹可以获得一些头绪，经过孵化可以得到“异色”外观的精灵。"
+ },
+ "150794": {
+  "name": "地鼠的蛋",
+  "icon": "https://wegame.shallow.ink/api/v1/resources/wiki/assets/items/bag/150794.png",
+  "desc": "经过孵化可以得到“异色”外观、“了不起”天分的地鼠。"
+ },
+ "150795": {
+  "name": "伊贝儿的蛋",
+  "icon": "https://wegame.shallow.ink/api/v1/resources/wiki/assets/items/bag/150795.png",
+  "desc": "经过孵化可以得到“异色”外观、“了不起”天分的伊贝儿。"
+ },
+ "150796": {
+  "name": "可立鸡的蛋",
+  "icon": "https://wegame.shallow.ink/api/v1/resources/wiki/assets/items/bag/150796.png",
+  "desc": "经过孵化可以得到“异色”外观、“了不起”天分的可立鸡。"
+ },
+ "150797": {
+  "name": "小草虫的蛋",
+  "icon": "https://wegame.shallow.ink/api/v1/resources/wiki/assets/items/bag/150797.png",
+  "desc": "经过孵化可以得到“异色”外观、“了不起”天分的小草虫。"
+ },
+ "150857": {
+  "name": "小帕尔的蛋",
+  "icon": "https://wegame.shallow.ink/api/v1/resources/wiki/assets/items/bag/150857.png",
+  "desc": "完成「暗夜拾光」赛季图鉴任务获得的异色精灵蛋，经过孵化可以得到“异色”外观、“完美无瑕”，且支持自选性格与个体资质的小帕尔。"
+ },
+ "600030": {
+  "name": "异色精灵蛋",
+  "icon": "https://wegame.shallow.ink/api/v1/resources/wiki/assets/items/bag/600030.png",
+  "desc": "蕴含着难以捉摸的魔力，必定孵化出“异色”外观、“了不起”天分的精灵。"
+ }
+}
