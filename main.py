@@ -75,7 +75,7 @@ def _card():
 
 _PLUGIN_DIR = Path(__file__).resolve().parent
 _PLUGIN_NAME = "astrbot_plugin_lk_egg"
-VERSION = "1.49.0"
+VERSION = "1.50.0"
 
 
 def _data_dir() -> Path:
@@ -138,7 +138,7 @@ def _save_state(state: Dict[str, Any]) -> None:
     "astrbot_plugin_lk_egg",
     "MIKU013970 & DeepSeek",
     "市集购买成功推送 + 新上架监控 + 黑白名单查询",
-    "1.49.0",
+    "1.50.0",
 )
 class LkMarketNotify(Star):
     def __init__(self, context: Context, config: AstrBotConfig = None):
@@ -890,7 +890,8 @@ class LkMarketNotify(Star):
             return ps[0]
 
     def _identify_card(self, h: float, w: float,
-                       hits: Optional[List[Dict[str, Any]]] = None) -> Optional[bytes]:
+                       hits: Optional[List[Dict[str, Any]]] = None,
+                       note: str = "") -> Optional[bytes]:
         """身高体重查蛋的结果卡。"""
         c = _card()
         if c is None or not c.available():
@@ -917,8 +918,11 @@ class LkMarketNotify(Star):
         for i, x in enumerate(hits[:6], 1):
             nm = str(x.get("精灵") or "")
             bins = x.get("区间数")
-            head_v = ((f"区间 {bins} · " if bins not in (None, "", 0) else "")
-                      + str(self._size_of(h, w, x)))
+            pct = x.get("pct")
+            head_v = " · ".join(y for y in (
+                (f"{float(pct):.1f}%" if pct is not None else ""),
+                (f"区间 {bins}" if bins not in (None, "", 0) else ""),
+                str(self._size_of(h, w, x))) if y)
             subs = []
             forms = [f for f in (x.get("forms") or []) if f]
             if len(forms) > 1:
@@ -950,9 +954,10 @@ class LkMarketNotify(Star):
             hs.append((self._icon_grid(four), f"{i}. {nm}", head_v, subs))
         return c.render_card(
             title="身高体重查蛋",
-            subtitle=f"身高 {h:g} cm · 体重 {w / 1000:.3f} kg",
+            subtitle=" · ".join(y for y in (
+                f"身高 {h:g} cm · 体重 {w / 1000:.3f} kg", note) if y),
             rows=([("结果", "没有匹配的精灵蛋"),
-                   ("", "可能是输入格式不对，或者这颗蛋不是图鉴里的品种")]
+                   ("", note or "可能是输入格式不对，或者这颗蛋不是图鉴里的品种")]
                   if not hs else None),
             hits=(hs or None),
             **self._card_kwargs())
@@ -1701,14 +1706,162 @@ class LkMarketNotify(Star):
         return await self._reply(event, text, png)
 
     async def _identify_reply(self, event: Any, hw):
-        """身高体重查蛋的统一出口（识别卡也放到线程里画）。"""
+        """身高体重查蛋的统一出口（识别卡也放到线程里画）。
+
+        优先用控制台的实时孵化概率（底层是孵蛋预测接口）：
+        概率低于 identify_min_pct 的候选直接不显示，免得把「理论上在区间内、
+        实际几乎不可能出」的品种列出来误导人。接口不可用时退回本地区间匹配。
+        """
+        h, w = float(hw[0]), float(hw[1])
+        hits, note = await self._identify_hits(h, w)
         png = None
         if self._image_reply_on():
             try:
-                png = await asyncio.to_thread(self._identify_card, hw[0], hw[1])
+                png = await asyncio.to_thread(self._identify_card, h, w, hits, note)
             except Exception as e:
                 logger.warning(f"[出图] 识别卡失败: {type(e).__name__}: {e}")
-        return await self._reply(event, self._render_identify(*hw), png)
+        return await self._reply(event, self._render_identify(h, w, hits, note), png)
+
+    #: 概率接口返回的文本行：「1. 里拉鳐 [大块头] (100.0%)」
+    _ID_HEAD_RE = re.compile(r"^\s*\d+\.\s*(.+?)\s*\(([\d.]+)%\)\s*$")
+    _ID_TAG_RE = re.compile(r"^(.*?)\s*\[(.+?)\]\s*$")
+
+    @classmethod
+    def _parse_identify_raw(cls, text: str) -> Dict[str, Dict[str, float]]:
+        """解析-predict 接口的文本结果（控制台 guess 为空时兜底）。
+
+        文本长这样：
+            【0.44/17.3460】
+            可能精灵：
+            1. 里拉鳐 (100.0%)
+            特殊精灵：
+            1. 守夜烛 [大块头] (100.0%)
+        """
+        out: Dict[str, Dict[str, float]] = {"top": {}, "special": {}}
+        section = "top"
+        for raw in str(text or "").splitlines():
+            line = raw.strip()
+            if not line:
+                continue
+            if line.startswith("特殊精灵"):
+                section = "special"
+                continue
+            if line.startswith("可能精灵"):
+                section = "top"
+                continue
+            if line.startswith("未找到"):
+                continue
+            m = cls._ID_HEAD_RE.match(line)
+            if not m:
+                continue
+            name = m.group(1).strip()
+            try:
+                pct = float(m.group(2))
+            except (TypeError, ValueError):
+                continue
+            mt = cls._ID_TAG_RE.match(name)
+            if mt:
+                name = mt.group(1).strip()
+            if name:
+                out[section][name] = max(pct, out[section].get(name, 0.0))
+        return out
+
+    async def _identify_probs(self, h: float, w: float):
+        """问控制台要这颗蛋的真实孵化概率。
+
+        返回 ({"top": {名字: %}, "special": {名字: %}}, 状态)：
+            "ok"    拿到候选
+            "empty" 接口明确说这个身高体重对不上任何蛋
+            "down"  控制台没起 / 接口报错（调用方退回本地区间匹配）
+            "off"   配置里关掉了
+        """
+        empty = {"top": {}, "special": {}}
+        if not bool(self._cfg("identify_use_remote", True)):
+            return empty, "off"
+        try:
+            timeout = max(2.0, float(self._cfg("identify_timeout", 10)))
+        except (TypeError, ValueError):
+            timeout = 10.0
+        try:
+            data = await asyncio.wait_for(
+                self._api(f"/api/egg/identify?h={h:g}&w={w:g}"), timeout=timeout)
+        except Exception as e:
+            logger.warning(f"[查蛋] 概率接口超时/失败: {type(e).__name__}: {e}")
+            return empty, "down"
+        if not isinstance(data, dict):
+            return empty, "down"
+        guess = data.get("guess") or {}
+        res = {"top": {}, "special": {}}
+        for key, src in (("top", guess.get("top")), ("special", guess.get("special"))):
+            for c in (src or []):
+                nm = str((c or {}).get("name") or "").strip()
+                if not nm:
+                    continue
+                try:
+                    pct = float((c or {}).get("pct") or 0.0)
+                except (TypeError, ValueError):
+                    pct = 0.0
+                res[key][nm] = max(pct, res[key].get(nm, 0.0))
+        if not res["top"] and not res["special"]:
+            parsed = self._parse_identify_raw(str(data.get("raw") or ""))
+            res["top"] = parsed["top"]
+            res["special"] = parsed["special"]
+        if res["top"] or res["special"]:
+            return res, "ok"
+        return empty, "empty"
+
+    def _hit_from_name(self, name: str) -> Optional[Dict[str, Any]]:
+        """把概率接口给的精灵名换成本地图鉴的一条候选（带蛋名/蛋组/区间）。"""
+        rec = self._find_species(name)
+        if not rec:
+            return None
+        v = self._pick_variant(rec, name)
+        return {
+            "形态": v.get("形态") or "", "形态简称": v.get("形态简称") or "",
+            "精灵": rec.get("精灵"), "蛋名": v.get("蛋名") or rec.get("蛋名"),
+            "身高区间": v.get("身高区间") or "", "体重区间": v.get("体重区间") or "",
+            "区间数": v.get("区间数"), "蛋组": rec.get("蛋组"),
+            "公母": rec.get("公母") or v.get("公母") or "未知", "area": 0,
+        }
+
+    async def _identify_hits(self, h: float, w: float):
+        """身高体重 → (候选列表, 说明文案)。有实时概率就按概率来，否则退回本地匹配。"""
+        local = self._match_species(h, w)
+        probs, state = await self._identify_probs(h, w)
+        if state == "ok":
+            try:
+                min_pct = float(self._cfg("identify_min_pct", 1.0))
+            except (TypeError, ValueError):
+                min_pct = 1.0
+            out: List[Dict[str, Any]] = []
+            for nm, pct in sorted((probs.get("top") or {}).items(), key=lambda kv: -kv[1]):
+                if pct < min_pct:
+                    continue
+                item = self._hit_from_name(nm)
+                if item:
+                    item["pct"] = pct
+                    out.append(item)
+            if out:
+                tail = "" if min_pct <= 0 else f" · 低于 {min_pct:g}% 的已隐藏"
+                return out, f"实时孵化概率{tail}"
+            # 普通蛋池没有 → 看「特殊精灵」（活动/特殊获取）
+            extra: List[Dict[str, Any]] = []
+            for nm, pct in sorted((probs.get("special") or {}).items(), key=lambda kv: -kv[1]):
+                if pct < min_pct:
+                    continue
+                item = self._hit_from_name(nm)
+                if item:
+                    item["pct"] = pct
+                    extra.append(item)
+            if extra:
+                tail = "" if min_pct <= 0 else f" · 低于 {min_pct:g}% 的已隐藏"
+                return extra, f"特殊精灵（不在普通蛋池）· 实时概率{tail}"
+            return [], f"实时概率里没有超过 {min_pct:g}% 的候选"
+        if state == "empty":
+            return [], "接口没找到匹配的精灵（也可能刚好卡在区间边界，比如正好等于上限）"
+        if state == "off":
+            return local, "按本地区间匹配（实时概率已在配置里关闭）"
+        return local, "概率接口不可用，下面是本地区间匹配（可能含低概率品种）"
 
     # ---------------------------------------------------------------- 新上架提醒
     def _watch(self) -> List[str]:
@@ -1820,20 +1973,30 @@ class LkMarketNotify(Star):
 
     # ---------------------------------------------------------------- 身高/体重 查蛋
     def _parse_hw(self, text: str):
-        """'34/3.617'、'34 3.617'、'0.34 3.617' → (34.0, 3617.0)  单位：cm / 克
+        """'34/3.617'、'34 3.617'、'0.34 3.617'、'34cm 3.617kg' → (34.0, 3617.0)
 
-        分隔符用 / 空格 逗号 x 都行。
+        分隔符用 / 空格 逗号 x 都行；带单位（cm / m / kg / g / 克）也认，
+        甚至「44cm19.8kg」这种不加空格的写法。
         身高小于 4 的一律按「米」算（游戏里显示的就是 0.32 这种），×100 转成厘米；
         图鉴里最矮的蛋是 4 cm，所以这个阈值不会误伤。
         体重带小数点或 <100 按 kg，否则按克。
         """
         import re as _re
-        m = _re.match(r"^\s*(\d+(?:\.\d+)?)\s*[/\s,，、x×*]\s*(\d+(?:\.\d+)?)\s*$",
-                      str(text or ""), _re.I)
+        s = str(text or "").strip()
+        if not s:
+            return None
+        # 把单位统一去掉，但记住身高是不是「米」
+        h_is_m = False
+        m_h = _re.search(r"(\d+(?:\.\d+)?)\s*(m|cm|厘米|米)", s, _re.I)
+        if m_h:
+            h_is_m = m_h.group(2).lower() in ("m", "米")
+        s = _re.sub(r"\s*(cm|m|kg|g|克|厘米|米|千克|公斤)\s*", " ", s, flags=_re.I)
+        s = s.replace("／", "/").strip()
+        m = _re.match(r"^\s*(\d+(?:\.\d+)?)\s*[/\s,，、x×*]?\s*(\d+(?:\.\d+)?)\s*$", s, _re.I)
         if not m:
             return None
         h = float(m.group(1))
-        if h < 4:                      # 游戏里给的是米
+        if h_is_m or h < 4:            # 游戏里给的是米
             h *= 100
         w_raw = float(m.group(2))
         # 带小数点 或 <100 当成 kg，否则当克
@@ -1888,21 +2051,34 @@ class LkMarketNotify(Star):
             return f"小块头（≤{sl / 1000:.3f}kg）"
         return "普通体型"
 
-    def _render_identify(self, h: float, w: float) -> str:
-        hits = self._match_species(h, w)
+    def _render_identify(self, h: float, w: float,
+                         hits: Optional[List[Dict[str, Any]]] = None,
+                         note: str = "") -> str:
+        if hits is None:
+            hits = self._match_species(h, w)
         head = f"身高 {h:g} cm · 体重 {w / 1000:.3f} kg"
         if not hits:
             return (f"{head}\n没有匹配的精灵蛋。\n"
-                    f"（可能是输入格式不对，或者这颗蛋不是图鉴里的品种）")
+                    f"※ {note or '可能是输入格式不对，或者这颗蛋不是图鉴里的品种'}")
         lines = [head, f"可能孵出（{len(hits)} 种）："]
-        for i, x in enumerate(hits, 1):
+        for i, x in enumerate(self._merge_hits(hits), 1):
             size = self._size_of(h, w, x)
             bins = x.get("区间数")
-            lines.append(f"{i}. {x['精灵']}"
-                         + (f" · 区间 {bins}" if bins not in (None, "", 0) else "")
-                         + f"{' · ' if bins not in (None, '', 0) else ' · '}{size}")
+            bits = []
+            pct = x.get("pct")
+            if pct is not None:
+                bits.append(f"{float(pct):.1f}%")
+            if bins not in (None, "", 0):
+                bits.append(f"区间 {bins}")
+            bits.append(size)
+            forms = [f for f in (x.get("forms") or []) if f]
+            if len(forms) > 1:
+                bits.append("形态 " + " / ".join(forms))
+            lines.append(f"{i}. {x['精灵']} · " + " · ".join(bits))
             lines.append(f"   蛋名 {x['蛋名']} · 蛋组 {x['蛋组']} · {x.get('公母') or '未知'}")
             lines.append(f"   身高 {x['身高区间']} · 体重 {x['体重区间']}")
+        if note:
+            lines.append(f"※ {note}")
         return "\n".join(lines)
 
     def _merchant_block(self, d: Dict[str, Any],
