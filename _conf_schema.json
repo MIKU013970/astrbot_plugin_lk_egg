@@ -249,5 +249,11 @@
   "type": "int",
   "default": 10,
   "hint": "超时就退回本地区间匹配，不会卡住查蛋"
+ },
+ "console_admin_qq": {
+  "description": "市场控制台管理员 QQ（可看换绑/改名记录）",
+  "type": "string",
+  "default": "1877811952",
+  "hint": "多个用逗号隔开；填了就在这里改，也会优先读市场控制台配置里的 admin_qq"
  }
 }

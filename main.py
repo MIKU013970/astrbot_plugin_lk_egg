@@ -75,7 +75,7 @@ def _card():
 
 _PLUGIN_DIR = Path(__file__).resolve().parent
 _PLUGIN_NAME = "astrbot_plugin_lk_egg"
-VERSION = "1.50.0"
+VERSION = "1.51.0"
 
 
 def _data_dir() -> Path:
@@ -138,7 +138,7 @@ def _save_state(state: Dict[str, Any]) -> None:
     "astrbot_plugin_lk_egg",
     "MIKU013970 & DeepSeek",
     "市集购买成功推送 + 新上架监控 + 黑白名单查询",
-    "1.50.0",
+    "1.51.0",
 )
 class LkMarketNotify(Star):
     def __init__(self, context: Context, config: AstrBotConfig = None):
@@ -2175,7 +2175,7 @@ class LkMarketNotify(Star):
         "蛋推送绑定 / 解绑 / 测试 / 状态 / 重置\n"
         "—————— 其它 ——————\n"
         "UID 503671642           用游戏 UID 查等级/离线/家园/收集度\n"
-        "改绑记录 / 改名记录      看绑定角色有没有被换绑 / 改名\n"
+        "改绑记录 / 改名记录      看绑定角色有没有被换绑 / 改名（仅控制台管理员）\n"
         "帮助 / 菜单              看这张卡片\n"
         "诊断                     管理员用：查图片链路哪里挂了\n"
         "回复默认都是图片         配置里关掉 reply_as_image 就发文字\n"
@@ -2889,6 +2889,54 @@ class LkMarketNotify(Star):
             return self._is_private(event)
         return sid in admins
 
+    #: 市场控制台管理员 QQ 的默认值（只有他们能看换绑 / 改名记录）
+    DEFAULT_CONSOLE_ADMIN_QQ = "1877811952"
+    #: 控制台管理员名单缓存（秒）
+    CONSOLE_ADMIN_TTL = 600
+
+    async def _console_admin_ids(self) -> List[str]:
+        """市场控制台管理员 QQ 名单。
+
+        取值顺序：市场控制台配置（`admin_qq` / `console_admin_qq` / `管理员QQ:` 任意一行）
+        → 插件配置 `console_admin_qq` → 内置默认 1877811952。多个用逗号分隔。
+        """
+        cached = getattr(self, "_console_admin_cache", None)
+        if cached and time.time() - cached[0] < self.CONSOLE_ADMIN_TTL:
+            return cached[1]
+        ids: List[str] = []
+        try:
+            data = await self._api("/api/config")
+            text = str((data or {}).get("text") or "") if isinstance(data, dict) else ""
+            for line in text.splitlines():
+                m = re.match(r"^\s*(admin_qq|console_admin_qq|管理员\s*qq)\s*[:：]\s*(.+?)\s*$",
+                             line, re.I)
+                if m:
+                    ids.extend(x for x in re.split(r"[,\[\]\"'\s]+", m.group(2)) if x)
+        except Exception:
+            pass
+        base = str(self._cfg("console_admin_qq", self.DEFAULT_CONSOLE_ADMIN_QQ) or "")
+        for ch in ("，", "；", ";", " ", "\n", "\t"):
+            base = base.replace(ch, ",")
+        ids.extend(base.split(","))
+        out: List[str] = []
+        for x in ids:
+            x = str(x).strip().strip("\"'“”").lstrip("+")
+            if x.isdigit() and x not in out:
+                out.append(x)
+        if not out:
+            out = [self.DEFAULT_CONSOLE_ADMIN_QQ]
+        try:
+            self._console_admin_cache = (time.time(), out)
+        except Exception:
+            pass
+        return out
+
+    async def _is_console_admin(self, event) -> bool:
+        """当前发消息的人是不是市场控制台管理员。"""
+        ids = await self._console_admin_ids()
+        sid = self._sender_id(event)
+        return bool(sid) and sid in ids
+
     async def _give_code(self, event: AstrMessageEvent):
         import random as _random
 
@@ -3557,15 +3605,18 @@ class LkMarketNotify(Star):
     # ---------------------------------------------------------------- 改绑 / 改名记录
     @filter.command("改绑记录")
     async def cmd_rebind(self, event: AstrMessageEvent):
-        """改绑记录 [N] —— 谁把绑定的游戏角色换到别的助手了"""
+        """改绑记录 [N] —— 谁把绑定的游戏角色换到别的助手了（仅控制台管理员）"""
         yield await self._roles_changes(event, "换绑")
 
     @filter.command("改名记录")
     async def cmd_rename_hist(self, event: AstrMessageEvent):
-        """改名记录 [N] —— 绑定过的游戏角色改过名的"""
+        """改名记录 [N] —— 绑定过的游戏角色改过名的（仅控制台管理员）"""
         yield await self._roles_changes(event, "改名")
 
     async def _roles_changes(self, event: Any, reason: str):
+        # 只给市场控制台管理员看（默认 1877811952，可在配置 / 控制台里改）
+        if not await self._is_console_admin(event):
+            return event.plain_result("暂无控制台管理员权限")
         arg = self._cmd_args(event)
         limit = 15
         if str(arg).isdigit():
