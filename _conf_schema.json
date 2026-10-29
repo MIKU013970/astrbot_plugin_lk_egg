@@ -255,5 +255,17 @@
   "type": "string",
   "default": "1877811952",
   "hint": "多个用逗号隔开；填了就在这里改，也会优先读市场控制台配置里的 admin_qq"
+ },
+ "buy_notify_target": {
+  "description": "购买成功通知发到哪",
+  "type": "string",
+  "default": "",
+  "hint": "留空=只私聊发给管理员（默认）；填 QQ 号=私聊他；填 g:群号=发群；填 bind=沿用旧行为（发到 /蛋推送绑定 的会话）。多个用逗号隔开"
+ },
+ "listing_notify_target": {
+  "description": "新上架提醒发到哪",
+  "type": "string",
+  "default": "bind",
+  "hint": "默认 bind（发到 /蛋推送绑定 的会话）；写法同购买成功：留空/admin=管理员私聊，g:群号=发群"
  }
 }

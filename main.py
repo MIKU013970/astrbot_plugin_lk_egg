@@ -75,7 +75,7 @@ def _card():
 
 _PLUGIN_DIR = Path(__file__).resolve().parent
 _PLUGIN_NAME = "astrbot_plugin_lk_egg"
-VERSION = "1.53.0"
+VERSION = "1.54.0"
 
 
 def _data_dir() -> Path:
@@ -138,7 +138,7 @@ def _save_state(state: Dict[str, Any]) -> None:
     "astrbot_plugin_lk_egg",
     "MIKU013970 & DeepSeek",
     "市集购买成功推送 + 新上架监控 + 黑白名单查询",
-    "1.53.0",
+    "1.54.0",
 )
 class LkMarketNotify(Star):
     def __init__(self, context: Context, config: AstrBotConfig = None):
@@ -303,8 +303,62 @@ class LkMarketNotify(Star):
         out.append(ZWSP + text)    # 最后退化到纯字符串
         return out
 
-    async def _send(self, text: str) -> int:
-        umos = self._candidate_umos()
+    def _admin_qq_list(self) -> List[str]:
+        """管理员 QQ（先看缓存，没有就按配置/内置默认算，不查控制台，保持同步）。"""
+        cached = getattr(self, "_console_admin_cache", None)
+        if cached and time.time() - cached[0] < self.CONSOLE_ADMIN_TTL:
+            return list(cached[1])
+        base = str(self._cfg("console_admin_qq", self.DEFAULT_CONSOLE_ADMIN_QQ) or "")
+        for ch in ("，", "；", ";", " ", "\n", "\t"):
+            base = base.replace(ch, ",")
+        out = [x.strip().strip("\"'") for x in base.split(",") if x.strip()]
+        return [x for x in out if x] or [self.DEFAULT_CONSOLE_ADMIN_QQ]
+
+    def _notify_targets(self, kind: str = "purchase") -> List[str]:
+        """购买成功 / 新上架 通知发到哪。
+
+        配置 `buy_notify_target`（购买成功，默认空 = 只私聊管理员）：
+            空 / admin / 管理员 / 私聊  → 只私聊管理员（`console_admin_qq`，没配就 `target_qq`）
+            bind / 绑定                → 老行为：发到 `/蛋推送绑定` 过的会话 + `target_qq`
+            123456                     → 私聊这个 QQ
+            g:123456 / 群:123456        → 发到这个群
+            aiocqhttp:GroupMessage:xxx  → 完整 umo 原样用
+        多个用逗号隔开；`listing_notify_target` 管新上架（默认 bind，即老行为）。
+        """
+        key = "listing_notify_target" if kind == "listing" else "buy_notify_target"
+        raw = str(self._cfg(key, "" if kind == "purchase" else "bind") or "").strip()
+        plat = self._platform()
+        tpl = str(self._cfg("umo_template", "{platform}:FriendMessage:{qq}") or "")
+
+        def _priv(qq: str) -> str:
+            return (tpl.replace("{platform}", plat)
+                       .replace("{qq}", qq).replace("{session}", qq))
+
+        mode = raw.lower()
+        if not raw or mode in ("admin", "管理员", "私聊", "private", "私信"):
+            admins = self._admin_qq_list() or self._targets()
+            out = [_priv(q) for q in admins]
+            return out or [_priv(q) for q in self._targets()]
+        if mode in ("bind", "绑定", "旧", "legacy", "老"):
+            return self._candidate_umos()
+        out: List[str] = []
+        for item in re.split(r"[,，\s]+", raw):
+            item = item.strip()
+            if not item:
+                continue
+            low = item.lower()
+            if low.startswith(("g:", "g：", "群:", "群：")):
+                out.append(f"{plat}:GroupMessage:" + re.sub(r"^[^:：]+\s*[:：]", "", item).strip())
+            elif item.count(":") >= 2 or item.count("：") >= 2:
+                out.append(item)                    # 完整 umo
+            elif item.isdigit():
+                out.append(_priv(item))
+            else:
+                out.append(item)
+        return out or self._candidate_umos()
+
+    async def _send(self, text: str, kind: str = "purchase") -> int:
+        umos = self._notify_targets(kind)
         if not umos:
             logger.warning("[市集推送] 没有推送目标：先在目标会话发一次 /蛋推送绑定，"
                            "或在配置里填 target_qq")
@@ -1913,7 +1967,7 @@ class LkMarketNotify(Star):
             if fresh:
                 text = self._render_listing(sid, data.get("nickname") or "",
                                             fresh, data.get("listed") or len(items))
-                if await self._send(text):
+                if await self._send(text, kind="listing"):
                     sent += 1
                     self.stats["sent"] += 1
                     logger.info(f"[市集推送] {sid} 新上架 {len(fresh)} 件")
@@ -2173,6 +2227,7 @@ class LkMarketNotify(Star):
         "发码记录                 看最近发了哪些码（仅管理员）\n"
         "—————— 推送 ——————\n"
         "蛋推送绑定 / 解绑 / 测试 / 状态 / 重置\n"
+        "（购买成功默认只私聊管理员；要发群改 buy_notify_target）\n"
         "—————— 其它 ——————\n"
         "UID 503671642           用游戏 UID 查等级/离线/家园/收集度\n"
         "改绑记录 / 改名记录      看绑定角色有没有被换绑 / 改名（仅控制台管理员）\n"
@@ -3761,7 +3816,10 @@ class LkMarketNotify(Star):
         self.state["umos"] = umos[-10:]
         _save_state(self.state)
         yield await self._say(event, 
-            f"✅ 已绑定推送目标\n{umo}\n之后买到蛋会推送到这里（共 {len(self.state['umos'])} 个目标）"
+            f"✅ 已绑定推送目标\n{umo}\n"
+            f"（共 {len(self.state['umos'])} 个目标）\n"
+            f"⚠️ 购买成功通知默认只私聊管理员，不跟着这个绑定走；\n"
+            f"想让购买成功也发到这里，把配置 buy_notify_target 填 bind"
         )
 
     @filter.command("蛋推送解绑")
