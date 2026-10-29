@@ -75,7 +75,7 @@ def _card():
 
 _PLUGIN_DIR = Path(__file__).resolve().parent
 _PLUGIN_NAME = "astrbot_plugin_lk_egg"
-VERSION = "1.56.0"
+VERSION = "1.57.0"
 
 
 def _data_dir() -> Path:
@@ -138,7 +138,7 @@ def _save_state(state: Dict[str, Any]) -> None:
     "astrbot_plugin_lk_egg",
     "MIKU013970 & DeepSeek",
     "市集购买成功推送 + 新上架监控 + 黑白名单查询",
-    "1.56.0",
+    "1.57.0",
 )
 class LkMarketNotify(Star):
     def __init__(self, context: Context, config: AstrBotConfig = None):
@@ -1199,8 +1199,11 @@ class LkMarketNotify(Star):
         pet = str(v.get("精灵") or rec.get("精灵") or "")
         egg = str(v.get("蛋名") or rec.get("蛋名") or pet)
         form0 = str(v.get("形态简称") or v.get("形态") or "")
-        out = [self._form_sprite_path(rec, v) or self._stage1_path(pet, form0),
-               c.icon_path("egg", egg)]
+        egg_path = c.icon_path("egg", egg)
+        # magic_egg 是通用占位白蛋：通行证精灵官方只有异色蛋、没有普通蛋，别拿它凑数
+        if egg_path and Path(egg_path).stem == "magic_egg":
+            egg_path = None
+        out = [self._form_sprite_path(rec, v) or self._stage1_path(pet, form0), egg_path]
         # 异色
         try:
             _s1n = json.loads((_PLUGIN_DIR / "stage1name.json").read_text(encoding="utf-8"))
@@ -1217,8 +1220,29 @@ class LkMarketNotify(Star):
                     break
             if shiny_egg:
                 out.append(shiny_egg)
-        out = [x for x in out if x]
-        return out or None
+        # 同一张图不重复显示：通行证精灵的「普通蛋」和「异色蛋」官方就是同一张图，
+        # 归一化到 item 数字 id 再比（蛋150701 / 异色蛋150701 视为同一张）
+        def _icon_key(p):
+            stem = Path(p).stem
+            mm = re.search(r"(\d{4,})", stem)
+            base = mm.group(1) if mm else stem
+            if stem.startswith("shiny"):
+                return "shiny-" + base
+            if stem.startswith("pet"):
+                return "pet-" + base
+            return base
+
+        _seen = set()
+        uniq = []
+        for _p in out:
+            if not _p:
+                continue
+            _k = _icon_key(_p)
+            if _k in _seen:
+                continue
+            _seen.add(_k)
+            uniq.append(_p)
+        return uniq or None
 
     #: 奖牌简写（货架格子窄，写全称挤不下）
     MEDAL_SHORT = {
