@@ -75,7 +75,7 @@ def _card():
 
 _PLUGIN_DIR = Path(__file__).resolve().parent
 _PLUGIN_NAME = "astrbot_plugin_lk_egg"
-VERSION = "1.51.0"
+VERSION = "1.52.0"
 
 
 def _data_dir() -> Path:
@@ -138,7 +138,7 @@ def _save_state(state: Dict[str, Any]) -> None:
     "astrbot_plugin_lk_egg",
     "MIKU013970 & DeepSeek",
     "市集购买成功推送 + 新上架监控 + 黑白名单查询",
-    "1.51.0",
+    "1.52.0",
 )
 class LkMarketNotify(Star):
     def __init__(self, context: Context, config: AstrBotConfig = None):
@@ -2898,7 +2898,7 @@ class LkMarketNotify(Star):
         """市场控制台管理员 QQ 名单。
 
         取值顺序：市场控制台配置（`admin_qq` / `console_admin_qq` / `管理员QQ:` 任意一行）
-        → 插件配置 `console_admin_qq` → 内置默认 1877811952。多个用逗号分隔。
+        → 插件配置 `console_admin_qq` → 内置默认值。多个用逗号分隔。
         """
         cached = getattr(self, "_console_admin_cache", None)
         if cached and time.time() - cached[0] < self.CONSOLE_ADMIN_TTL:
@@ -3044,8 +3044,21 @@ class LkMarketNotify(Star):
                 while len(_MERCHANT_CACHE) > 64:
                     _MERCHANT_CACHE.pop(next(iter(_MERCHANT_CACHE)))
         note = ""
-        # 纯数字查不到就补个 Z 再试：玩家常把助手ID 前面的 Z 忘了写
         ok = isinstance(data, dict) and data.get("ok")
+        # 实时接口不认游戏ID（要"先建索引"）→ 退一步用索引搜索（游戏ID / 昵称都能搜）
+        if not ok:
+            try:
+                row = await self._seller_info(qid)
+            except Exception:
+                row = None
+            sid = str((row or {}).get("seller") or "").strip()
+            if sid:
+                alt = await self._api("/api/merchant?q=" + urllib.parse.quote(sid))
+                if isinstance(alt, dict) and alt.get("ok"):
+                    data = alt
+                    note = f"（按{row.get('match') or '索引'}找到 {sid}）"
+                    ok = True
+        # 纯数字查不到就补个 Z 再试：玩家常把助手ID 前面的 Z 忘了写
         if not ok and re.fullmatch(r"\d{5,12}", qid):
             alt = await self._api("/api/merchant?q=" + urllib.parse.quote("Z" + qid))
             if isinstance(alt, dict) and alt.get("ok"):
@@ -3066,13 +3079,32 @@ class LkMarketNotify(Star):
                         text += f"\n· {self._cand_text(c)}"
             _chs = [c for c in (data.get("uid_changes") or []) if isinstance(c, dict)][:6]
             if _chs:
-                text += "\n———— 绑定变更 ——​——"
+                # uid_changes 只有 game / seller / name / first / last，没有新名字：
+                # 有改名条目时补查一次记录，把「旧名 → 新名」对上
+                _nm = {}
+                if any(c.get("reason") == "改名" for c in _chs):
+                    try:
+                        _rc = await self._api(
+                            "/api/roles/changes?limit=50&reason="
+                            + urllib.parse.quote("改名"))
+                        for it in ((_rc or {}).get("items") or []):
+                            if isinstance(it, dict) and it.get("game"):
+                                _nm[str(it.get("game"))] = (
+                                    str(it.get("old_role") or "—"),
+                                    str(it.get("now_role") or "—"))
+                    except Exception:
+                        pass
+                text += "\n———— 绑定变更 ​————"
                 for ch in _chs:
+                    g = str(ch.get("game") or "")
+                    tm = self._fmt_ts_hm(ch.get("last") or ch.get("at"))
+                    tail = f"　{tm}" if tm else ""
                     if ch.get("reason") == "换绑":
-                        text += (f"\n· 换绑 {ch.get('game')} "
-                                 f"{ch.get('old_seller')} → {ch.get('now_seller') or '—'}")
+                        text += (f"\n· 换绑 {g} → "
+                                 f"{ch.get('now_seller') or ch.get('seller') or '—'}{tail}")
                     else:
-                        text += f"\n· 改名 {ch.get('game')} 「{ch.get('old_role') or ''}」"
+                        old, now = _nm.get(g, (str(ch.get("name") or "—"), "—"))
+                        text += f"\n· 改名 {g} 「{old}」→「{now}」{tail}"
             png = None
             if self._image_reply_on():
                 try:
@@ -3614,7 +3646,7 @@ class LkMarketNotify(Star):
         yield await self._roles_changes(event, "改名")
 
     async def _roles_changes(self, event: Any, reason: str):
-        # 只给市场控制台管理员看（默认 1877811952，可在配置 / 控制台里改）
+        # 只给市场控制台管理员看（号码在配置 / 控制台里配）
         if not await self._is_console_admin(event):
             return event.plain_result("暂无控制台管理员权限")
         arg = self._cmd_args(event)
@@ -3640,7 +3672,13 @@ class LkMarketNotify(Star):
                 rows.append((gid, f"{x.get('old_seller') or '—'} → "
                                    f"{x.get('now_seller') or '—'}　{at}"))
             else:
-                rows.append((gid, f"「{x.get('old_role') or ''}」改名　{at}"))
+                # 改名：老角色名 → 新角色名（顺手带上卖家和平台昵称，方便认人）
+                old_r = str(x.get("old_role") or "—")
+                now_r = str(x.get("now_role") or "—")
+                seller = str(x.get("old_seller") or x.get("now_seller") or "")
+                nick = str(x.get("now_nick") or x.get("old_nick") or "")
+                extra = "　" + " ".join(y for y in (seller, nick) if y) if (seller or nick) else ""
+                rows.append((gid, f"{old_r} → {now_r}{extra}　{at}"))
         title = f"{reason}记录（共 {data.get('count') or len(items)} 条）"
         png = None
         if self._image_reply_on():
