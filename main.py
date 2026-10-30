@@ -43,6 +43,9 @@ _CARD_TRIED = False
 #: 文字卡缓存：内容 + 配置一致就直接复用，省掉重复渲染
 #: （帮助菜单、各种格式提示这些天天发同样的内容，画一次就够了）
 _CARD_CACHE: Dict[str, bytes] = {}
+#: 图鉴卡缓存：同一只精灵 + 同配置重复查，直接返回上次那张（图鉴数据是静态的）
+_SPECIES_CACHE: Dict[str, bytes] = {}
+_SPECIES_CACHE_MAX = 128
 #: 查ID 的商家数据短缓存：key → (时间戳, data)
 _MERCHANT_CACHE: Dict[str, tuple] = {}
 _CARD_CACHE_MAX = 64
@@ -655,10 +658,38 @@ class LkMarketNotify(Star):
         png = None
         if self._image_reply_on():
             try:
-                png = await asyncio.to_thread(self._species_card, rec, items, query)
+                png = await asyncio.to_thread(self._species_card_cached, rec, items, query)
             except Exception as e:
                 logger.warning(f"[出图] 图鉴卡失败，退回文字: {type(e).__name__}: {e}")
         return text, png
+
+    def _species_card_cached(self, rec: Dict[str, Any],
+                             items: Optional[List[Dict[str, Any]]] = None,
+                             query: str = "") -> Optional[bytes]:
+        """图鉴卡带缓存：同一只精灵 + 同配置重复查，直接返回上次那张。
+
+        图鉴数据是静态的（不像行情会变），缓存非常安全。改卡片配置会自动失效。
+        """
+        kw = self._card_kwargs()
+        _items_sig = "|".join(str((it or {}).get("key") or "") for it in (items or []))
+        raw = "\x1f".join([
+            str(rec.get("精灵") or ""), str(query or ""), _items_sig,
+            str(kw.get("theme") or ""), str(kw.get("font_path") or ""),
+            str(kw.get("width")), str(kw.get("font_size")),
+        ])
+        key = hashlib.sha1(raw.encode("utf-8")).hexdigest()
+        hit = _SPECIES_CACHE.get(key)
+        if hit is not None:
+            return hit
+        png = self._species_card(rec, items, query)
+        if png:
+            while len(_SPECIES_CACHE) >= _SPECIES_CACHE_MAX:
+                try:
+                    _SPECIES_CACHE.pop(next(iter(_SPECIES_CACHE)))
+                except StopIteration:
+                    break
+            _SPECIES_CACHE[key] = png
+        return png
 
     async def _render_species_quoted(self, rec: Dict[str, Any]) -> str:
         """只要文字版（兼容老调用）。"""
@@ -1123,20 +1154,26 @@ class LkMarketNotify(Star):
         return None
 
     def _temp_png(self, png: bytes) -> str:
-        """落到临时文件（协议端要按路径读），顺手清掉 1 小时前的旧图。"""
+        """落到临时文件（协议端要按路径读），顺手清掉 1 小时前的旧图。
+
+        清理不用每次都做：攒够 50 次再扫一遍目录，省掉每次的 glob。
+        """
         import tempfile
         d = Path(tempfile.gettempdir()) / "lk_egg_cards"
         try:
             d.mkdir(parents=True, exist_ok=True)
         except Exception:
             d = Path(tempfile.gettempdir())
-        try:
-            now = time.time()
-            for f in d.glob("card-*.png"):
-                if now - f.stat().st_mtime > 3600:
-                    f.unlink(missing_ok=True)
-        except Exception:
-            pass
+        global _TEMP_CLEAN_TICK
+        _TEMP_CLEAN_TICK = (globals().get("_TEMP_CLEAN_TICK") or 0) + 1
+        if _TEMP_CLEAN_TICK % 50 == 1:
+            try:
+                now = time.time()
+                for f in d.glob("card-*.png"):
+                    if now - f.stat().st_mtime > 3600:
+                        f.unlink(missing_ok=True)
+            except Exception:
+                pass
         fp = d / f"card-{int(time.time() * 1000)}-{os.getpid() % 999:03d}.png"
         fp.write_bytes(png)
         return str(fp)
