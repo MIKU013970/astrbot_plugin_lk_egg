@@ -923,12 +923,58 @@ class LkMarketNotify(Star):
                 out[section][name] = max(pct, out[section].get(name, 0.0))
         return out
 
-    async def _identify_probs(self, h: float, w: float):
-        """纯本地：不再问任何远端接口，直接走本地区间匹配。
+    #: 孵蛋预测接口（公用的计算服务，不需要登录、不需要 key）
+    IDENTIFY_API = "https://cinene.cloud/egg/api/compute"
 
-        返回 ({"top": {}, "special": {}}, "off")，调用方据此改用区间算法。
+    async def _identify_probs(self, h: float, w: float):
+        """问孵蛋预测接口要这颗蛋的**真实孵化概率**。
+
+        接口：POST https://cinene.cloud/egg/api/compute
+            {"attribute": "孵蛋预测", "data": "0.27 3.0680"}   ← 米 + 千克
+            返回 {"result": "【0.27/3.0680】\\n可能精灵：\\n1. 呼呼猪 (69.8%)..."}
+
+        返回 ({"top": {名字: %}, "special": {名字: %}}, 状态)：
+            "ok"    拿到候选
+            "empty" 接口明确说这个身高体重对不上任何蛋
+            "down"  接口连不上 / 报错（调用方退回本地区间匹配）
+            "off"   配置里关掉了
         """
-        return {"top": {}, "special": {}}, "off"
+        empty = {"top": {}, "special": {}}
+        if not bool(self._cfg("identify_use_remote", True)):
+            return empty, "off"
+        if h <= 0 or w <= 0:
+            return empty, "empty"
+        try:
+            timeout = max(2.0, float(self._cfg("identify_timeout", 10)))
+        except (TypeError, ValueError):
+            timeout = 10.0
+        # 接口要「米 + 千克」：身高 cm/100、体重 g/1000
+        body = {
+            "attribute": "孵蛋预测",
+            "data": f"{float(h) / 100:.6f} {float(w) / 1000:.6f}",
+        }
+        text = ""
+        try:
+            async with aiohttp.ClientSession(
+                    timeout=aiohttp.ClientTimeout(total=timeout)) as sess:
+                async with sess.post(
+                        self.IDENTIFY_API, json=body,
+                        headers={"User-Agent": "lk-egg/1.0"}) as resp:
+                    if resp.status != 200:
+                        logger.warning(f"[查蛋] 预测接口 HTTP {resp.status}")
+                        return empty, "down"
+                    data = await resp.json(content_type=None)
+            if isinstance(data, dict):
+                text = str(data.get("result") or "")
+        except Exception as e:
+            logger.warning(f"[查蛋] 预测接口失败: {type(e).__name__}: {e}")
+            return empty, "down"
+        if not text:
+            return empty, "down"
+        res = self._parse_identify_raw(text)
+        if res["top"] or res["special"]:
+            return res, "ok"
+        return empty, "empty"
 
     def _hit_from_name(self, name: str) -> Optional[Dict[str, Any]]:
         """把概率接口给的精灵名换成本地图鉴的一条候选（带蛋名/蛋组/区间）。"""
@@ -1109,6 +1155,7 @@ class LkMarketNotify(Star):
         "0.32 2.12               身高体重查蛋（空格分隔，身高按米算）\n"
         "34/3.617                身高厘米 + 体重千克（斜杠也行）\n"
         "34 3617                 整数体重按克算\n"
+        "（会自动显示每种可能蛋的真实孵化概率，低于 1% 的默认隐藏）\n"
         "—————— 其它 ——————\n"
         "UID 503671642            用游戏 UID 查等级/在线/家园/收集度\n"
         "帮助 / 菜单              看这张卡片\n"

@@ -67,5 +67,23 @@
   "type": "string",
   "default": "",
   "hint": "留空用默认 https://wegame.shallow.ink"
+ },
+ "identify_use_remote": {
+  "description": "身高体重查蛋用实时孵化概率",
+  "type": "bool",
+  "default": true,
+  "hint": "查身高体重时问孵蛋预测接口要真实概率，并按百分比过滤；关掉就退回本地区间匹配（会列出理论上在区间内、实际几乎不可能出的品种）"
+ },
+ "identify_min_pct": {
+  "description": "低于这个百分比不显示",
+  "type": "float",
+  "default": 1.0,
+  "hint": "按实时概率过滤，填 1 就隐藏不足 1% 的品种；填 0 就是全都显示"
+ },
+ "identify_timeout": {
+  "description": "概率接口超时（秒）",
+  "type": "int",
+  "default": 10,
+  "hint": "超时就退回本地区间匹配，不会卡住查蛋"
  }
 }
