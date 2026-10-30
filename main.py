@@ -19,6 +19,8 @@ import time
 from pathlib import Path
 from typing import Any, Dict, List, Optional
 
+import aiohttp
+
 from astrbot.api import AstrBotConfig, logger
 from astrbot.api.event import AstrMessageEvent, filter
 from astrbot.api.star import Context, Star, register
@@ -65,6 +67,19 @@ _PLUGIN_DIR = Path(__file__).resolve().parent
 _PLUGIN_NAME = "astrbot_plugin_lk_egg"
 VERSION = "1.59.0"
 
+
+def _data_dir() -> Path:
+    """按平台规范：持久化数据放 data/plugin_data/<plugin_name>/"""
+    try:
+        from astrbot.core.utils.astrbot_path import get_astrbot_data_path
+        return Path(get_astrbot_data_path()) / "plugin_data" / _PLUGIN_NAME
+    except Exception:
+        # 兼容旧版 AstrBot / 独立测试
+        return Path("data") / "plugin_data" / _PLUGIN_NAME
+
+
+#: 游戏角色资料缓存（等级 / 注册时间 / 家园信息），按游戏 UID 存
+_ROCOM_CACHE_PATH = _data_dir() / "rocom_roles.json"
 ZWSP = "\u200b"          # 零宽空格：防止适配器把首行/换行 strip 掉
 
 
@@ -678,6 +693,34 @@ class LkMarketNotify(Star):
                 logger.warning(f"[出图] 发图失败，退回文字: {type(e).__name__}: {e}")
         return event.plain_result(text)
 
+    # ---------------------------------------------------------------- 时间格式
+    @staticmethod
+    def _fmt_ts_hm(v: Any) -> str:
+        """时间戳（秒/毫秒）→ 'YYYY-MM-DD HH:MM'，用于「上次离线」这种要看到时分的。"""
+        try:
+            n = float(v)
+        except (TypeError, ValueError):
+            return str(v or "")
+        if n > 1e11:
+            n /= 1000.0
+        try:
+            return time.strftime("%Y-%m-%d %H:%M", time.localtime(n))
+        except Exception:
+            return str(v or "")
+
+    @staticmethod
+    def _fmt_ts(v: Any) -> str:
+        """时间戳（秒/毫秒）→ 'YYYY-MM-DD'；不是数字就原样返回。"""
+        try:
+            n = float(v)
+        except (TypeError, ValueError):
+            return str(v or "")
+        if n > 1e11:
+            n /= 1000.0
+        try:
+            return time.strftime("%Y-%m-%d", time.localtime(n))
+        except Exception:
+            return str(v or "")
 
     def _card_key(self, text: str, icons=None) -> str:
         """缓存键：内容 + 图标 + 影响画面的那几个配置。改配置就不会拿到旧图。"""
@@ -1067,6 +1110,7 @@ class LkMarketNotify(Star):
         "34/3.617                身高厘米 + 体重千克（斜杠也行）\n"
         "34 3617                 整数体重按克算\n"
         "—————— 其它 ——————\n"
+        "UID 503671642            用游戏 UID 查等级/在线/家园/收集度\n"
         "帮助 / 菜单              看这张卡片\n"
         "诊断                     管理员用：查图片链路哪里挂了\n"
         "回复默认都是图片         配置里关掉 reply_as_image 就发文字\n"
@@ -1080,6 +1124,350 @@ class LkMarketNotify(Star):
         "查蛋": "格式：查蛋 火花\n和「查询」完全一样，斜杠可加可不加",
     }
 
+
+    # ---------------------------------------------------------------- UID 查角色
+    #: 游戏角色资料缓存有效期内不重复拉（秒）
+    ROCOM_TTL = 6 * 3600
+    #: UID 命令词：UID / 查UID / 游戏ID，后面跟纯数字
+    _UID_CMD_RE = re.compile(r"^\s*(?:查\s*)?(?:[Uu][Ii][Dd]|游戏[Ii][Dd])\s*(\d{5,15})\s*$")
+
+    @staticmethod
+    def _rocom_fields(payload: Any) -> List[tuple]:
+        """把 rocom 能拿到的字段**尽量全**地整理成行。
+
+        来源：POST /api/v1/games/rocom/ingame/player/card
+                data.register_timestamp / online / topic_point /
+                data.player_card_brief_info.card_signature /
+                  card_handbook_collect_num / card_fashion_bond_collect_num /
+                  card_pet_info.collected_glass_pet_count / collected_shining_pet_count
+              POST /api/v1/games/rocom/ingame/home/info
+                result.home_info.friend_home_brief_info.home_name / home_level /
+                  room_level / home_comfort_level / home_experience / home_pet_count
+        """
+        p = payload if isinstance(payload, dict) else {}
+        card = p.get("card") if isinstance(p.get("card"), dict) else {}
+        player = p.get("player") if isinstance(p.get("player"), dict) else {}
+        home = (p.get("home") if isinstance(p.get("home"), dict) else {}) or \
+            (player.get("home_info") if isinstance(player.get("home_info"), dict) else {})
+        brief = card.get("player_card_brief_info") if isinstance(
+            card.get("player_card_brief_info"), dict) else {}
+        pet = brief.get("card_pet_info") if isinstance(
+            brief.get("card_pet_info"), dict) else {}
+        out: List[tuple] = []
+
+        def add(label: str, val: Any, ts: bool = False, unit: str = "") -> None:
+            if val in (None, "", [], {}):
+                return
+            out.append((label, (LkMarketNotify._fmt_ts(val) if ts else str(val)) + unit))
+
+        def yn(label: str, val: Any) -> None:
+            if val is None:
+                return
+            out.append((label, "是" if val else "否"))
+
+        GENDER = {1: "雄性", 2: "雌性"}
+        add("角色等级", player.get("level"))
+        add("世界等级", player.get("world_level"))
+        add("性别", GENDER.get(player.get("gender"), player.get("gender")))
+        add("注册时间", player.get("regist_date") or card.get("register_timestamp"),
+            ts=True)
+        online = player.get("online")
+        if online is None:
+            online = card.get("online")
+        if online is not None:
+            out.append(("在线", "在线" if online else "离线"))
+        _lo = player.get("last_logout_time")
+        if _lo not in (None, "", 0):
+            out.append(("上次离线", LkMarketNotify._fmt_ts_hm(_lo)))
+        add("个性签名", player.get("signature") or brief.get("card_signature"))
+        add("图鉴收集", brief.get("card_handbook_collect_num")
+            or player.get("card_handbook_collect_num"), unit=" 种")
+        add("时装羁绊", brief.get("card_fashion_bond_collect_num"), unit=" 个")
+        add("炫彩精灵数", pet.get("collected_glass_pet_count"), unit=" 只")
+        add("异色精灵数", pet.get("collected_shining_pet_count"), unit=" 只")
+        add("话题点", card.get("topic_point"))
+        yn("好友", card.get("is_friend"))
+        yn("被拉黑", card.get("is_black_role"))
+        add("家园名称", home.get("home_name"))
+        add("家园等级", home.get("home_level"))
+        add("房间等级", home.get("room_level"))
+        add("家园舒适度", home.get("home_comfort_level"))
+        add("家园好感/经验", home.get("home_experience"))
+        add("家园精灵数", home.get("home_pet_count"), unit=" 只")
+        return out
+
+    def _rocom_cache(self) -> Dict[str, Any]:
+        try:
+            d = json.loads(_ROCOM_CACHE_PATH.read_text(encoding="utf-8"))
+            return d if isinstance(d, dict) else {}
+        except Exception:
+            return {}
+
+    def _rocom_save(self, cache: Dict[str, Any]) -> None:
+        try:
+            _ROCOM_CACHE_PATH.parent.mkdir(parents=True, exist_ok=True)
+            _ROCOM_CACHE_PATH.write_text(
+                json.dumps(cache, ensure_ascii=False, indent=1), encoding="utf-8")
+        except Exception as e:
+            logger.warning(f"[角色资料] 缓存写盘失败: {type(e).__name__}: {e}")
+
+    def _rocom_on(self) -> bool:
+        return bool(str(self._cfg("rocom_api_key", "") or "").strip())
+
+    async def _rocom_call(self, path: str, game_id: str,
+                          key: str, base: str) -> Optional[Dict[str, Any]]:
+        """打一发 rocom 接口：POST 拿 task_id → 轮询 tasks/{id} → 返回 data 层。"""
+        hdr = {"X-API-Key": key, "Content-Type": "application/json"}
+        url = base + path
+        try:
+            async with aiohttp.ClientSession(
+                    timeout=aiohttp.ClientTimeout(total=12)) as s:
+                async with s.post(url, json={"uid": str(game_id), "wait_ms": 6000},
+                                  headers=hdr) as r:
+                    if r.status not in (200, 202):
+                        logger.warning(f"[角色资料] {path} {game_id} → HTTP {r.status}")
+                        return None
+                    env = await r.json(content_type=None)
+        except Exception as e:
+            logger.warning(f"[角色资料] {path} 请求失败: {type(e).__name__}: {e}")
+            return None
+        if not isinstance(env, dict):
+            return None
+        data = env.get("data")
+        if not isinstance(data, dict):
+            data = env if env.get("code") in (0, None) else {}
+        tid = str(((data or {}).get("meta") or {}).get("task_id") or "")
+        if not tid:
+            return data or None
+        # player/card 第一次就直接把完整资料塞在 data 里了（只是顺带带了个 task_id），
+        # 这种情况别去排队轮询 —— 一轮询就只剩任务结果，图鉴收集那些字段就丢了。
+        if path.endswith(("/player/card", "/player/search")) and any(
+                k not in ("meta", "ret_info", "source",
+                          "cache_ttl_seconds", "cached_age_seconds")
+                for k in data):
+            return data
+        for _ in range(8):                      # 每 1.5 秒探一次，最多 ~12 秒
+            await asyncio.sleep(1.5)
+            try:
+                async with aiohttp.ClientSession(
+                        timeout=aiohttp.ClientTimeout(total=10)) as s:
+                    async with s.get(
+                            base + "/api/v1/games/rocom/ingame/tasks/" + tid,
+                            headers=hdr) as r:
+                        if r.status != 200:
+                            return None
+                        task = await r.json(content_type=None)
+            except Exception:
+                return None
+            if not isinstance(task, dict):
+                return None
+            # 轮询返回同样是 {code, data, message} 信封，status/result 在 data 里
+            body = task.get("data") if isinstance(task.get("data"), dict) else task
+            st = str(body.get("status") or "").lower()
+            if st in ("failed", "error", "cancelled", "canceled"):
+                logger.warning(f"[角色资料] {path} 任务失败: {st}")
+                return None
+            res = body.get("result")
+            if isinstance(res, dict):
+                return res
+        return None
+
+    async def _rocom_fetch(self, game_id: str) -> Optional[Dict[str, Any]]:
+        """用游戏 UID 拉角色资料。
+
+        实测结构（2026-10，用真 key 验证过）：
+          POST /ingame/player/card → data.register_timestamp / online / card_signature
+          POST /ingame/home/info   → task → result.home_info.friend_home_brief_info
+                                     {home_name, home_level, room_level,
+                                      home_comfort_level, home_experience}
+        角色等级那两个接口都没给（player/search 现在返回 502）。
+        """
+        key = str(self._cfg("rocom_api_key", "") or "").strip()
+        if not key or not game_id:
+            return None
+        base = str(self._cfg("rocom_api_base", "")
+                   or "https://wegame.shallow.ink").rstrip("/")
+        out: Dict[str, Any] = {}
+        # player/search 一次就带全：等级 / 世界等级 / 上次离线 / 性别 / 家园，
+        # player/card 补 图鉴收集、炫彩·异色精灵数、话题点。
+        # 两个并发打，各 1.2 秒左右；**不再调 home/info**（那个要走任务队列，慢 4 秒，
+        # 而且家园数据 player/search 里已经有了）。
+        search, card = await asyncio.gather(
+            self._rocom_call("/api/v1/games/rocom/ingame/player/search",
+                             game_id, key, base),
+            self._rocom_call("/api/v1/games/rocom/ingame/player/card",
+                             game_id, key, base),
+            return_exceptions=True)
+        if isinstance(search, Exception):
+            search = None
+        if isinstance(card, Exception):
+            card = None
+        if isinstance(search, dict):
+            pi = search.get("player_info")
+            if isinstance(pi, dict) and pi:
+                out["player"] = pi
+        if isinstance(card, dict) and card:
+            out["card"] = card
+        # 家园：优先用 player_info.home_info（秒回），没有再退到 home/info
+        home = (out.get("player") or {}).get("home_info")
+        if isinstance(home, dict) and home:
+            out["home"] = home
+        else:
+            h = await self._rocom_call(
+                "/api/v1/games/rocom/ingame/home/info", game_id, key, base)
+            if isinstance(h, dict) and h:
+                hi = h.get("home_info") if isinstance(h.get("home_info"), dict) else {}
+                brief = (hi.get("friend_home_brief_info")
+                         or hi.get("home_brief_info") or {})
+                if brief:
+                    out["home"] = brief
+        return out or None
+
+    async def _rocom_maybe_refresh(self, data: Dict[str, Any],
+                                   wait: float = 3.0) -> None:
+        """角色资料：**只同步等 player/card**（1.3 秒，拿注册时间/在线/签名），
+        家园那一路（3.8 秒）转后台，下次查就有了。
+
+        为啥这么拆：实测 home/info 要走任务队列，比 card 慢两三倍，
+        为了它让用户多等 4 秒不划算。
+        """
+        if not self._rocom_on():
+            return
+        roles = [r for r in (data.get("roles") or []) if isinstance(r, dict)]
+        gid = str((roles[0] if roles else {}).get("gameId") or "").strip()
+        if not gid:
+            return
+        cache = self._rocom_cache()
+        rec = cache.get(gid) or {}
+        fresh = time.time() - float(rec.get("at") or 0) < self.ROCOM_TTL
+        if rec.get("fields") and fresh and rec.get("full"):
+            return                                  # 完整数据还热，直接用
+        if not rec.get("fields") or not fresh:
+            # ① 同步只拉 card（快）
+            try:
+                key = str(self._cfg("rocom_api_key", "") or "").strip()
+                base = str(self._cfg("rocom_api_base", "")
+                           or "https://wegame.shallow.ink").rstrip("/")
+                card = await asyncio.wait_for(
+                    self._rocom_call("/api/v1/games/rocom/ingame/player/card",
+                                     gid, key, base),
+                    timeout=max(2.0, float(wait)))
+                if isinstance(card, dict) and card:
+                    fields = self._rocom_fields({"card": card})
+                    if fields:
+                        c = self._rocom_cache()
+                        old = (c.get(gid) or {}).get("fields") or []
+                        c[gid] = {"at": time.time(), "fields": fields, "full": False}
+                        self._rocom_save(c)
+            except Exception as e:
+                logger.info(f"[角色资料] {gid} card 没等到（{type(e).__name__}），转后台")
+        if not rec.get("full"):
+            self._rocom_spawn(gid)                  # ② 家园那一路后台补
+
+    def _rocom_spawn(self, gid: str) -> None:
+        """后台把完整资料（card + home）拉一遍，下次查就有家园数据了。"""
+        running = getattr(self, "_rocom_running", None)
+        if running is None:
+            running = set()
+            self._rocom_running = running
+        if gid in running:
+            return
+        running.add(gid)
+
+        async def _job():
+            try:
+                payload = await self._rocom_fetch(gid)
+                fields = self._rocom_fields(payload) if payload else []
+                if fields:
+                    c = self._rocom_cache()
+                    c[gid] = {"at": time.time(), "fields": fields, "full": True}
+                    self._rocom_save(c)
+                    logger.info(f"[角色资料] {gid} 后台补全 {len(fields)} 项")
+            except Exception as e:
+                logger.warning(f"[角色资料] 后台采集失败: {type(e).__name__}: {e}")
+            finally:
+                running.discard(gid)
+
+        try:
+            asyncio.create_task(_job())
+        except Exception as e:
+            running.discard(gid)
+            logger.warning(f"[角色资料] 起任务失败: {type(e).__name__}: {e}")
+
+    def _rocom_rows(self, game_id: str) -> List[tuple]:
+        """读缓存给卡片用（这个是同步的，跑在线程里，绝不能发网络请求）。"""
+        if not game_id or not self._rocom_on():
+            return []
+        rec = self._rocom_cache().get(str(game_id)) or {}
+        fields = rec.get("fields") or []
+        if fields:
+            return [(str(k), str(v)) for k, v in fields]
+        return [("角色资料", "后台采集中，稍后再查一次就有了")]
+
+    async def _uid_result(self, event: Any, gid: str):
+        """用游戏 UID 查角色资料（注册时间 / 家园 / 收集度 等），能列的全列。"""
+        gid = str(gid or "").strip()
+        if not gid.isdigit():
+            return event.plain_result(
+                "格式：UID 503671642\n（游戏内的角色 UID，纯数字）")
+        if not self._rocom_on():
+            return event.plain_result(
+                "查游戏角色要先在配置里填 rocom_api_key\n"
+                "（在 https://rocom.shallow.ink 申请，填了才启用）")
+        cache = self._rocom_cache()
+        rec = cache.get(gid) or {}
+        fresh = time.time() - float(rec.get("at") or 0) < self.ROCOM_TTL
+        if not rec.get("full") or not fresh:
+            payload = await self._rocom_fetch(gid)
+            fields = self._rocom_fields(payload) if payload else []
+            if fields:
+                c = self._rocom_cache()
+                # 没拿到家园数据就不算 full，下次查会再试一次
+                c[gid] = {"at": time.time(), "fields": fields,
+                        "full": bool(payload.get("home"))}
+                self._rocom_save(c)
+                rec = c[gid]
+            elif rec.get("fields"):
+                pass                       # 拉失败就用旧缓存
+        fields = rec.get("fields") or []
+        if not fields:
+            return event.plain_result(
+                f"没查到游戏 UID {gid} 的资料。\n"
+                f"可能是接口排队，稍等再发一次；或者这个 UID 不存在。")
+        rows = [("游戏UID", gid)] + [(str(k), str(v)) for k, v in fields]
+        png = None
+        if self._image_reply_on():
+            try:
+                c = _card()
+                if c is not None and c.available():
+                    png = await asyncio.to_thread(
+                        c.render_card, title="游戏角色", rows=rows,
+                        **self._card_kwargs())
+            except Exception as e:
+                logger.warning(f"[出图] UID 卡失败: {type(e).__name__}: {e}")
+        text = "\n".join(f"{k}：{v}" if v else str(k) for k, v in rows)
+        return await self._reply(event, text, png)
+
+    @filter.command("UID")
+    async def cmd_uid(self, event: AstrMessageEvent):
+        """UID 503671642 —— 用游戏角色 UID 查注册信息 / 家园"""
+        arg = self._cmd_args(event)
+        if not arg:
+            m = self._UID_CMD_RE.match(
+                str(getattr(event, "message_str", "") or ""))
+            arg = m.group(1) if m else ""
+        yield await self._uid_result(event, arg)
+
+    @filter.regex(r"^\s*[/#]?\s*(?:查\s*)?(?:[Uu][Ii][Dd]|游戏[Ii][Dd])\s*\d{5,15}\s*$")
+    async def on_uid_loose(self, event: AstrMessageEvent):
+        """兜底入口：/UID503671642 这种不加空格的写法。"""
+        if not self._sp_dedupe(event):
+            return
+        m = self._UID_CMD_RE.match(
+            str(getattr(event, "message_str", "") or "").lstrip("/#").strip())
+        if not m:
+            return
+        yield await self._uid_result(event, m.group(1))
 
     def _cmd_parts(self, event) -> list:
         """['/标','Z123','黑','备注'] → ['标','Z123','黑','备注']"""

@@ -8,21 +8,20 @@
 
 | 类别 | 删掉的东西 |
 |---|---|
-| 商家查询 | `查ID` / `查询ID`（含游戏ID、昵称反查、洛克魔法书资料） |
+| 商家查询 | `查ID` / `查询ID`（含游戏ID、昵称反查） |
 | 推送 | 购买成功推送、新上架监控、`蛋推送绑定/解绑/测试/状态/重置` |
 | 发码 | `发码` / `输入兑换码` / `发码记录` / 每日自动发码 / 自动买单补码 |
 | 名单 | `标` / `取消标` / `黑名单` / `白名单` |
 | 记录 | `改绑记录` / `改名记录` |
 | 查蛋增强 | 实时行情（大婉/小婉/大粗/小粗）、`查询 xx 最近` 成交明细 |
-| 其他 | `UID` 角色查询、控制台管理员鉴权 |
+| 其他 | 控制台管理员鉴权 |
 
 ### 代码层面
 
-- 移除全部 HTTP 请求代码：`_api` / `_api_post` / `_session_get` / `api_base`，插件**不再连接任何外部服务**
-- 移除 `aiohttp` 依赖
-- 主文件 4016 行 → 约 1560 行，删掉 100 个方法
-- 配置项 50 项 → **10 项**
-- 移除状态持久化（`notified.json`）和洛克魔法书缓存
+- 移除全部市场控制台接口调用：`_api` / `_api_post` / `_session_get` / `api_base`
+- 主文件 4016 行 → 约 2020 行，删掉 100 个方法后重新加回 UID 那套
+- 配置项 50 项 → **12 项**
+- 移除状态持久化（`notified.json`）
 
 ### 保留的功能
 
@@ -30,6 +29,7 @@
 - 多形态精灵逐规格列出
 - `查询 拟人组` / `查询 组` —— 蛋组查询
 - 身高体重反查（`34/3.617`、`0.32 2.12`、`34 3617`）
+- **`UID 503671642` —— 查角色资料**（等级 / 注册时间 / 在线 / 家园 / 收集度，需配 `rocom_api_key`）
 - `帮助` / `菜单` / `诊断` / `诊断图标`
 - 卡片出图、配色、字号自定义
 
@@ -42,11 +42,12 @@
 
 - 升级到这一版后，旧的 `market_paused`、`api_base`、`code_groups`、`code_pool`、
   `auto_buy_*`、`console_admin_qq`、`buy_notify_target`、`listing_notify_target`、
-  `identify_*`、`market_quote_*`、`rocom_api_*`、`platform`、`target_qq`、
+  `identify_*`、`market_quote_*`、`platform`、`target_qq`、
   `umo_template`、`poll_interval`、`only_unclaimed`、`max_candidates`、
   `include_special`、`notify_existing`、`template`、`watch_sellers`、
   `listing_template`、`daily_code_*`、`show_activity_changes`、`show_timing`
   这些配置项**全部失效**，可以直接删掉
+- 保留了 `rocom_api_key` / `rocom_api_base`（UID 查角色要用）
 
 ## v1.58.0
 
