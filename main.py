@@ -588,6 +588,8 @@ class LkMarketNotify(Star):
         走控制台的 GET /api/market/quote，控制台那边负责多账号轮询 + 按蛋种缓存。
         拿不到（超时 / 控制台没起 / 接口报错）就返回空字典，绝不抛出去卡住查蛋。
         """
+        if self._market_paused():
+            return {}
         if not bool(self._cfg("market_quote_enabled", True)):
             return {}
         nm = str(name or "").strip()
@@ -3582,6 +3584,8 @@ class LkMarketNotify(Star):
         q = str(name or "").strip()
         if not q:
             return await self._say(event, "格式：查询 火花 最近")
+        if self._market_paused():
+            return await self._say(event, self.PAUSED_HINT)
         try:
             data = await self._api("/api/market/recent?q=" + urllib.parse.quote(q))
         except Exception as e:
