@@ -170,8 +170,12 @@ class LkMarketNotify(Star):
             logger.warning(f"[市集推送] 读取图鉴失败: {e}")
         return {"species": {}, "alias": {}, "count": 0}
 
-    def _find_species(self, q: str) -> Optional[Dict[str, Any]]:
-        """精灵名 / 蛋名 / 进化链上任意名字 / 裸名字 → 记录（含多形态）"""
+    def _find_species(self, q: str, strict: bool = False) -> Optional[Dict[str, Any]]:
+        """精灵名 / 蛋名 / 进化链上任意名字 / 裸名字 → 记录（含多形态）。
+
+        strict=True 时不做模糊匹配 —— 概率接口返回的是**准确**名字，
+        用模糊匹配会有误伤（比如数据库里没有「储水地鼠」，模糊匹配会命中「地鼠」）。
+        """
         q = str(q or "").strip()
         if not q:
             return None
@@ -188,6 +192,8 @@ class LkMarketNotify(Star):
                 return sp[alias[cand]]
             if cand in sp:
                 return sp[cand]
+        if strict:
+            return None
         # 模糊
         for name, rec in sp.items():
             if q in name or name in q:
@@ -977,9 +983,14 @@ class LkMarketNotify(Star):
         return empty, "empty"
 
     def _hit_from_name(self, name: str) -> Optional[Dict[str, Any]]:
-        """把概率接口给的精灵名换成本地图鉴的一条候选（带蛋名/蛋组/区间）。"""
-        rec = self._find_species(name)
+        """把概率接口给的精灵名换成本地图鉴的一条候选（带蛋名/蛋组/区间）。
+
+        接口返回的是准确名字，这里用严格匹配：数据库里没有就直接跳过，
+        不要拿模糊匹配凑（「储水地鼠」不能被凑成「地鼠」）。
+        """
+        rec = self._find_species(name, strict=True)
         if not rec:
+            logger.info(f"[查蛋] 概率接口给了「{name}」，但本地图鉴没有这条记录，已跳过")
             return None
         v = self._pick_variant(rec, name)
         return {
@@ -999,30 +1010,39 @@ class LkMarketNotify(Star):
                 min_pct = float(self._cfg("identify_min_pct", 1.0))
             except (TypeError, ValueError):
                 min_pct = 1.0
-            out: List[Dict[str, Any]] = []
-            for nm, pct in sorted((probs.get("top") or {}).items(), key=lambda kv: -kv[1]):
-                if pct < min_pct:
-                    continue
-                item = self._hit_from_name(nm)
-                if item:
-                    item["pct"] = pct
-                    out.append(item)
+            show_special = bool(self._cfg("identify_show_special", False))
+
+            def _collect(section: str) -> List[Dict[str, Any]]:
+                acc: List[Dict[str, Any]] = []
+                for nm, pct in sorted((probs.get(section) or {}).items(),
+                                      key=lambda kv: -kv[1]):
+                    if pct < min_pct:
+                        continue
+                    item = self._hit_from_name(nm)
+                    if item:
+                        item["pct"] = pct
+                        if section == "special":
+                            item["special"] = True
+                        acc.append(item)
+                return acc
+
+            tail = "" if min_pct <= 0 else f" · 低于 {min_pct:g}% 的已隐藏"
+            out = _collect("top")
+            if show_special:
+                # 开关打开：普通 + 特殊一起列，特殊那几行带标记
+                special = _collect("special")
+                if out and special:
+                    return out + special, f"实时孵化概率（含特殊精灵）{tail}"
+                if out:
+                    return out, f"实时孵化概率{tail}"
+                if special:
+                    return special, f"特殊精灵（不在普通蛋池）· 实时概率{tail}"
+                return [], f"实时概率里没有超过 {min_pct:g}% 的候选"
+            # 默认关闭：完全忽略特殊精灵
             if out:
-                tail = "" if min_pct <= 0 else f" · 低于 {min_pct:g}% 的已隐藏"
                 return out, f"实时孵化概率{tail}"
-            # 普通蛋池没有 → 看「特殊精灵」（活动/特殊获取）
-            extra: List[Dict[str, Any]] = []
-            for nm, pct in sorted((probs.get("special") or {}).items(), key=lambda kv: -kv[1]):
-                if pct < min_pct:
-                    continue
-                item = self._hit_from_name(nm)
-                if item:
-                    item["pct"] = pct
-                    extra.append(item)
-            if extra:
-                tail = "" if min_pct <= 0 else f" · 低于 {min_pct:g}% 的已隐藏"
-                return extra, f"特殊精灵（不在普通蛋池）· 实时概率{tail}"
-            return [], f"实时概率里没有超过 {min_pct:g}% 的候选"
+            return [], (f"实时概率里没有超过 {min_pct:g}% 的普通蛋候选"
+                        f"（特殊精灵默认不显示，可在配置里打开 identify_show_special）")
         if state == "empty":
             return [], "接口没找到匹配的精灵（也可能刚好卡在区间边界，比如正好等于上限）"
         if state == "off":
@@ -1132,6 +1152,8 @@ class LkMarketNotify(Star):
             forms = [f for f in (x.get("forms") or []) if f]
             if len(forms) > 1:
                 bits.append("形态 " + " / ".join(forms))
+            if x.get("special"):
+                bits.append("特殊")
             lines.append(f"{i}. {x['精灵']} · " + " · ".join(bits))
             lines.append(f"   蛋名 {x['蛋名']} · 蛋组 {x['蛋组']} · {x.get('公母') or '未知'}")
             lines.append(f"   身高 {x['身高区间']} · 体重 {x['体重区间']}")

@@ -85,5 +85,11 @@
   "type": "int",
   "default": 10,
   "hint": "超时就退回本地区间匹配，不会卡住查蛋"
+ },
+ "identify_show_special": {
+  "description": "查蛋时也显示「特殊精灵」",
+  "type": "bool",
+  "default": false,
+  "hint": "特殊精灵是活动/特殊途径获取的品种，不属于普通蛋池。默认关闭（只列普通蛋池的真实概率）；打开后会把它们一起列出来并标注「特殊」"
  }
 }
