@@ -3,193 +3,22 @@
   "description": "总开关",
   "type": "bool",
   "default": true,
-  "hint": "关闭后不再轮询与推送"
- },
- "market_paused": {
-  "description": "市场服务暂停（关闭所有依赖终端的功能）",
-  "type": "bool",
-  "default": true,
-  "hint": "服务恢复后改回 false 即可。开启时：查ID / 查蛋实时概率 / 购买推送 / 新上架监控 / 蛋推送 / 改绑·改名记录 全部返回暂停提示；图鉴查询、蛋组查询不受影响"
- },
- "api_base": {
-  "description": "市集控制台地址",
-  "type": "string",
-  "default": "http://127.0.0.1:8777",
-  "hint": "本机跑的就是这个；AstrBot 在别的机器上就填那台机器的 IP:8777"
- },
- "platform": {
-  "description": "AstrBot 平台 id",
-  "type": "string",
-  "default": "aiocqhttp",
-  "hint": "SnowLuma 是 OneBot v11，接 AstrBot 用 aiocqhttp 适配器，保持默认即可"
- },
- "target_qq": {
-  "description": "推送给谁（QQ 号，多个用逗号分隔）",
-  "type": "string",
-  "default": "",
-  "hint": "也可以留空，改用 /蛋推送绑定 指令绑定会话（更稳，不怕 umo 格式不对）"
- },
- "umo_template": {
-  "description": "会话标识模板",
-  "type": "string",
-  "default": "{platform}:FriendMessage:{qq}",
-  "hint": "群聊改成 {platform}:GroupMessage:群号；用 /蛋推送绑定 的话这里不用管"
- },
- "poll_interval": {
-  "description": "轮询间隔（秒）",
-  "type": "int",
-  "default": 20,
-  "hint": "最小 3 秒。控制台自己缓存 60 秒，20~30 秒足够"
- },
- "only_unclaimed": {
-  "description": "只推还没领取的兑换码",
-  "type": "bool",
-  "default": true,
-  "hint": "关掉后已领取/已退款也会推"
- },
- "max_candidates": {
-  "description": "可能精灵最多显示几个",
-  "type": "int",
-  "default": 4,
-  "hint": "查蛋接口一般给 1~4 个候选"
- },
- "include_special": {
-  "description": "额外推送「特殊精灵」那一段",
-  "type": "bool",
-  "default": false,
-  "hint": "接口会单独给一段特殊精灵，默认不推"
- },
- "notify_existing": {
-  "description": "首次运行也推送已有记录",
-  "type": "bool",
-  "default": false,
-  "hint": "默认关闭，避免一装插件就把几十条历史全推一遍"
- },
- "template": {
-  "description": "消息模板",
-  "type": "text",
-  "default": "🥚 购买成功\n蛋名：{name}\n消耗：{points} 积分\n可能孵出：{pets}\n尺寸：{size}\n卖家：{seller}\n时间：{time}",
-  "hint": "占位符：{name} {points} {pets} {size} {seller} {courier} {code} {time}（多行会自动拆成多段发送）"
- },
- "watch_sellers": {
-  "description": "默认监控的商家助手ID（逗号分隔，也可用「蛋监控 添加 Zxxx」）",
-  "type": "string",
-  "default": ""
- },
- "listing_template": {
-  "description": "新上架提醒模板（留空用内置排版），可用 {nickname} {seller} {items} {total}",
-  "type": "string",
-  "default": ""
- },
- "bare_name_private": {
-  "description": "私聊里直接发精灵名字就查（群聊始终需要 / 前缀）",
-  "type": "bool",
-  "default": true
+  "hint": "关闭后插件不响应任何指令"
  },
  "wake_prefix": {
   "description": "指令前缀（默认 /）",
   "type": "string",
   "default": "/"
  },
- "code_groups": {
-  "description": "发码目标群号，多个用逗号或换行分隔（随机选一个群发）",
-  "type": "string",
-  "default": "",
-  "hint": "例：123456789,987654321"
- },
- "code_pool": {
-  "description": "备选兑换码（一行一个）；发指令时不带码就随机从这里取",
-  "type": "text",
-  "default": ""
- },
- "daily_code_enabled": {
-  "description": "开启每日自动发码（从最早的神奇蛋兑换码里挑）",
+ "bare_name_private": {
+  "description": "私聊里直接发精灵名字就查（群聊始终需要 / 前缀）",
   "type": "bool",
   "default": true
- },
- "daily_code_count": {
-  "description": "每天自动发几个",
-  "type": "int",
-  "default": 10
- },
- "daily_code_start": {
-  "description": "开始时间（HH:MM）",
-  "type": "string",
-  "default": "08:30"
- },
- "daily_code_end": {
-  "description": "结束时间（HH:MM）",
-  "type": "string",
-  "default": "10:00"
- },
- "daily_code_keyword": {
-  "description": "只发蛋名含这个关键字的码",
-  "type": "string",
-  "default": "神奇"
- },
- "daily_code_template": {
-  "description": "发送文案模板，{code}=兑换码 {egg}=蛋名",
-  "type": "string",
-  "default": "神奇礼物蛋神兑换码———{code}"
- },
- "auto_buy_enabled": {
-  "description": "兑换码不够时自动去市集买（会花积分！默认关闭）",
-  "type": "bool",
-  "default": false
- },
- "auto_buy_count": {
-  "description": "每次最多补几个",
-  "type": "int",
-  "default": 10
- },
- "auto_buy_max_points": {
-  "description": "只买单价不超过这个分数的",
-  "type": "float",
-  "default": 10
- },
- "auto_buy_keyword": {
-  "description": "只买名字含这个字的蛋",
-  "type": "string",
-  "default": "神奇蛋"
- },
- "auto_buy_ceiling_points": {
-  "description": "加价上限：起始价买不到就每次 +1 分，到这个价为止（默认 13）",
-  "type": "float",
-  "default": 13
- },
- "auto_buy_step": {
-  "description": "买不到时每次加多少分（默认 1，可设 0.01 这类小数）",
-  "type": "float",
-  "default": 1
  },
  "show_body": {
   "description": "查蛋时同时显示本体（成体）数据（默认只显示蛋）",
   "type": "bool",
   "default": false
- },
- "market_quote_enabled": {
-  "description": "查蛋时附带实时行情",
-  "type": "bool",
-  "default": true,
-  "hint": "显示大婉 / 小婉 / 大粗 / 小粗 的今日成交与最低积分（只锁极限声线）"
- },
- "market_quote_cache_min": {
-  "description": "行情缓存时间（分钟）",
-  "type": "int",
-  "default": 60,
-  "hint": "同一只蛋在这段时间内复用缓存、不再请求接口；0 = 每次都打实时"
- },
- "market_quote_timeout": {
-  "description": "行情请求超时（秒）",
-  "type": "int",
-  "default": 6,
-  "hint": "超时就只发图鉴正文、不显示行情，不会卡住查蛋"
- },
- "show_timing": {
-  "description": "回复里显示出图耗时",
-  "type": "bool",
-  "default": true,
-  "hint": "开启后查蛋/查精灵的图片下面会跟一行「⚡ 出图 XXms」（从收到指令到图片生成完的耗时，不含发到 QQ 的时间）"
  },
  "reply_as_image": {
   "description": "查蛋结果发图片",
@@ -221,63 +50,10 @@
   "default": "",
   "hint": "留空自动找（Windows 微软雅黑 / Linux 文泉驿·思源黑体）。Linux、Docker 上如果系统没有中文字体，出图会退回文字，这里填个字体路径就行"
  },
- "rocom_api_key": {
-  "description": "洛克魔法书 API Key（可选）",
-  "type": "string",
-  "default": "",
-  "hint": "查ID 时用来查这个玩家的等级 / 注册时间 / 家园等级 / 家园好感。在 https://rocom.shallow.ink 申请；不填就完全跳过，不影响其它功能"
- },
- "rocom_api_base": {
-  "description": "洛克魔法书 API 地址（一般不用改）",
-  "type": "string",
-  "default": "",
-  "hint": "留空用默认 https://wegame.shallow.ink"
- },
  "admin_ids": {
-  "description": "管理员 QQ 号（逗号分隔），只有他们能看发码记录；留空则仅私聊可用",
-  "type": "string",
-  "default": ""
- },
- "show_activity_changes": {
-  "type": "bool",
-  "default": false,
-  "description": "商家卡显示「上次变动」",
-  "hint": "售出/好评/粉丝/在售/差评 数字最近一次变化的时间。这个时间是从数据变动倒推的「上次操作时间」，平台没有直接的「助手上次登录」字段。默认关闭。"
- },
- "identify_use_remote": {
-  "description": "身高体重查蛋用实时孵化概率",
-  "type": "bool",
-  "default": true,
-  "hint": "查身高体重时问控制台要真实概率（需要市集控制台在线）；关掉就退回本地区间匹配"
- },
- "identify_min_pct": {
-  "description": "低于这个百分比不显示",
-  "type": "float",
-  "default": 1.0,
-  "hint": "按实时概率过滤，比如填 1 就隐藏不足 1% 的品种；填 0 就是全都显示"
- },
- "identify_timeout": {
-  "description": "概率接口超时（秒）",
-  "type": "int",
-  "default": 10,
-  "hint": "超时就退回本地区间匹配，不会卡住查蛋"
- },
- "console_admin_qq": {
-  "description": "市场控制台管理员 QQ（可看换绑/改名记录）",
-  "type": "string",
-  "default": "1877811952",
-  "hint": "多个用逗号隔开；填了就在这里改，也会优先读市场控制台配置里的 admin_qq"
- },
- "buy_notify_target": {
-  "description": "购买成功通知发到哪",
+  "description": "管理员 QQ 号（逗号分隔）",
   "type": "string",
   "default": "",
-  "hint": "留空=只私聊发给管理员（默认）；填 QQ 号=私聊他；填 g:群号=发群；填 bind=沿用旧行为（发到 /蛋推送绑定 的会话）。多个用逗号隔开"
- },
- "listing_notify_target": {
-  "description": "新上架提醒发到哪",
-  "type": "string",
-  "default": "bind",
-  "hint": "默认 bind（发到 /蛋推送绑定 的会话）；写法同购买成功：留空/admin=管理员私聊，g:群号=发群"
+  "hint": "只有他们能用「诊断」/「诊断图标」，留空则仅私聊可用"
  }
 }
