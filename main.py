@@ -1178,10 +1178,23 @@ class LkMarketNotify(Star):
         fp.write_bytes(png)
         return str(fp)
 
-    def _result_image(self, event: Any, png: bytes):
-        """把 PNG 包成 AstrBot 的结果对象，几种写法挨个试。"""
+    def _result_image(self, event: Any, png: bytes, caption: str = ""):
+        """把 PNG 包成 AstrBot 的结果对象，几种写法挨个试。
+
+        caption 非空时优先用 chain 把「图 + 一行字」一起发出去。
+        """
         path = self._temp_png(png)
         fn = getattr(event, "image_result", None)
+        if caption:
+            # 图 + 文字的链式结果（出图耗时就是这么带出来的）
+            try:
+                from astrbot.api.message_components import Image as _Image, Plain
+                img = _Image.fromFileSystem(path)
+                ch = getattr(event, "chain_result", None)
+                if callable(ch):
+                    return ch([img, Plain(caption)])
+            except Exception as e:
+                logger.warning(f"[出图] 图+耗时链式发送失败: {type(e).__name__}: {e}")
         if callable(fn):
             try:
                 return fn(path)
@@ -1210,16 +1223,42 @@ class LkMarketNotify(Star):
             logger.warning(f"[出图] 组装图片结果失败: {type(e).__name__}: {e}")
         return None
 
-    async def _reply(self, event: Any, text: str, png: Optional[bytes]):
-        """统一出口：能出图就出图，出不了就发文字。"""
+    async def _reply(self, event: Any, text: str, png: Optional[bytes],
+                     t0: Optional[float] = None):
+        """统一出口：能出图就出图，出不了就发文字。
+
+        t0 传入指令开始处理的时间戳，就会把「出图耗时」跟着图片一起发出来
+        （配置 show_timing 控制，默认开）。
+        """
+        cap = ""
+        if t0 is not None and self._show_timing():
+            cap = f"⚡ {self._timing_text(t0)}"
         if png and self._image_reply_on():
             try:
-                r = self._result_image(event, png)
+                r = self._result_image(event, png, cap)
                 if r is not None:
                     return r
             except Exception as e:
                 logger.warning(f"[出图] 发图失败，退回文字: {type(e).__name__}: {e}")
+        if cap:
+            text = text + "\n" + cap
         return event.plain_result(text)
+
+    def _show_timing(self) -> bool:
+        """是否在回复里带出图耗时。"""
+        return bool(self._cfg("show_timing", True))
+
+    def _timing_text(self, t0: float) -> str:
+        """指令开始 → 图片生成完的耗时，附一句人话说明。"""
+        try:
+            ms = (time.perf_counter() - float(t0)) * 1000
+        except Exception:
+            return ""
+        if ms < 1:
+            return "出图 <1ms"
+        if ms < 1000:
+            return f"出图 {ms:.0f}ms"
+        return f"出图 {ms / 1000:.2f}s"
 
     def _card_key(self, text: str, icons=None) -> str:
         """缓存键：内容 + 图标 + 影响画面的那几个配置。改配置就不会拿到旧图。"""
@@ -3586,6 +3625,7 @@ class LkMarketNotify(Star):
 
     async def _species_result(self, event: Any, arg: str, risky: bool = False):
         """精灵查询的统一出口。返回 None 表示「决定不吭声」。"""
+        _t0 = time.perf_counter()
         q = str(arg or "").strip()
         if not q:
             return await self._say(
@@ -3614,7 +3654,7 @@ class LkMarketNotify(Star):
                 f"（传说精灵、活动限定这些官方图鉴没公开的品种查不到；"
                 f"知道身高体重就直接发，比如 34/3.617 或 0.34 3.617）")
         text, png = await self._species_payload(rec, q)
-        return await self._reply(event, text, png)
+        return await self._reply(event, text, png, t0=_t0)
 
     async def _recent_reply(self, event: Any, name: str):
         """最近成交：走控制台 /api/market/recent（底层是 getPrivateMarketTrend）。"""

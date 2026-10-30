@@ -185,6 +185,12 @@
   "default": 6,
   "hint": "超时就只发图鉴正文、不显示行情，不会卡住查蛋"
  },
+ "show_timing": {
+  "description": "回复里显示出图耗时",
+  "type": "bool",
+  "default": true,
+  "hint": "开启后查蛋/查精灵的图片下面会跟一行「⚡ 出图 XXms」（从收到指令到图片生成完的耗时，不含发到 QQ 的时间）"
+ },
  "reply_as_image": {
   "description": "查蛋结果发图片",
   "type": "bool",
