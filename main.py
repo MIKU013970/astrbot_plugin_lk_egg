@@ -75,7 +75,7 @@ def _card():
 
 _PLUGIN_DIR = Path(__file__).resolve().parent
 _PLUGIN_NAME = "astrbot_plugin_lk_egg"
-VERSION = "1.57.0"
+VERSION = "1.58.0"
 
 
 def _data_dir() -> Path:
@@ -138,7 +138,7 @@ def _save_state(state: Dict[str, Any]) -> None:
     "astrbot_plugin_lk_egg",
     "MIKU013970 & DeepSeek",
     "市集购买成功推送 + 新上架监控 + 黑白名单查询",
-    "1.57.0",
+    "1.58.0",
 )
 class LkMarketNotify(Star):
     def __init__(self, context: Context, config: AstrBotConfig = None):
@@ -161,6 +161,16 @@ class LkMarketNotify(Star):
     @property
     def api_base(self) -> str:
         return str(self._cfg("api_base", "http://127.0.0.1:8777")).rstrip("/")
+
+    #: 市场服务暂停总开关：服务停了就把依赖终端(蛋神助手)的功能全部关掉。
+    #: 图鉴查询 / 蛋组查询这些纯本地功能不受影响。
+    PAUSED_HINT = ("🥚 市场服务暂时关闭\n"
+                   "「查ID / 查蛋实时概率 / 购买推送 / 新上架监控 / 蛋推送 / 改绑·改名记录」"
+                   "这些依赖终端的功能已暂停，恢复时间请留意官方公告。\n"
+                   "图鉴查询（查询 xx / 蛋组）不受影响，照常用。")
+
+    def _market_paused(self) -> bool:
+        return bool(self._cfg("market_paused", True))
 
     @property
     def interval(self) -> float:
@@ -430,9 +440,15 @@ class LkMarketNotify(Star):
         return pushed
 
     async def _loop(self) -> None:
+        if self._market_paused():
+            logger.info("[市集推送] 市场服务暂停（market_paused=true），不轮询终端")
+            return
         logger.info(f"[市集推送] 轮询 {self.api_base} 每 {self.interval:g}s"
                     f" · 平台 {self._platform()} · 目标 {len(self._candidate_umos())} 个")
         while True:
+            if self._market_paused():
+                logger.info("[市集推送] 市场服务已暂停，停止轮询")
+                break
             self.stats["polls"] += 1
             self.stats["last_at"] = int(time.time())
             try:
@@ -1854,7 +1870,7 @@ class LkMarketNotify(Star):
             "off"   配置里关掉了
         """
         empty = {"top": {}, "special": {}}
-        if not bool(self._cfg("identify_use_remote", True)):
+        if self._market_paused() or not bool(self._cfg("identify_use_remote", True)):
             return empty, "off"
         try:
             timeout = max(2.0, float(self._cfg("identify_timeout", 10)))
@@ -2024,6 +2040,8 @@ class LkMarketNotify(Star):
 
     async def _seller_info(self, sid: str) -> Dict[str, Any]:
         """从控制台库里补一点信息（昵称/角色/在售）。"""
+        if self._market_paused():
+            return {}
         data = await self._api(f"/api/merchants/search?q={sid}&limit=1&auto=1")
         rows = (data or {}).get("rows") or []
         return rows[0] if rows else {}
@@ -2226,39 +2244,24 @@ class LkMarketNotify(Star):
         "0.32 2.12               身高体重查蛋（空格分隔，身高按米算）\n"
         "34/3.617                身高厘米 + 体重千克（斜杠也行）\n"
         "34 3617                 整数体重按克算\n"
-        "（查蛋附带行情：大婉/小婉/大粗/小粗 的今日成交 · 中位价 · 最低积分 · 在售）\n"
-        "—————— 查助手（商家）——————\n"
-        "查ID Z10014514          昵称/上架/售出/好评差评/货架明细\n"
-        "查ID z10014514          大小写都行\n"
-        "查 id z10014514         命令词拆开、小写也行\n"
-        "查IDZ10014514           命令词和 ID 粘一起也行\n"
-        "查ID 10014514           纯数字会自动补 Z 再查一次\n"
-        "查ID 134961358          游戏ID（已建索引的才有）\n"
-        "查ID 咕咕               用平台昵称查\n"
-        "查询ID xxx              和 查ID 完全一样\n"
         "—————— 名单 ——————\n"
         "标 Z10014514 黑 备注     加黑名单（备注可省略）\n"
         "标 Z10014514 白 备注     加白名单\n"
         "取消标 Z10014514         移出名单\n"
         "黑名单 / 白名单          列全部\n"
-        "—————— 新上架提醒 ——————\n"
-        "新上架 添加 Z10014514    开始监控这个商家\n"
-        "新上架 删除 Z10014514    取消监控\n"
-        "新上架 列表              看监控列表\n"
-        "—————— 发码 ——————\n"
-        "发码                     从最早的 10 个码里随机发 1 个\n"
-        "发码 EGG-XXXX-XXXX       直接发这个码\n"
-        "发码记录                 看最近发了哪些码（仅管理员）\n"
-        "—————— 推送 ——————\n"
-        "蛋推送绑定 / 解绑 / 测试 / 状态 / 重置\n"
-        "（购买成功默认只私聊管理员；要发群改 buy_notify_target）\n"
         "—————— 其它 ——————\n"
-        "UID 503671642           用游戏 UID 查等级/离线/家园/收集度\n"
-        "改绑记录 / 改名记录      看绑定角色有没有被换绑 / 改名（仅控制台管理员）\n"
         "帮助 / 菜单              看这张卡片\n"
         "诊断                     管理员用：查图片链路哪里挂了\n"
         "回复默认都是图片         配置里关掉 reply_as_image 就发文字\n"
         "（提示：直接发精灵名字的功能已关闭，请用「查询 名字」）\n"
+        "—————— ⚠️ 以下功能暂时关闭（市场服务暂停）——————\n"
+        "查ID / 查询ID            商家信息（依赖控制台）\n"
+        "查蛋实时概率             身高体重查蛋的在线概率\n"
+        "购买成功推送 / 新上架监控\n"
+        "蛋推送绑定 / 解绑 / 测试 / 状态 / 重置\n"
+        "改绑记录 / 改名记录\n"
+        "自动买单（补码）\n"
+        "（恢复时间以官方公告为准；图鉴查询不受影响）\n"
     )
 
     FORMAT_HINTS = {
@@ -2317,6 +2320,9 @@ class LkMarketNotify(Star):
     @filter.command("蛋监控")
     async def cmd_watch(self, event: AstrMessageEvent):
         """蛋监控 添加 Z10014514 / 删除 / 列表"""
+        if self._market_paused():
+            yield await self._say(event, self.PAUSED_HINT)
+            return
         args = self._cmd_parts(event)
         q = self._cmd_args(event)
         sub = args[1] if len(args) > 1 else ""
@@ -2450,6 +2456,9 @@ class LkMarketNotify(Star):
     @filter.command("新上架")
     async def cmd_watch_alias(self, event: AstrMessageEvent):
         """新上架 添加 Z10014514 / 删除 / 列表"""
+        if self._market_paused():
+            yield await self._say(event, self.PAUSED_HINT)
+            return
         args = self._cmd_parts(event)
         sub = args[1] if len(args) > 1 else ""
         rest = args[2:]
@@ -2772,6 +2781,8 @@ class LkMarketNotify(Star):
         价格从 auto_buy_max_points 开始，加到 auto_buy_ceiling_points 为止。
         """
         if not bool(self._cfg("auto_buy_enabled", False)):
+            return 0
+        if self._market_paused():
             return 0
         if need <= 0:
             return 0
@@ -3108,6 +3119,8 @@ class LkMarketNotify(Star):
         if not q:
             return await self._say(event, 
                 "格式：查ID Z10014514\n也可以用昵称：查ID 咕咕\n（大小写、空格都随意）")
+        if self._market_paused():
+            return await self._say(event, self.PAUSED_HINT)
 
         # 助手ID 大小写都行，统一成大写再查
         qid = q.upper() if re.fullmatch(r"[Zz]\d{5,12}", q) else q
@@ -3725,6 +3738,8 @@ class LkMarketNotify(Star):
         yield await self._roles_changes(event, "改名")
 
     async def _roles_changes(self, event: Any, reason: str):
+        if self._market_paused():
+            return event.plain_result(self.PAUSED_HINT)
         # 只给市场控制台管理员看（号码在配置 / 控制台里配）
         if not await self._is_console_admin(event):
             return event.plain_result("暂无控制台管理员权限")
@@ -3857,6 +3872,9 @@ class LkMarketNotify(Star):
     @filter.command("蛋推送测试")
     async def cmd_test(self, event: AstrMessageEvent):
         """发一条样例消息，确认推送链路。"""
+        if self._market_paused():
+            yield await self._say(event, self.PAUSED_HINT)
+            return
         sample_guess = {"top": [{"name": "电咩咩", "pct": 100.0, "tag": ""}], "special": []}
         sample = {"id": "test", "name": "神奇蛋", "points": 12, "seller": "Z10031963",
                   "courier": "快递员D1", "code": "EGG-XXXX-XXXX",
@@ -3868,6 +3886,9 @@ class LkMarketNotify(Star):
 
     @filter.command("蛋推送状态")
     async def cmd_status(self, event: AstrMessageEvent):
+        if self._market_paused():
+            yield await self._say(event, self.PAUSED_HINT)
+            return
         data = await self._api("/api/purchases")
         api_ok = bool(data and data.get("ok"))
         lines = [

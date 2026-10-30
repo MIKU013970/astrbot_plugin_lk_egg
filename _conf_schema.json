@@ -5,6 +5,12 @@
   "default": true,
   "hint": "关闭后不再轮询与推送"
  },
+ "market_paused": {
+  "description": "市场服务暂停（关闭所有依赖终端的功能）",
+  "type": "bool",
+  "default": true,
+  "hint": "服务恢复后改回 false 即可。开启时：查ID / 查蛋实时概率 / 购买推送 / 新上架监控 / 蛋推送 / 改绑·改名记录 全部返回暂停提示；图鉴查询、蛋组查询不受影响"
+ },
  "api_base": {
   "description": "市集控制台地址",
   "type": "string",
