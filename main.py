@@ -103,7 +103,7 @@ def _strip_emoji(text: str) -> str:
 
 _PLUGIN_DIR = Path(__file__).resolve().parent
 _PLUGIN_NAME = "astrbot_plugin_lk_egg"
-VERSION = "1.72.1"
+VERSION = "1.73.0"
 
 
 def _data_dir() -> Path:
@@ -166,7 +166,7 @@ def _save_state(state: Dict[str, Any]) -> None:
     "astrbot_plugin_lk_egg",
     "MIKU013970 & DeepSeek",
     "洛克小肥鱼全功能 + 炫彩花种订阅",
-    "1.72.1",
+    "1.73.0",
 )
 class LkMarketNotify(Star):
     def __init__(self, context: Context, config: AstrBotConfig = None):
@@ -2809,6 +2809,22 @@ class LkMarketNotify(Star):
                     hits = [b for b in snap
                             if str(b.get("color_name") or "") in near]
 
+            # ④ 卖家名（包含即算，比如「花种 玩家ede0」）
+            if not hits:
+                sellers = {str(b.get("seller") or "") for b in snap} - {""}
+                sim_sellers = [s for s in sellers if key in s or s in key]
+                if sim_sellers:
+                    kind = f"卖家「{sim_sellers[0]}」"
+                    hits = [b for b in snap
+                            if str(b.get("seller") or "") in sim_sellers]
+                elif len(key) >= 2:
+                    # 卖家名也支持相似度（打错一两个字也能中）
+                    near_s = self._flower_pick_similar(key, list(sellers))
+                    if near_s:
+                        kind = f"卖家「{near_s[0]}」"
+                        hits = [b for b in snap
+                                if str(b.get("seller") or "") == near_s[0]]
+
         if not hits:
             # 最后兜底：给出市场里有哪些粒子 / 颜色可选
             parts = sorted({str(b.get("particle_name") or "") for b in snap} - {""})
@@ -2829,15 +2845,25 @@ class LkMarketNotify(Star):
             return await self._say(event, "\n".join(lines))
 
         hits.sort(key=lambda b: (b.get("price") is None, b.get("price") or 0))
-        lines = [f"🌸 {kind}的花种 · {len(hits)} 个"]
         lim = 20
+        title = f"{kind}的花种 · {len(hits)} 个"
+        lines = [f"🌸 {title}"]
         for b in hits[:lim]:
             lines.append(self._flower_line(b))
         if len(hits) > lim:
             lines.append(f"…… 还有 {len(hits) - lim} 个")
         lines.append("")
         lines.append("发「花种 精灵名」看那只精灵的色卡")
-        return await self._say(event, "\n".join(lines))
+        text = "\n".join(lines)
+
+        # 出色卡图（每行左边贴官方色卡）
+        png = None
+        if self._image_reply_on():
+            try:
+                png = await self._flower_multi_card(title, hits[:lim])
+            except Exception as e:
+                logger.warning(f"[出图] 花种列表卡失败: {type(e).__name__}: {e}")
+        return await self._reply(event, text, png)
 
     async def _flower_by_species(self, event: Any, rec: Dict[str, Any],
                                  query: str):
@@ -2928,6 +2954,124 @@ class LkMarketNotify(Star):
         except Exception:
             pass
         return True
+
+    async def _flower_multi_card(self, title: str,
+                                 briefs: List[Dict[str, Any]]) -> Optional[bytes]:
+        """多条花种的色卡图：每行左边贴官方色卡图，右边写精灵/颜色/粒子/价格。"""
+        try:
+            from PIL import Image, ImageDraw, ImageFont
+        except Exception:
+            return None
+        c = _card()
+        if c is None or not c.available():
+            return None
+
+        kw = self._card_kwargs()
+        base_w = int(kw.get("width") or 700)
+        base_fs = int(kw.get("font_size") or 18)
+        W = max(560, min(1100, base_w))
+
+        rows = briefs
+        ROW_H = int(base_fs * 4.4)
+        HEAD_H = int(base_fs * 3.4)
+        PAD = int(base_fs * 0.9)
+        CARD_W = int(ROW_H * 1.7)          # 色卡图宽
+        CARD_H = int(CARD_W / 280 * 154)   # 官方图 280×154 比例
+
+        H = HEAD_H + ROW_H * len(rows) + PAD
+        try:
+            theme = c._norm_theme(kw.get("theme") or "")
+            bg = c._to_rgb(theme.get("背景", "#FCFAF6"))
+            card_bg = c._to_rgb(theme.get("卡片", "#FFFFFF"))
+            title_rgb = c._to_rgb(theme.get("标题", "#2C2A26"))
+            body_rgb = c._to_rgb(theme.get("正文", "#4A4740"))
+            sub_rgb = c._to_rgb(theme.get("次要", "#9A958C"))
+            accent_rgb = c._to_rgb(theme.get("强调", "#C25828"))
+        except Exception:
+            bg, card_bg = (252, 250, 246), (255, 255, 255)
+            title_rgb, body_rgb = (44, 42, 38), (74, 71, 64)
+            sub_rgb, accent_rgb = (154, 149, 140), (194, 88, 40)
+
+        img = Image.new("RGB", (W, H), bg)
+        dr = ImageDraw.Draw(img)
+
+        try:
+            fpath = c.find_font(str(kw.get("font_path") or ""))
+            f_title = ImageFont.truetype(fpath, int(base_fs * 1.3)) if fpath else None
+            f_name = ImageFont.truetype(fpath, base_fs) if fpath else None
+            f_small = ImageFont.truetype(fpath, max(10, int(base_fs * 0.76))) if fpath else None
+        except Exception:
+            f_title = f_name = f_small = None
+        f_title = f_title or ImageFont.load_default()
+        f_name = f_name or f_title
+        f_small = f_small or f_name
+
+        dr.text((PAD, int(HEAD_H * 0.32)), _strip_emoji(title),
+                font=f_title, fill=title_rgb)
+        dr.line([(PAD, HEAD_H - 6), (W - PAD, HEAD_H - 6)],
+                fill=(232, 228, 220), width=1)
+
+        import io as _io
+        for i, b in enumerate(rows):
+            y = HEAD_H + i * ROW_H
+            if i % 2 == 0:
+                dr.rectangle([PAD - 6, y + 2, W - PAD + 6, y + ROW_H - 4],
+                             fill=card_bg)
+
+            # 左：官方色卡图
+            img_bytes = await self._chroma_card_bytes(b.get("particle_id"),
+                                                      b.get("color_id"))
+            cx, cy = PAD, y + (ROW_H - CARD_H) // 2
+            placed = False
+            if img_bytes:
+                try:
+                    oim = Image.open(_io.BytesIO(img_bytes)).convert("RGBA")
+                    oim = oim.resize((CARD_W, CARD_H), Image.LANCZOS)
+                    img.paste(oim, (cx, cy), oim)
+                    placed = True
+                except Exception:
+                    pass
+            if not placed:
+                # 兜底：两个色块
+                c1 = self._hex_to_rgb(b.get("c1"), (222, 222, 222))
+                c2 = self._hex_to_rgb(b.get("c2"), (245, 245, 245))
+                hw = CARD_W // 2
+                dr.rectangle([cx, cy, cx + hw - 2, cy + CARD_H], fill=c1)
+                dr.rectangle([cx + hw + 2, cy, cx + CARD_W, cy + CARD_H], fill=c2)
+
+            tx = cx + CARD_W + int(base_fs * 0.8)
+
+            # 第一行：精灵名 + 外观
+            sp = str(b.get("species") or b.get("name") or "?")
+            look = b.get("appearance_txt") or "未标注"
+            dr.text((tx, y + int(ROW_H * 0.10)), sp, font=f_name, fill=body_rgb)
+            tw = dr.textlength(look, font=f_small)
+            dr.text((W - PAD - tw, y + int(ROW_H * 0.15)), look,
+                    font=f_small, fill=accent_rgb)
+
+            # 第二行：颜色
+            dr.text((tx, y + int(ROW_H * 0.40)),
+                    str(b.get("color_name") or "颜色未知"),
+                    font=f_small, fill=sub_rgb)
+
+            # 第三行：粒子 + 价格 + 卖家
+            py = y + int(ROW_H * 0.66)
+            pname = str(b.get("particle_name") or "")
+            off = 0
+            if pname:
+                psz = max(10, int(base_fs * 0.6))
+                self._draw_particle(dr, tx + psz // 2, py + psz // 2,
+                                    psz, pname, self._hex_to_rgb(b.get("c1")))
+                dr.text((tx + psz + 6, py), pname, font=f_small, fill=body_rgb)
+                off = psz + 6 + dr.textlength(pname + "　　", font=f_small)
+            price = f"{b.get('price')} 分" if b.get("price") is not None else "?"
+            dr.text((tx + off, py), price, font=f_small, fill=accent_rgb)
+            seller = str(b.get("seller") or "")
+            if seller:
+                dr.text((tx + off + dr.textlength(price + "　", font=f_small), py),
+                        seller, font=f_small, fill=sub_rgb)
+
+        return c._png_bytes(img)
 
     async def _flower_reply(self, event: Any, query: str):
         """「花种 xxx」智能识别：
@@ -3288,6 +3432,7 @@ class LkMarketNotify(Star):
         "花种 四角星              看有这种粒子的花种\n"
         "花种 浅橙青              看这种颜色的花种\n"
         "花种 异色                看异色花种（炫彩同理）\n"
+        "花种 玩家名              看这个卖家上架的花种\n"
         "花种订阅 颜色/粒子/精灵   订阅，新上架自动推\n"
         "花种订阅 列表 / 删除 1"
     )
