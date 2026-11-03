@@ -76,9 +76,34 @@ def _card():
     return _CARD_MOD
 
 
+#: emoji / 特殊符号：字体（微软雅黑）没有这些字形，画出来是小方块
+_EMOJI_RE = re.compile(
+    "["
+    "\U0001F000-\U0001FAFF"      # 表情、符号、交通、旗帜…
+    "\U00002600-\U000027BF"      # 杂项符号（☀✂✉ 等）
+    "\U00002B00-\U00002BFF"      # 箭头星形
+    "\U0000FE00-\U0000FE0F"      # 变体选择符
+    "\U0001F1E6-\U0001F1FF"      # 区域旗帜
+    "]+"
+)
+
+
+def _strip_emoji(text: str) -> str:
+    """把 emoji 去掉，顺便把多余空格收拢，避免图片里出现豆腐块。"""
+    s = str(text or "")
+    if not s:
+        return s
+    s2 = _EMOJI_RE.sub("", s)
+    # 标签行前面留的空格清一下（"  已订阅" → "已订阅"）
+    s2 = re.sub(r"[ \t]{2,}", " ", s2)
+    s2 = re.sub(r"^[ \t]+", "", s2, flags=re.M)
+    s2 = re.sub(r"[ \t]+$", "", s2, flags=re.M)
+    return s2
+
+
 _PLUGIN_DIR = Path(__file__).resolve().parent
 _PLUGIN_NAME = "astrbot_plugin_lk_egg"
-VERSION = "1.62.0"
+VERSION = "1.63.0"
 
 
 def _data_dir() -> Path:
@@ -141,7 +166,7 @@ def _save_state(state: Dict[str, Any]) -> None:
     "astrbot_plugin_lk_egg",
     "MIKU013970 & DeepSeek",
     "蛋神助手全功能 + 炫彩花种订阅",
-    "1.62.0",
+    "1.63.0",
 )
 class LkMarketNotify(Star):
     def __init__(self, context: Context, config: AstrBotConfig = None):
@@ -237,14 +262,36 @@ class LkMarketNotify(Star):
 
     # ---------------------------------------------------------------- 拼消息
     async def _identify(self, item: Dict[str, Any]) -> Optional[Dict[str, Any]]:
+        """市集推送用：身高体重 → 可能精灵。
+
+        优先用本插件直连的概率接口（cinene），控制台的 /api/egg/identify
+        已经失效（恒返回「接口没有解析出可能精灵」），只当兜底。
+        """
         guess = item.get("guess")
         if guess and guess.get("top"):
             return guess
         h, w = item.get("height_cm"), item.get("weight_g")
         if not h or not w:
             return None
-        data = await self._api(f"/api/egg/identify?h={h}&w={w}")
-        return (data or {}).get("guess")
+        # 1) 直连概率接口
+        try:
+            probs, state = await self._identify_probs(h, w)
+            if state == "ok" and probs.get("top"):
+                top = [{"name": k, "pct": v} for k, v in probs["top"].items()]
+                special = [{"name": k, "pct": v}
+                           for k, v in (probs.get("special") or {}).items()]
+                return {"top": top, "special": special}
+        except Exception as e:
+            logger.warning(f"[市集推送] 本机概率接口失败: {type(e).__name__}: {e}")
+        # 2) 控制台兜底（多半没用，但留着不亏）
+        try:
+            data = await self._api(f"/api/egg/identify?h={h}&w={w}")
+            got = (data or {}).get("guess")
+            if isinstance(got, dict) and got.get("top"):
+                return got
+        except Exception:
+            pass
+        return None
 
     def _pets_text(self, guess: Optional[Dict[str, Any]]) -> str:
         if not guess or not guess.get("top"):
@@ -509,8 +556,6 @@ class LkMarketNotify(Star):
         ]
         if b.get("particle_name"):
             lines.append(f"粒子：{b['particle_name']}")
-        if b.get("star"):
-            lines.append(f"星级：{b['star']}")
         lines.append(f"价格：{b.get('price')} 分" if b.get("price") is not None
                      else "价格：?")
         if b.get("seller"):
@@ -1045,12 +1090,13 @@ class LkMarketNotify(Star):
                 tiles.append((c.icon_path("egg", egg_name, eforms[0] if eforms else ""),
                               [x for x in cap if x]))
         return c.render_card(
-            title=str(rec.get("精灵") or ""),
-            subtitle=" · ".join(x for x in (
+            title=_strip_emoji(str(rec.get("精灵") or "")),
+            subtitle=_strip_emoji(" · ".join(x for x in (
                 (f"图鉴 {_dex_txt}" if _dex_txt else ""),
-                ("\x01可同乘" if rec.get("同乘") else "")) if x),
-            tag=(f"区间 {bins}" if bins not in (None, "", 0) else ""),
-            rows=rows, boxes=boxes, table=table, tiles=tiles,
+                ("\x01可同乘" if rec.get("同乘") else "")) if x)),
+            tag=_strip_emoji(f"区间 {bins}" if bins not in (None, "", 0) else ""),
+            rows=[(_strip_emoji(a), _strip_emoji(b)) for a, b in rows],
+            boxes=boxes, table=table, tiles=tiles,
             tile_icon=_tile_icon, head_icon=_head_icon,
             head_icons=self._spe_icons(rec, v), **self._card_kwargs())
 
@@ -1906,6 +1952,7 @@ class LkMarketNotify(Star):
         c = _card()
         if c is None or not c.available():
             return None
+        text = _strip_emoji(text)
         key = self._card_key(text, icons)
         hit = _CARD_CACHE.get(key)
         if hit is not None:
@@ -2359,9 +2406,12 @@ class LkMarketNotify(Star):
             lines.append(f"※ {note}")
         return "\n".join(lines)
 
+    #: 查ID 里最多列多少个绑定角色（多的省略，避免卡片太长）
+    LOOKUP_ROLE_LIMIT = 15
+
     def _merchant_block(self, d: Dict[str, Any],
                         mark: Optional[Dict[str, Any]] = None) -> str:
-        """名字 + 助手ID + 统计 + 货架（不显示角色/游戏UID）"""
+        """名字 + 助手ID + 统计 + 绑定角色 + 货架。"""
         m = d.get("merchant") or {}
         seller = d.get("seller") or m.get("seller") or "—"
         nick = m.get("nickname") or m.get("displayName") or "—"
@@ -2382,6 +2432,21 @@ class LkMarketNotify(Star):
         else:
             out.append("标记：无")
         out.append(f"上架 {listed} · 售出 {sold} · 好评 {likes} · 差评 {dislikes}")
+
+        # 绑定角色（游戏 UID）
+        roles = [r for r in (d.get("roles") or []) if isinstance(r, dict)]
+        if roles:
+            out.append(f"———— 绑定 {len(roles)} 个角色 ————")
+            lim = int(getattr(self, "LOOKUP_ROLE_LIMIT", 15) or 15)
+            for r in roles[:lim]:
+                gid = str(r.get("gameId") or r.get("game_id") or "")
+                nm = str(r.get("name") or "—")
+                out.append(f"· {gid} {nm}" if gid else f"· {nm}")
+            if len(roles) > lim:
+                out.append(f"…… 还有 {len(roles) - lim} 个")
+        elif d.get("seller"):
+            out.append("———— 还没扫到绑定角色 ————")
+
         if items:
             out.append(f"———— 在售 {len(items)} 件 ————")
             for it in items[:15]:
@@ -2420,8 +2485,6 @@ class LkMarketNotify(Star):
         for i, o in enumerate(offers, 1):
             b = self._flower_brief(o)
             head = [f"{b['appearance_txt']}", f"{self.FLOWER_TYPE.get(b['type'], b['type'])}"]
-            if b.get("star"):
-                head.append(f"{b['star']}星")
             price = b.get("price")
             lines.append(f"{i}. {b['color_name'] or '颜色未知'} · " + " · ".join(head)
                          + f" · {price if price is not None else '?'} 分")
@@ -2430,7 +2493,10 @@ class LkMarketNotify(Star):
                 lines.append(col)
             if b["particle_name"]:
                 lines.append(f"   粒子 {b['particle_name']}")
-            lines.append(f"   卖家 {b['seller'] or '—'}"
+            seller_txt = b["seller"] or "—"
+            if b.get("seller_id"):
+                seller_txt = f"{seller_txt}（{b['seller_id']}）"
+            lines.append(f"   卖家 {seller_txt}"
                          + (f" · 成团 {b['people']}/{b['min_people']}"
                             if b.get("min_people") else ""))
             if b.get("remark"):
@@ -2475,8 +2541,8 @@ class LkMarketNotify(Star):
             dr.ellipse([cx - h * 0.62, cy - h * 0.62,
                         cx + h * 0.62, cy + h * 0.62], fill=color)
 
-    def _flower_card(self, species: str,
-                     offers: List[Dict[str, Any]]) -> Optional[bytes]:
+    async def _flower_card(self, species: str,
+                            offers: List[Dict[str, Any]]) -> Optional[bytes]:
         """花种卡片：左边两个色块 + 粒子图形，右边颜色名 / 价格 / 卖家。
 
         配色跟蛋神里一致：用接口返回的 c1 / c2 两个色值画色块。
@@ -2539,7 +2605,8 @@ class LkMarketNotify(Star):
 
         # 标题
         dr.text((PAD, int(HEAD_H * 0.34)),
-                f"🌸 {species} · {len(rows)} 个花种", font=f_title, fill=title_rgb)
+                _strip_emoji(f"🌸 {species} · {len(rows)} 个花种"),
+                font=f_title, fill=title_rgb)
         dr.line([(PAD, HEAD_H - 6), (W - PAD, HEAD_H - 6)], fill=(232, 228, 220), width=1)
 
         for i, b in enumerate(rows):
@@ -2550,23 +2617,41 @@ class LkMarketNotify(Star):
                              fill=card_bg)
 
             c1 = self._hex_to_rgb(b["c1"], (222, 222, 222))
-            c2 = self._hex_to_rgb(b["c2"], (245, 245, 245))
             sx = PAD
             sy = y + (ROW_H - SW) // 2
 
-            # 两个色块
-            dr.rectangle([sx, sy, sx + SW, sy + SW], fill=c1,
-                         outline=(225, 222, 215), width=1)
-            dr.rectangle([sx + SW + GAP, sy, sx + SW * 2 + GAP, sy + SW], fill=c2,
-                         outline=(225, 222, 215), width=1)
+            # 优先贴官方色卡图（两个色块 + 粒子效果都在这张图里）
+            card_img = await self._chroma_card_bytes(b.get("particle_id"),
+                                                     b.get("color_id"))
+            placed = False
+            if card_img:
+                try:
+                    import io as _io
+                    oim = Image.open(_io.BytesIO(card_img)).convert("RGBA")
+                    # 按比例缩放到色卡位（高 SW，宽按原图比例）
+                    tw2 = int(SW * 2 + GAP)
+                    th2 = int(tw2 * oim.height / max(1, oim.width))
+                    if th2 > ROW_H - 8:
+                        th2 = ROW_H - 8
+                        tw2 = int(th2 * oim.width / max(1, oim.height))
+                    oim = oim.resize((max(1, tw2), max(1, th2)), Image.LANCZOS)
+                    img.paste(oim, (sx, y + (ROW_H - th2) // 2), oim)
+                    placed = True
+                except Exception as e:
+                    logger.warning(f"[花种] 贴官方色卡图失败: {type(e).__name__}: {e}")
+            if not placed:
+                # 兜底：用色值画两个方块
+                c2 = self._hex_to_rgb(b["c2"], (245, 245, 245))
+                dr.rectangle([sx, sy, sx + SW, sy + SW], fill=c1,
+                             outline=(225, 222, 215), width=1)
+                dr.rectangle([sx + SW + GAP, sy, sx + SW * 2 + GAP, sy + SW], fill=c2,
+                             outline=(225, 222, 215), width=1)
 
             tx = sx + SW * 2 + GAP + int(base_fs * 0.75)
 
             # 第一行：颜色名 + 外观 + 类型
             name = b["color_name"] or "颜色未知"
             tag = f"{b['appearance_txt']} · {self.FLOWER_TYPE.get(b['type'], b['type'])}"
-            if b.get("star"):
-                tag += f" · {b['star']}星"
             dr.text((tx, y + int(ROW_H * 0.13)), name, font=f_name, fill=body_rgb)
             # 外观标签右对齐
             tw = dr.textlength(tag, font=f_small)
@@ -2594,8 +2679,11 @@ class LkMarketNotify(Star):
             price = f"{b['price']} 分" if b.get("price") is not None else "?"
             dr.text((tx + off, py), price, font=f_small, fill=accent_rgb)
             if b.get("seller"):
+                who = b["seller"]
+                if b.get("seller_id"):
+                    who = f"{who}（{b['seller_id']}）"
                 dr.text((tx + off + dr.textlength(price + "　", font=f_small), py),
-                        b["seller"], font=f_small, fill=sub_rgb)
+                        who, font=f_small, fill=sub_rgb)
 
         return c._png_bytes(img)
 
@@ -2648,7 +2736,7 @@ class LkMarketNotify(Star):
         png = None
         if offers and self._image_reply_on():
             try:
-                png = await asyncio.to_thread(self._flower_card, species, offers)
+                png = await self._flower_card(species, offers)
             except Exception as e:
                 logger.warning(f"[出图] 花种卡异常: {type(e).__name__}: {e}")
         return await self._reply(event, text, png)
@@ -2888,6 +2976,42 @@ class LkMarketNotify(Star):
             "cutoff_at": offer.get("cutoffAt"),
             "departure_at": offer.get("departureAt"),
         }
+
+    #: 官方色卡图缓存：(particle, color) → webp 字节
+    _CHROMA_CACHE: Dict[tuple, bytes] = {}
+    _CHROMA_CACHE_MAX = 200
+
+    async def _chroma_card_bytes(self, particle: Any, color: Any):
+        """从控制台拿官方色卡图（控制台已把 156 张全量下到本地）。"""
+        try:
+            p = int(particle)
+            c = int(color)
+        except (TypeError, ValueError):
+            return None
+        key = (p, c)
+        hit = self._CHROMA_CACHE.get(key)
+        if hit is not None:
+            return hit
+        try:
+            sess = await self._session_get()
+            async with sess.get(
+                    f"{self.api_base}/api/chroma/card/{p}/{c}",
+                    timeout=aiohttp.ClientTimeout(total=8)) as resp:
+                if resp.status != 200:
+                    return None
+                data = await resp.read()
+        except Exception as e:
+            logger.warning(f"[花种] 取色卡图失败 {p}/{c}: {type(e).__name__}: {e}")
+            return None
+        if not data or len(data) < 200:
+            return None
+        if len(self._CHROMA_CACHE) >= self._CHROMA_CACHE_MAX:
+            try:
+                self._CHROMA_CACHE.pop(next(iter(self._CHROMA_CACHE)))
+            except Exception:
+                pass
+        self._CHROMA_CACHE[key] = data
+        return data
 
     def _flower_species_name(self, pet_id: Any, fallback: str = "") -> str:
         """petId 换成图鉴里的精灵名（任意阶段都能查到一阶段）。"""

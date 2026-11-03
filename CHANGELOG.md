@@ -1,5 +1,54 @@
 # 更新日志
 
+## v1.63.0
+
+**接口对齐 + 查ID 显示绑定角色。**
+
+### 查ID 现在显示绑定角色
+
+之前 `_merchant_block` 注释写着「不显示角色/游戏UID」，所以像 `Z10001176`
+这种绑了 33 个角色的商家，查出来只能看到「上架 0 · 售出 2」，
+一个角色都不显示。现在补上了：
+
+```
+I I U（Z10001176）
+上架 0 · 售出 2 · 好评 2 · 差评 0
+———— 绑定 33 个角色 ————
+· 9890001 逢坂大河
+· 135645888 固执海洋
+...
+…… 还有 18 个
+```
+
+最多显示 15 个（`LOOKUP_ROLE_LIMIT`），多的提示「还有 N 个」。
+
+### 市集推送的精灵识别改直连
+
+控制台的 `/api/egg/identify` 已经坏了（恒返回「接口没有解析出可能精灵」），
+导致推送里精灵名一直是「未知」。改成优先用本插件直连的 cinene 概率接口，
+控制台那个只当兜底。
+
+### 接口全面审计
+
+对着控制台逐条验证了插件调用的 12 个接口：
+
+| 接口 | 状态 |
+|---|---|
+| `/api/merchants/search` | ✓ |
+| `/api/merchant` | ✓（roles 已补显示） |
+| `/api/merchants/listings` | ✓ |
+| `/api/market/recent` | ✓ |
+| `/api/purchases` | ✓ |
+| `/api/roles/changes` | ✓ |
+| `/api/grocery/flowers/catalog` | ✓ |
+| `/api/grocery/flowers/offers` | ✓ |
+| `/api/chroma/card` `/particle` | ✓ |
+| `/api/permissions` | ✓ |
+| `/api/config` | ✓ |
+| `/api/egg/identify` | ✗ 已失效 → 改用直连 |
+
+## v1.62.0
+
 ## v1.62.0
 
 **花种卡片的色卡改成真色块。**
