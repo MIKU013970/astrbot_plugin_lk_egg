@@ -103,7 +103,7 @@ def _strip_emoji(text: str) -> str:
 
 _PLUGIN_DIR = Path(__file__).resolve().parent
 _PLUGIN_NAME = "astrbot_plugin_lk_egg"
-VERSION = "1.68.1"
+VERSION = "1.69.0"
 
 
 def _data_dir() -> Path:
@@ -166,7 +166,7 @@ def _save_state(state: Dict[str, Any]) -> None:
     "astrbot_plugin_lk_egg",
     "MIKU013970 & DeepSeek",
     "洛克小肥鱼全功能 + 炫彩花种订阅",
-    "1.68.1",
+    "1.69.0",
 )
 class LkMarketNotify(Star):
     def __init__(self, context: Context, config: AstrBotConfig = None):
@@ -3104,7 +3104,9 @@ class LkMarketNotify(Star):
     MENU_ID = (
         "—————— 查助手（商家）——————\n"
         "查ID Z10014514          昵称/绑定角色/上架/售出/好评差评\n"
-        "查询ID xxx              和 查ID 完全一样"
+        "查询ID xxx              和 查ID 完全一样\n"
+        "家园 Z10014514          家园详情：住民/生蛋配对/家具\n"
+        "家园 974179987          也可以直接给游戏 UID（不用绑定）"
     )
 
     MENU_MARKS = (
@@ -3170,6 +3172,7 @@ class LkMarketNotify(Star):
         "查询": "格式：查询 火花（查蛋 也一样）\n进化链上任意名字都行：查询 火神 / 查询 焰火\n查蛋组：查询 拟人组 / 查询 拟人 / 查询 海洋\n查最近成交：查询 火花 最近",
         "查蛋": "格式：查蛋 火花\n和「查询」完全一样，斜杠可加可不加",
         "查ID": "格式：查ID Z10014514\n也可以用平台昵称：查ID 咕咕",
+        "家园": "格式：家园 Z10014514\n也可以给游戏UID：家园 974179987\n（不用绑定，公开家园都能查）",
         "查询ID": "格式：查询ID Z10014514（和 查ID 一样）",
         "新上架": "格式：\n新上架 添加 Z10014514\n新上架 删除 Z10014514\n新上架 列表",
         "蛋监控": "格式：\n蛋监控 添加 Z10014514\n蛋监控 删除 Z10014514\n蛋监控 列表",
@@ -3942,6 +3945,196 @@ class LkMarketNotify(Star):
         if mark:
             return await self._say(event, await self._describe_mark(qid.upper(), mark))
         return await self._say(event, f"没查到商家「{q}」。\n如果他是精灵名，用：查询 {q}")
+
+    # ---------------------------------------------------------------- 家园详情
+    async def _home_data(self, sid: str) -> Dict[str, Any]:
+        """调控制台 /api/merchant/home 拿家园详情。"""
+        try:
+            data = await self._api("/api/merchant/home?seller="
+                                   + urllib.parse.quote(sid))
+        except Exception as e:
+            logger.warning(f"[家园] 取失败: {type(e).__name__}: {e}")
+            return {}
+        return data if isinstance(data, dict) else {}
+
+    async def _home_uid_to_zid(self, uid: str) -> str:
+        """游戏 UID → 助手 ID（用控制台的商家索引反查）。"""
+        try:
+            r = await self._api("/api/merchants/search?q="
+                                + urllib.parse.quote(str(uid)) + "&limit=1&auto=1")
+            rows = (r or {}).get("rows") or []
+            if rows:
+                return str(rows[0].get("seller") or "").upper()
+        except Exception as e:
+            logger.warning(f"[家园] UID 反查失败: {type(e).__name__}: {e}")
+        return ""
+
+    def _home_resident_line(self, idx: int, r: Dict[str, Any]) -> str:
+        """一行住民信息。"""
+        name = str(r.get("name") or "?")
+        form = (r.get("form") or {}).get("name") or ""
+        nat = (r.get("nature") or {}).get("name") or ""
+        gender = (r.get("gender") or {}).get("symbol") or ""
+        lv = r.get("level") or ""
+        hobj = r.get("height") or {}
+        wobj = r.get("weight") or {}
+        ht = hobj.get("value")
+        hunit = str(hobj.get("unit") or "cm").lower()
+        wt = wobj.get("value")
+        wunit = str(wobj.get("unit") or "g").lower()
+        db = (r.get("sound") or {}).get("db")
+        eg = str(r.get("eggGroup") or "")
+        bits = []
+        if form and form not in ("普通", "初始"):
+            bits.append(f"【{form}】")           # 炫彩 / 异色 等形态
+        if gender:
+            bits.append(gender)
+        if nat:
+            bits.append(nat)
+        if lv:
+            bits.append(f"{lv}级")
+        if ht is not None:
+            bits.append(f"{ht}{hunit}")
+        if wt is not None:
+            # 平台给的是米/千克，住民这里是厘米/克；按原单位显示，别乱换算
+            if wunit in ("g", "克"):
+                bits.append(f"{wt / 1000:g}kg" if wt >= 1000 else f"{wt}g")
+            else:
+                bits.append(f"{wt}{wunit}")
+        if db is not None:
+            bits.append(f"{db}dB")
+        if eg:
+            bits.append(eg.replace(" / ", "/"))
+        tail = " ".join(str(x) for x in bits if str(x).strip())
+        return f"{idx}. {name}{(' ' + tail) if tail else ''}"
+
+    async def _home_reply(self, event: Any, arg: str):
+        """「家园 xxx」：查助手 ID 或游戏 UID 的家园详情。"""
+        if not await self._perm_gate(event, "lookup_id"):
+            return
+        if self._market_paused():
+            return await self._say(event, self.PAUSED_HINT)
+        q = str(arg or "").strip()
+        if not q:
+            return await self._say(
+                event,
+                "格式：家园 Z10014514\n"
+                "也可以直接给游戏 UID：家园 974179987\n"
+                "（不用绑定，任何公开家园都能查）")
+
+        sid = ""
+        note = ""
+        if re.fullmatch(r"[Zz]\d{5,12}", q):
+            sid = q.upper()
+        elif re.fullmatch(r"\d{5,15}", q):
+            sid = await self._home_uid_to_zid(q)
+            if sid:
+                note = f"（UID {q} 对应 {sid}）"
+            else:
+                return await self._say(
+                    event, f"没查到 UID {q} 对应的助手ID。\n"
+                           f"可以先用「查ID {q}」试试，或者直接发助手ID：家园 Z10014514")
+        else:
+            # 昵称 → 索引搜索
+            sid = await self._home_uid_to_zid(q)
+            if sid:
+                note = f"（按昵称找到 {sid}）"
+            else:
+                return await self._say(
+                    event, f"「{q}」没找到对应商家。\n"
+                           f"家园需要助手ID（Z 开头）或游戏 UID。")
+
+        d = await self._home_data(sid)
+        if not d or not d.get("ok"):
+            err = (d or {}).get("error") or "查不到"
+            return await self._say(
+                event, f"查不到 {sid} 的家园：{err}\n"
+                       f"（家园没公开、或者这个助手没开家园）")
+
+        home = d.get("home") or {}
+        residents = [r for r in (home.get("residents") or []) if isinstance(r, dict)]
+        furniture = home.get("furniture") or []
+        couples = home.get("layEggCouples") or []
+        egg_status = home.get("homeEggStatus") or {}
+        public = d.get("homePublic")
+        room = d.get("roomLevel")
+
+        lines = [f"🏠 {sid} 的家园"]
+        if note:
+            lines.append(note)
+        head = [f"房间 {room} 级" if room else "房间 ? 级",
+                f"住民 {len(residents)} 只"]
+        if furniture:
+            head.append(f"家具 {len(furniture)} 件")
+        if public is False:
+            head.append("未公开")
+        lines.append(" · ".join(head))
+        if egg_status.get("count"):
+            lines.append(f"家园里的蛋：{egg_status.get('count')} 个")
+
+        if residents:
+            lines.append(f"———— 住民 {len(residents)} 只 ————")
+            lim = 15
+            for i, r in enumerate(residents[:lim], 1):
+                lines.append(self._home_resident_line(i, r))
+            if len(residents) > lim:
+                lines.append(f"…… 还有 {len(residents) - lim} 只")
+
+            # 生蛋配对：actorId → 名字
+            if couples:
+                by_actor = {str(r.get("actorId") or ""): r for r in residents}
+                pairs = []
+                for cp in couples:
+                    fid = str(cp.get("femaleActorId") or "")
+                    f = by_actor.get(fid)
+                    if not f:
+                        continue
+                    fname = str(f.get("name") or "?")
+                    mnames = []
+                    for mid in (cp.get("maleActorIds") or []):
+                        m = by_actor.get(str(mid))
+                        if m:
+                            mnames.append(str(m.get("name") or "?"))
+                    if mnames:
+                        pairs.append(f"{fname}♀ × {'/'.join(mnames)}♂")
+                if pairs:
+                    lines.append(f"———— 生蛋配对 {len(pairs)} 对 ————")
+                    for i, p in enumerate(pairs[:10], 1):
+                        lines.append(f"{i}. {p}")
+                    if len(pairs) > 10:
+                        lines.append(f"…… 还有 {len(pairs) - 10} 对")
+        else:
+            lines.append("（家园里没有住民，或者家园没公开）")
+
+        cap = home.get("capturedAt")
+        if cap:
+            lines.append(f"（数据时间 {str(cap)[:19].replace('T', ' ')}）")
+        return await self._say(event, "\n".join(lines))
+
+    @filter.command("家园")
+    async def cmd_home(self, event: AstrMessageEvent):
+        """家园 Z10014514 —— 查商家家园详情（住民/配对/家具），不用绑定"""
+        arg = self._cmd_args(event)
+        if not arg:
+            m = re.match(r"^\s*[/#]?\s*家\s*园\s*(.+)$",
+                         str(getattr(event, "message_str", "") or ""))
+            arg = m.group(1).strip() if m else ""
+        yield await self._home_reply(event, arg)
+
+    @filter.regex(r"^\s*[/#]?\s*家\s*园\s*[A-Za-z0-9\u4e00-\u9fa5]{3,20}\s*$")
+    async def on_home_loose(self, event: AstrMessageEvent):
+        """兜底：/家园Z100 这种不加空格的写法。"""
+        if getattr(event, "_lk_home_done", False):
+            return
+        try:
+            event._lk_home_done = True
+        except Exception:
+            pass
+        raw = str(getattr(event, "message_str", "") or "").lstrip("/#").strip()
+        m = re.match(r"^家\s*园\s*(.+)$", raw)
+        if not m:
+            return
+        yield await self._home_reply(event, m.group(1).strip())
 
     @filter.command("查ID")
     async def cmd_lookup_id(self, event: AstrMessageEvent):
