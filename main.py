@@ -103,7 +103,7 @@ def _strip_emoji(text: str) -> str:
 
 _PLUGIN_DIR = Path(__file__).resolve().parent
 _PLUGIN_NAME = "astrbot_plugin_lk_egg"
-VERSION = "1.79.0"
+VERSION = "1.79.1"
 
 
 def _data_dir() -> Path:
@@ -166,7 +166,7 @@ def _save_state(state: Dict[str, Any]) -> None:
     "astrbot_plugin_lk_egg",
     "MIKU013970 & DeepSeek",
     "洛克小肥鱼全功能 + 炫彩花种订阅",
-    "1.79.0",
+    "1.79.1",
 )
 class LkMarketNotify(Star):
     def __init__(self, context: Context, config: AstrBotConfig = None):
@@ -3103,7 +3103,11 @@ class LkMarketNotify(Star):
         price = b.get("price")
         tail = f"{price} 分" if price is not None else "?"
         seller = str(b.get("seller") or "").strip()
-        line = f"· {look} {sp} · {' · '.join(bits)} · {tail}"
+        body = " · ".join(bits)
+        line = f"· {look} {sp}"
+        if body:
+            line += f" · {body}"
+        line += f" · {tail}"
         if seller:
             line += f" · {seller}"
         return line
@@ -3378,6 +3382,15 @@ class LkMarketNotify(Star):
         offers: List[Dict[str, Any]] = []
         for pid in pet_ids:
             offers.extend(await self._flower_offers(pid))
+        # 标题优先用**市场里挂的名字**（蝎子王），别用图鉴一阶段名（碎晶蝎）
+        _disp = ""
+        for _o in offers:
+            # 原始 offer 里名字在 flower.name
+            _s = str((_o.get("flower") or {}).get("name") or "")
+            if _s:
+                _disp = _s
+                break
+        species = _disp or species
         text = self._render_flower_offers(species, offers)
         png = None
         if offers and self._image_reply_on():
