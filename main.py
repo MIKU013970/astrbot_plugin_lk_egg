@@ -103,7 +103,7 @@ def _strip_emoji(text: str) -> str:
 
 _PLUGIN_DIR = Path(__file__).resolve().parent
 _PLUGIN_NAME = "astrbot_plugin_lk_egg"
-VERSION = "1.78.2"
+VERSION = "1.79.0"
 
 
 def _data_dir() -> Path:
@@ -166,7 +166,7 @@ def _save_state(state: Dict[str, Any]) -> None:
     "astrbot_plugin_lk_egg",
     "MIKU013970 & DeepSeek",
     "洛克小肥鱼全功能 + 炫彩花种订阅",
-    "1.78.2",
+    "1.79.0",
 )
 class LkMarketNotify(Star):
     def __init__(self, context: Context, config: AstrBotConfig = None):
@@ -3587,8 +3587,13 @@ class LkMarketNotify(Star):
                    "炫彩", "colorful", "炫彩花种"):
             return await self._flower_by_trait(event, q)
 
-        # ② 粒子 / 颜色：跟市场里真实存在的名字比相似度
-        #    必须放在精灵名前面 —— 否则「星星」会被模糊匹配成精灵「星星眼」，
+        # ② 图鉴**精确**匹配优先（月牙雪熊 / 蝎子王 这种不能再被当成粒子）
+        _exact = self._find_species(q, strict=True)
+        if _exact:
+            return await self._flower_by_species(event, _exact, q)
+
+        # ③ 粒子 / 颜色：跟市场里真实存在的名字比
+        #    必须放在**模糊**精灵名前面 —— 否则「星星」会被匹配成「星星眼」，
         #    「方」会被匹配成「机械方方」。
         snap = await self._flower_snapshot()
         if snap:
@@ -3610,12 +3615,12 @@ class LkMarketNotify(Star):
                 if self._flower_sim(q, best) >= 0.5:
                     return await self._flower_by_trait(event, q)
 
-        # ③ 图鉴精灵名
+        # ④ 图鉴模糊匹配（进化链任意阶段）
         rec = self._flower_match_pet(q)
         if rec:
             return await self._flower_by_species(event, rec, q)
 
-        # ④ 都没命中 → 让筛选逻辑给「市场里有什么」的提示
+        # ⑤ 都没命中 → 让筛选逻辑给「市场里有什么」的提示
         return await self._flower_by_trait(event, q)
 
     @filter.command("花种")
@@ -3786,32 +3791,63 @@ class LkMarketNotify(Star):
     }
 
     async def _flower_catalog(self) -> List[Dict[str, Any]]:
-        """花种品种列表：每个品种带挂单数和最低价。"""
-        try:
-            data = await self._api(
-                f"/api/grocery/flowers/catalog?page=1&pageSize=50")
-        except Exception as e:
-            logger.warning(f"[花种] 取目录失败: {type(e).__name__}: {e}")
-            return []
-        if not isinstance(data, dict):
-            logger.warning("[花种] 目录接口返回异常（控制台可能需要重启）")
-            return []
-        if not data.get("ok", True):
-            logger.warning(f"[花种] 目录接口报错: {str(data.get('error'))[:80]}")
-            return []
-        return [x for x in (data.get("items") or []) if isinstance(x, dict)]
+        """花种品种列表：每个品种带挂单数和最低价。
+
+        **必须翻页**：服务端把 pageSize 强制成 12（传 50/100 都没用），
+        只拉第 1 页会漏掉后半部分（比如蝎子王在第 2 页）。
+        """
+        out: List[Dict[str, Any]] = []
+        page = 1
+        while page <= 30:
+            try:
+                data = await self._api(
+                    f"/api/grocery/flowers/catalog?page={page}&pageSize=12")
+            except Exception as e:
+                logger.warning(f"[花种] 取目录失败(page {page}): "
+                               f"{type(e).__name__}: {e}")
+                break
+            if not isinstance(data, dict):
+                logger.warning("[花种] 目录接口返回异常（控制台可能需要重启）")
+                break
+            if not data.get("ok", True):
+                logger.warning(f"[花种] 目录接口报错: "
+                               f"{str(data.get('error'))[:80]}")
+                break
+            items = [x for x in (data.get("items") or []) if isinstance(x, dict)]
+            out.extend(items)
+            try:
+                pages = int(data.get("pages") or 1)
+            except (TypeError, ValueError):
+                pages = 1
+            if page >= pages or not items:
+                break
+            page += 1
+        return out
 
     async def _flower_offers(self, pet_id: Any) -> List[Dict[str, Any]]:
-        """某个花种的全部挂单。"""
-        try:
-            data = await self._api(
-                f"/api/grocery/flowers/offers?petId={int(pet_id)}&page=1&pageSize=50")
-        except Exception as e:
-            logger.warning(f"[花种] 取挂单失败: {type(e).__name__}: {e}")
-            return []
-        if not isinstance(data, dict):
-            return []
-        return [x for x in (data.get("items") or []) if isinstance(x, dict)]
+        """某个花种的全部挂单（同样翻页，服务端 pageSize 上限 12）。"""
+        out: List[Dict[str, Any]] = []
+        page = 1
+        while page <= 30:
+            try:
+                data = await self._api(
+                    f"/api/grocery/flowers/offers?petId={int(pet_id)}"
+                    f"&page={page}&pageSize=12")
+            except Exception as e:
+                logger.warning(f"[花种] 取挂单失败: {type(e).__name__}: {e}")
+                break
+            if not isinstance(data, dict):
+                break
+            items = [x for x in (data.get("items") or []) if isinstance(x, dict)]
+            out.extend(items)
+            try:
+                pages = int(data.get("pages") or 1)
+            except (TypeError, ValueError):
+                pages = 1
+            if page >= pages or not items:
+                break
+            page += 1
+        return out
 
     @classmethod
     def _flower_brief(cls, offer: Dict[str, Any]) -> Dict[str, Any]:
