@@ -2488,9 +2488,19 @@ class LkMarketNotify(Star):
                 if species in nm or nm in species:
                     pet_ids.append(int(it.get("petId")))
         if not pet_ids:
+            if not catalog:
+                # 目录都拉不到 → 大概率是控制台没重启 / 没有花种代理
+                return await self._say(
+                    event,
+                    f"🌸 {species}\n"
+                    f"花种接口没返回数据。\n"
+                    f"检查一下：\n"
+                    f"1. 蛋神助手控制台是不是在跑（{self.api_base}）\n"
+                    f"2. 控制台是不是**旧版本**——花种接口要 1.60.0 之后重启过控制台才有\n"
+                    f"3. 账号 session 还有效吗（发「蛋推送状态」看接口通不通）")
             return await self._say(
                 event, f"🌸 {species}\n市场上现在没有它的花种。\n"
-                       f"（花种市场目前只有：{'、'.join(str(x.get('name')) for x in catalog[:8])}）")
+                       f"（当前花种市场只有：{'、'.join(str(x.get('name')) for x in catalog[:8])}）")
         offers: List[Dict[str, Any]] = []
         for pid in pet_ids:
             offers.extend(await self._flower_offers(pid))
@@ -2684,6 +2694,10 @@ class LkMarketNotify(Star):
             logger.warning(f"[花种] 取目录失败: {type(e).__name__}: {e}")
             return []
         if not isinstance(data, dict):
+            logger.warning("[花种] 目录接口返回异常（控制台可能需要重启）")
+            return []
+        if not data.get("ok", True):
+            logger.warning(f"[花种] 目录接口报错: {str(data.get('error'))[:80]}")
             return []
         return [x for x in (data.get("items") or []) if isinstance(x, dict)]
 
