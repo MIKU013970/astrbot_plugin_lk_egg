@@ -103,7 +103,7 @@ def _strip_emoji(text: str) -> str:
 
 _PLUGIN_DIR = Path(__file__).resolve().parent
 _PLUGIN_NAME = "astrbot_plugin_lk_egg"
-VERSION = "1.79.1"
+VERSION = "1.79.2"
 
 
 def _data_dir() -> Path:
@@ -166,7 +166,7 @@ def _save_state(state: Dict[str, Any]) -> None:
     "astrbot_plugin_lk_egg",
     "MIKU013970 & DeepSeek",
     "洛克小肥鱼全功能 + 炫彩花种订阅",
-    "1.79.1",
+    "1.79.2",
 )
 class LkMarketNotify(Star):
     def __init__(self, context: Context, config: AstrBotConfig = None):
@@ -3639,6 +3639,10 @@ class LkMarketNotify(Star):
     @filter.command("花种")
     async def cmd_flower(self, event: AstrMessageEvent):
         """花种 —— 列全部品种；花种 罗隐 —— 看这只精灵的花种"""
+        # 保险：消息里必须真有「花种」两个字，避免被别的入口误派发过来
+        _raw = str(getattr(event, "message_str", "") or "").lstrip("/#").strip()
+        if "花种" not in _raw:
+            return
         if not self._flower_claim(event):
             return
         arg = self._cmd_args(event)
@@ -4093,7 +4097,9 @@ class LkMarketNotify(Star):
 
     # AstrBot 在派发前已经剥掉了 / 前缀，插件这边不能再校验前缀（否则恒为 False）
     COMMAND_WORDS = ("查询ID", "查询", "查蛋", "查ID", "标", "取消标", "黑名单", "白名单",
-                     "新上架", "蛋监控", "帮助", "菜单", "蛋推送")
+                     "新上架", "蛋监控", "帮助", "菜单", "蛋推送",
+                     "花种", "花种订阅", "家园", "UID", "查UID", "游戏ID",
+                     "改绑记录", "改名记录", "诊断")
 
     def _looks_like_command(self, text: str) -> bool:
         t = str(text or "").lstrip()
