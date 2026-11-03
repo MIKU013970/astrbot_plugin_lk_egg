@@ -103,7 +103,7 @@ def _strip_emoji(text: str) -> str:
 
 _PLUGIN_DIR = Path(__file__).resolve().parent
 _PLUGIN_NAME = "astrbot_plugin_lk_egg"
-VERSION = "1.65.0"
+VERSION = "1.66.0"
 
 
 def _data_dir() -> Path:
@@ -166,7 +166,7 @@ def _save_state(state: Dict[str, Any]) -> None:
     "astrbot_plugin_lk_egg",
     "MIKU013970 & DeepSeek",
     "蛋神助手全功能 + 炫彩花种订阅",
-    "1.65.0",
+    "1.66.0",
 )
 class LkMarketNotify(Star):
     def __init__(self, context: Context, config: AstrBotConfig = None):
@@ -3617,6 +3617,95 @@ class LkMarketNotify(Star):
         m = re.search(r"group[:\s_]+(\d{5,15})", umo, re.I)
         return m.group(1) if m else ""
 
+    #: 受保护名单缓存：(时间戳, {"items": set, "notify": bool})
+    _PROTECT_CACHE: tuple = (0, None)
+
+    async def _protected_set(self) -> tuple:
+        """从控制台拉受保护名单（ZID / UID / 昵称），缓存 60 秒。"""
+        now = time.time()
+        ts, cache = self._PROTECT_CACHE
+        if cache is not None and now - ts < 60:
+            return cache
+        data = None
+        try:
+            data = await self._api("/api/permissions/protected")
+        except Exception as e:
+            logger.warning(f"[保护] 拉名单失败: {type(e).__name__}: {e}")
+        if isinstance(data, dict) and data.get("ok"):
+            items = {str(x).strip().upper() for x in (data.get("protected") or [])
+                     if str(x).strip()}
+            cache = {"items": items, "notify": bool(data.get("notify", True))}
+        else:
+            cache = cache or {"items": set(), "notify": True}
+        self._PROTECT_CACHE = (now, cache)
+        return cache
+
+    async def _protected_hit(self, *queries: str) -> Optional[str]:
+        """query 里有没有命中受保护名单？命中返回命中的那一项。"""
+        cache = await self._protected_set()
+        items = cache.get("items") or set()
+        if not items:
+            return None
+        for q in queries:
+            s = str(q or "").strip().upper()
+            if not s:
+                continue
+            if s in items:
+                return s
+        return None
+
+    async def _protected_notify(self, event: Any, query: str, hit: str) -> None:
+        """给管理员发一条「谁查了受保护对象」。"""
+        cache = await self._protected_set()
+        if not cache.get("notify", True):
+            return
+        who = self._sender_id(event) or "未知"
+        gid = self._group_id(event)
+        umo = str(getattr(event, "unified_msg_origin", "") or "")
+        where = f"群 {gid}" if gid else "私聊"
+        text = (
+            "🔔 有人查询了受保护对象\n"
+            f"查询内容：{query}\n"
+            f"命中名单：{hit}\n"
+            f"查询者：{who}（{where}）\n"
+            f"会话：{umo}\n"
+            f"时间：{time.strftime('%Y-%m-%d %H:%M:%S')}"
+        )
+        text = _strip_emoji(text)
+        # 发给所有管理员私聊
+        sent = 0
+        for admin in self._admin_ids():
+            for chain in self._chains(text):
+                for prefix in self._platform_prefixes():
+                    try:
+                        ret = await self.context.send_message(
+                            f"{prefix}:FriendMessage:{admin}", chain)
+                        if ret is not False:
+                            sent += 1
+                            break
+                    except Exception:
+                        continue
+                if sent:
+                    break
+        if sent:
+            logger.info(f"[保护] 已通知管理员 {sent} 人：{query}")
+        else:
+            logger.warning(f"[保护] 通知管理员失败（query={query} who={who}）")
+
+    def _platform_prefixes(self) -> List[str]:
+        """拼 umo 用的平台前缀候选。"""
+        out: List[str] = []
+        try:
+            p = self._platform()
+            if p:
+                out.append(p)
+        except Exception:
+            pass
+        for p in ("aiocqhttp", "qq_official", "gewechat"):
+            if p not in out:
+                out.append(p)
+        return out
+
     async def _perm_gate(self, event: Any, feature: str) -> bool:
         """权限拦一下：不许就回一句提示并返回 False。"""
         if await self._perm_allowed(event, feature):
@@ -3673,6 +3762,12 @@ class LkMarketNotify(Star):
         if not q:
             return await self._say(event, 
                 "格式：查ID Z10014514\n也可以用昵称：查ID 咕咕\n（大小写、空格都随意）")
+        # 受保护对象：不返回结果，只通知管理员
+        _hit = await self._protected_hit(q)
+        if _hit:
+            await self._protected_notify(event, q, _hit)
+            return await self._say(
+                event, "这个商家信息不对外提供。\n（有疑问请联系管理员）")
         if self._market_paused():
             return await self._say(event, self.PAUSED_HINT)
 
