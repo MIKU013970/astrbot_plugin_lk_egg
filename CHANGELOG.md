@@ -1,5 +1,29 @@
 # 更新日志
 
+## v1.64.0
+
+**移除发码功能（不再发码了）。**
+
+### 删掉的东西
+
+| 类型 | 内容 |
+|---|---|
+| 指令 | `发码` / `发码 EGG-XXXX` / `输入兑换码` / `发码记录` |
+| 自动任务 | 每日定时发码（`daily_code_loop`） |
+| 自动买蛋补货 | `_auto_buy_shortfall`（唯一用途是凑够发码数量） |
+| 内部方法 | `_give_code`、`_send_to_group`、`_group_umos`、`_known_umos`、`_sync_market` 等 18 个 |
+| 配置项 | `code_groups`、`code_pool`、`daily_code_enabled/count/start/end/keyword/template`、`auto_buy_*`（9 项） |
+| 权限 | 受限功能列表里的 `code` |
+
+代码从 4536 行降到 4462 行。
+
+### 保留的
+
+查ID、花种查询/订阅、购买推送、新上架监控、蛋推送、黑白名单、
+实时行情、最近成交、改绑/改名记录、UID 查角色 —— 都不受影响。
+
+## v1.63.0
+
 ## v1.63.0
 
 **接口对齐 + 查ID 显示绑定角色。**

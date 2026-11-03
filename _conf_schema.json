@@ -42,7 +42,7 @@
   "hint": "最小 3 秒。控制台自己缓存 60 秒，20~30 秒足够"
  },
  "only_unclaimed": {
-  "description": "只推还没领取的兑换码",
+  "description": "只推还没领取的蛋",
   "type": "bool",
   "default": true,
   "hint": "关掉后已领取/已退款也会推"
@@ -90,52 +90,6 @@
   "description": "指令前缀（默认 /）",
   "type": "string",
   "default": "/"
- },
- "code_groups": {
-  "description": "发码目标群号，多个用逗号或换行分隔（随机选一个群发）",
-  "type": "string",
-  "default": "",
-  "hint": "例：123456789,987654321"
- },
- "code_pool": {
-  "description": "备选兑换码（一行一个）；发指令时不带码就随机从这里取",
-  "type": "text",
-  "default": ""
- },
- "daily_code_enabled": {
-  "description": "开启每日自动发码（从最早的神奇蛋兑换码里挑）",
-  "type": "bool",
-  "default": true
- },
- "daily_code_count": {
-  "description": "每天自动发几个",
-  "type": "int",
-  "default": 10
- },
- "daily_code_start": {
-  "description": "开始时间（HH:MM）",
-  "type": "string",
-  "default": "08:30"
- },
- "daily_code_end": {
-  "description": "结束时间（HH:MM）",
-  "type": "string",
-  "default": "10:00"
- },
- "daily_code_keyword": {
-  "description": "只发蛋名含这个关键字的码",
-  "type": "string",
-  "default": "神奇"
- },
- "daily_code_template": {
-  "description": "发送文案模板，{code}=兑换码 {egg}=蛋名",
-  "type": "string",
-  "default": "神奇礼物蛋神兑换码———{code}"
- },
- "auto_buy_enabled": {
-  "description": "兑换码不够时自动去市集买（会花积分！默认关闭）",
-  "type": "bool",
-  "default": false
  },
  "auto_buy_count": {
   "description": "每次最多补几个",
@@ -234,7 +188,7 @@
   "hint": "留空用默认 https://wegame.shallow.ink"
  },
  "admin_ids": {
-  "description": "管理员 QQ 号（逗号分隔），只有他们能看发码记录；留空则仅私聊可用",
+  "description": "管理员 QQ 号（逗号分隔）；留空则仅私聊可用",
   "type": "string",
   "default": ""
  },
