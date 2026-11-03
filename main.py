@@ -103,7 +103,7 @@ def _strip_emoji(text: str) -> str:
 
 _PLUGIN_DIR = Path(__file__).resolve().parent
 _PLUGIN_NAME = "astrbot_plugin_lk_egg"
-VERSION = "1.71.0"
+VERSION = "1.72.0"
 
 
 def _data_dir() -> Path:
@@ -166,7 +166,7 @@ def _save_state(state: Dict[str, Any]) -> None:
     "astrbot_plugin_lk_egg",
     "MIKU013970 & DeepSeek",
     "洛克小肥鱼全功能 + 炫彩花种订阅",
-    "1.71.0",
+    "1.72.0",
 )
 class LkMarketNotify(Star):
     def __init__(self, context: Context, config: AstrBotConfig = None):
@@ -2685,44 +2685,164 @@ class LkMarketNotify(Star):
         return c._png_bytes(img)
 
 
-    async def _flower_reply(self, event: Any, query: str):
-        """「花种 xxx」：查这个精灵在市场上的所有花种（颜色/粒子/价格）。"""
-        if not await self._perm_gate(event, "flower"):
-            return
-        rec = self._flower_match_pet(query)
-        if not rec:
+    #: 全市场花种挂单快照缓存：(时间戳, [brief...])
+    _FLOWER_SNAP: tuple = (0, None)
+    _FLOWER_SNAP_TTL = 30
+
+    #: 常见粒子名（接口里的 particles.n）
+    FLOWER_PARTICLES = ("四角星", "方块", "爱心", "星星", "菱形", "雪花",
+                        "闪光", "泡泡", "花瓣", "圆点")
+
+    async def _flower_snapshot(self, force: bool = False) -> List[Dict[str, Any]]:
+        """把市场上所有花种挂单拉一遍（缓存 30 秒）。"""
+        now = time.time()
+        ts, cache = self._FLOWER_SNAP
+        if not force and cache is not None and now - ts < self._FLOWER_SNAP_TTL:
+            return cache
+        catalog = await self._flower_catalog()
+        out: List[Dict[str, Any]] = []
+        for it in catalog:
+            pid = it.get("petId")
+            if not pid:
+                continue
+            species = str(it.get("name") or "")
+            for o in await self._flower_offers(pid):
+                b = self._flower_brief(o)
+                b["species"] = species or b.get("name") or ""
+                out.append(b)
+        self._FLOWER_SNAP = (now, out)
+        return out
+
+    def _flower_line(self, b: Dict[str, Any]) -> str:
+        """一条花种的简短说明。"""
+        bits = [str(b.get("color_name") or "颜色未知")]
+        look = b.get("appearance_txt") or "未标注"
+        bits.append(look)
+        if b.get("particle_name"):
+            bits.append(b["particle_name"])
+        price = b.get("price")
+        tail = f"{price} 分" if price is not None else "?"
+        seller = str(b.get("seller") or "").strip()
+        line = f"· {b.get('species') or b.get('name')} · {' · '.join(bits)} · {tail}"
+        if seller:
+            line += f" · {seller}"
+        return line
+
+    async def _flower_by_trait(self, event: Any, q: str):
+        """按粒子 / 颜色 / 异色筛选花种。"""
+        key = q.strip()
+        low = key.lower()
+        snap = await self._flower_snapshot()
+        if not snap:
             return await self._say(
-                event, f"「{query}」没收录，查不到它的花种。\n"
-                       f"用法：花种 罗隐 / 花种 卡拉波斯（进化链任意阶段都行）")
+                event,
+                "花种接口没返回数据。\n"
+                f"检查一下控制台是不是在跑（{self.api_base}），"
+                f"以及是不是 1.60.0 之后重启过。")
+
+        hits: List[Dict[str, Any]] = []
+        kind = ""
+        # ① 异色 / 炫彩
+        if low in ("异色", "shiny", "异色花种", "异色炫彩"):
+            kind = "异色"
+            hits = [b for b in snap if b.get("appearance") == "shiny"]
+            if not hits:
+                looks = sorted({str(b.get("appearance_txt") or "")
+                                for b in snap} - {""})
+                return await self._say(
+                    event,
+                    f"🌸 现在市场上没有异色的花种。\n"
+                    f"（当前有的是：{' / '.join(looks) or '无'}）\n"
+                    f"花种订阅 粒子/颜色/精灵 可以蹲，上架了自动推给你")
+        elif low in ("炫彩", "colorful", "炫彩花种"):
+            kind = "炫彩"
+            hits = [b for b in snap if b.get("appearance") == "colorful"]
+            if not hits:
+                return await self._say(event, "🌸 现在市场上没有炫彩的花种。")
+        else:
+            # ② 粒子
+            for pn in self.FLOWER_PARTICLES:
+                if pn in key or key in pn:
+                    kind = f"粒子「{pn}」"
+                    hits = [b for b in snap if pn in str(b.get("particle_name") or "")]
+                    break
+            # ③ 颜色（完整匹配 → 退一步按前缀匹配，浅橙青 能命中 浅橙蓝）
+            if not hits:
+                hits = [b for b in snap
+                        if key in str(b.get("color_name") or "")
+                        or key.replace("色", "") in str(b.get("color_name") or "")]
+                if hits:
+                    kind = f"颜色「{key}」"
+            if not hits and len(key) >= 2:
+                for n in (3, 2):
+                    if len(key) < n:
+                        continue
+                    sub = key[:n]
+                    h = [b for b in snap if sub in str(b.get("color_name") or "")]
+                    if h:
+                        hits = h
+                        kind = f"颜色「{sub}」"
+                        break
+
+        if not hits:
+            # 最后兜底：给出市场里有哪些粒子 / 颜色可选
+            parts = sorted({str(b.get("particle_name") or "") for b in snap} - {""})
+            colors = sorted({str(b.get("color_name") or "") for b in snap} - {""})
+            looks = sorted({str(b.get("appearance_txt") or "") for b in snap} - {""})
+            lines = [f"「{q}」不是已知的精灵、粒子、颜色，也没有这个外观。",
+                     "",
+                     "当前市场里有的："]
+            if parts:
+                lines.append(f"· 粒子：{' / '.join(parts)}")
+            if colors:
+                lines.append(f"· 颜色：{' / '.join(colors[:12])}"
+                             + (" …" if len(colors) > 12 else ""))
+            if looks:
+                lines.append(f"· 外观：{' / '.join(looks)}")
+            lines.append("")
+            lines.append("用法：花种 罗隐 / 花种 四角星 / 花种 浅橙青 / 花种 异色")
+            return await self._say(event, "\n".join(lines))
+
+        hits.sort(key=lambda b: (b.get("price") is None, b.get("price") or 0))
+        lines = [f"🌸 {kind}的花种 · {len(hits)} 个"]
+        lim = 20
+        for b in hits[:lim]:
+            lines.append(self._flower_line(b))
+        if len(hits) > lim:
+            lines.append(f"…… 还有 {len(hits) - lim} 个")
+        lines.append("")
+        lines.append("发「花种 精灵名」看那只精灵的色卡")
+        return await self._say(event, "\n".join(lines))
+
+    async def _flower_by_species(self, event: Any, rec: Dict[str, Any],
+                                 query: str):
+        """按精灵查（原来的逻辑）。"""
         species = str(rec.get("精灵") or query)
         pet_ids = []
         for v in (rec.get("variants") or [rec]):
             pid = v.get("精灵ID") or v.get("petConfId") or v.get("基础ID")
             if pid:
                 pet_ids.append(int(pid))
-        # 图鉴里没存 petId → 从花种目录里按名字对
         catalog = await self._flower_catalog()
         if not pet_ids:
             for it in catalog:
                 if str(it.get("name") or "") == species:
                     pet_ids.append(int(it.get("petId")))
         if not pet_ids:
-            # 目录里按名字包含匹配（比如「晶石蜗（西瓜碧玺的样子）」）
             for it in catalog:
                 nm = str(it.get("name") or "")
                 if species in nm or nm in species:
                     pet_ids.append(int(it.get("petId")))
         if not pet_ids:
             if not catalog:
-                # 目录都拉不到 → 大概率是控制台没重启 / 没有花种代理
                 return await self._say(
                     event,
                     f"🌸 {species}\n"
                     f"花种接口没返回数据。\n"
                     f"检查一下：\n"
                     f"1. 洛克小肥鱼控制台是不是在跑（{self.api_base}）\n"
-                    f"2. 控制台是不是**旧版本**——花种接口要 1.60.0 之后重启过控制台才有\n"
-                    f"3. 账号 session 还有效吗（发「蛋推送状态」看接口通不通）")
+                    f"2. 控制台是不是旧版本——花种接口要 1.60.0 之后重启过控制台才有\n"
+                    f"3. 账号 session 还有效吗")
             return await self._say(
                 event, f"🌸 {species}\n市场上现在没有它的花种。\n"
                        f"（当前花种市场只有：{'、'.join(str(x.get('name')) for x in catalog[:8])}）")
@@ -2738,17 +2858,6 @@ class LkMarketNotify(Star):
                 logger.warning(f"[出图] 花种卡异常: {type(e).__name__}: {e}")
         return await self._reply(event, text, png)
 
-    #: 同一条消息只让一个花种入口响应（否则 command + regex 会各回一张图）
-    @staticmethod
-    def _flower_claim(event: Any) -> bool:
-        if getattr(event, "_lk_flower_done", False):
-            return False
-        try:
-            event._lk_flower_done = True
-        except Exception:
-            pass
-        return True
-
     async def _flower_all(self, event: Any):
         """「花种」不带参数：列出当前花种市场的所有品种。"""
         catalog = await self._flower_catalog()
@@ -2759,11 +2868,10 @@ class LkMarketNotify(Star):
                 f"检查一下：\n"
                 f"1. 洛克小肥鱼控制台是不是在跑（{self.api_base}）\n"
                 f"2. 控制台是不是旧版本——花种接口要 1.60.0 之后重启过控制台才有\n"
-                f"3. 账号 session 还有效吗（发「蛋推送状态」看接口通不通）")
+                f"3. 账号 session 还有效吗")
         items = [x for x in catalog if x.get("petId")]
         if not items:
             return await self._say(event, "花种市场现在没有任何品种。")
-        # 挂单多的排前面，其次按最低价
         items.sort(key=lambda x: (-(int(x.get("offers") or 0)),
                                   int(x.get("minPrice") or 999999)))
         lim = 25
@@ -2778,9 +2886,35 @@ class LkMarketNotify(Star):
         if len(items) > lim:
             lines.append(f"…… 还有 {len(items) - lim} 个品种")
         lines.append("")
-        lines.append("发「花种 名字」看颜色和粒子效果")
+        lines.append("花种 精灵名     看那只精灵的色卡")
+        lines.append("花种 四角星     看有这种粒子的花种")
+        lines.append("花种 浅橙青     看这种颜色的花种")
+        lines.append("花种 异色       看异色花种")
         lines.append("订阅：花种订阅 颜色/粒子/精灵")
         return await self._say(event, "\n".join(lines))
+
+    async def _flower_reply(self, event: Any, query: str):
+        """「花种 xxx」智能识别：
+
+        xxx 可以是
+          · 精灵名（任意进化阶段）→ 看那只精灵的花种色卡
+          · 粒子名（四角星/方块/爱心…）→ 看有这种粒子的花种
+          · 颜色名（浅橙青/青紫…）→ 看这种颜色的花种
+          · 异色 / 炫彩 → 看该外观的花种
+        """
+        if not await self._perm_gate(event, "flower"):
+            return
+        q = str(query or "").strip()
+        if not q:
+            return await self._flower_all(event)
+
+        # ① 先试图鉴精灵名（最常见）
+        rec = self._flower_match_pet(q)
+        if rec:
+            return await self._flower_by_species(event, rec, q)
+
+        # ② 再按粒子 / 颜色 / 异色筛
+        return await self._flower_by_trait(event, q)
 
     @filter.command("花种")
     async def cmd_flower(self, event: AstrMessageEvent):
@@ -3090,15 +3224,13 @@ class LkMarketNotify(Star):
 
     MENU_FLOWER = (
         "—————— 花种（炫彩花种市场）——————\n"
-        "花种                     列市场上所有花种品种\n"
-        "花种 罗隐                看这只精灵的颜色/粒子/价格\n"
-        "花种 卡拉波斯            进化链任意阶段名都行\n"
-        "花种订阅 颜色 浅橙青      订阅某个颜色\n"
-        "花种订阅 粒子 四角星      订阅某种粒子\n"
-        "花种订阅 精灵 罗隐        订阅某只精灵\n"
-        "花种订阅 / 花种订阅 列表  看当前订阅\n"
-        "花种订阅 删除 1          删掉第 1 条\n"
-        "（有匹配的新花种上架就推给你）"
+        "花种                     列市场上所有品种\n"
+        "花种 罗隐                看这只精灵的色卡（进化链任意阶段）\n"
+        "花种 四角星              看有这种粒子的花种\n"
+        "花种 浅橙青              看这种颜色的花种\n"
+        "花种 异色                看异色花种（炫彩同理）\n"
+        "花种订阅 颜色/粒子/精灵   订阅，新上架自动推\n"
+        "花种订阅 列表 / 删除 1"
     )
 
     MENU_ID = (
