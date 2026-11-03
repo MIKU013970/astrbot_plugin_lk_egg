@@ -103,7 +103,7 @@ def _strip_emoji(text: str) -> str:
 
 _PLUGIN_DIR = Path(__file__).resolve().parent
 _PLUGIN_NAME = "astrbot_plugin_lk_egg"
-VERSION = "1.73.0"
+VERSION = "1.74.0"
 
 
 def _data_dir() -> Path:
@@ -166,7 +166,7 @@ def _save_state(state: Dict[str, Any]) -> None:
     "astrbot_plugin_lk_egg",
     "MIKU013970 & DeepSeek",
     "洛克小肥鱼全功能 + 炫彩花种订阅",
-    "1.73.0",
+    "1.74.0",
 )
 class LkMarketNotify(Star):
     def __init__(self, context: Context, config: AstrBotConfig = None):
@@ -1832,7 +1832,8 @@ class LkMarketNotify(Star):
         return sorted(cands, key=key)
 
     def _merchant_rows(self, data: Dict[str, Any],
-                       mark: Optional[Dict[str, Any]] = None) -> List[tuple]:
+                       mark: Optional[Dict[str, Any]] = None,
+                       flowers: Optional[List[Dict[str, Any]]] = None) -> List[tuple]:
         """商家卡的行。
 
         助手ID 只在表格里出现一次（以前标题下面还挂一遍，重复了）。
@@ -1923,11 +1924,29 @@ class LkMarketNotify(Star):
             else:
                 txt = f"{gid} 「{ch.get('old_role') or ''}」改名"
             rows.append(("改绑记录" if reason == "换绑" else "改名记录", txt))
+
+        # 花种货架（这个商家在花种市场挂的单）
+        fl = flowers or []
+        if fl:
+            rows.append(("花种", f"{len(fl)} 个在售"))
+            for b in fl[:8]:
+                bits = [str(b.get("color_name") or "颜色未知"),
+                        str(b.get("appearance_txt") or "未标注")]
+                if b.get("particle_name"):
+                    bits.append(str(b["particle_name"]))
+                price = b.get("price")
+                tail = f"{price} 分" if price is not None else "?"
+                sp = str(b.get("species") or b.get("name") or "")
+                rows.append(("", (f"· {sp} · {' · '.join(bits)} · {tail}"
+                                  if sp else f"· {' · '.join(bits)} · {tail}")))
+            if len(fl) > 8:
+                rows.append(("", f"…… 还有 {len(fl) - 8} 个"))
         return rows
 
     def _merchant_card(self, data: Dict[str, Any],
                        mark: Optional[Dict[str, Any]] = None,
-                       avatar: Optional[str] = None) -> Optional[bytes]:
+                       avatar: Optional[str] = None,
+                       flowers: Optional[List[Dict[str, Any]]] = None) -> Optional[bytes]:
         """商家卡：头像 + 基本信息 + 货架按精灵分类的蛋图网格。"""
         c = _card()
         if c is None or not c.available():
@@ -1939,7 +1958,8 @@ class LkMarketNotify(Star):
         # 没设平台头像的商家（占大多数，都是"玩家xxxx""访客"这种默认号）
         # 用「神奇的蛋」的图兜底，卡片左边就不会空一块
         head = avatar or c.icon_path("egg", "神奇蛋")
-        return c.render_card(title=str(nick), rows=self._merchant_rows(data, mark),
+        return c.render_card(title=str(nick),
+                             rows=self._merchant_rows(data, mark, flowers),
                              tiles=(tiles or None), tiles_per_row=4,
                              head_icons=([head] if head else None),
                              **self._card_kwargs())
@@ -2407,8 +2427,9 @@ class LkMarketNotify(Star):
     LOOKUP_ROLE_LIMIT = 15
 
     def _merchant_block(self, d: Dict[str, Any],
-                        mark: Optional[Dict[str, Any]] = None) -> str:
-        """名字 + 助手ID + 统计 + 绑定角色 + 货架。"""
+                        mark: Optional[Dict[str, Any]] = None,
+                        flowers: Optional[List[Dict[str, Any]]] = None) -> str:
+        """名字 + 助手ID + 统计 + 绑定角色 + 蛋货架 + 花种货架。"""
         m = d.get("merchant") or {}
         seller = d.get("seller") or m.get("seller") or "—"
         nick = m.get("nickname") or m.get("displayName") or "—"
@@ -2456,6 +2477,23 @@ class LkMarketNotify(Star):
                 out.append(f"…… 还有 {len(items) - 15} 件")
         else:
             out.append("———— 当前没有在售 ————")
+
+        # 花种货架
+        fl = flowers or []
+        if fl:
+            out.append(f"———— 在售花种 {len(fl)} 个 ————")
+            for b in fl[:12]:
+                bits = [str(b.get("color_name") or "颜色未知")]
+                bits.append(str(b.get("appearance_txt") or "未标注"))
+                if b.get("particle_name"):
+                    bits.append(str(b["particle_name"]))
+                price = b.get("price")
+                tail = f"{price} 分" if price is not None else "?"
+                sp = str(b.get("species") or b.get("name") or "")
+                out.append(f"· {sp} · {' · '.join(bits)} · {tail}"
+                           if sp else f"· {' · '.join(bits)} · {tail}")
+            if len(fl) > 12:
+                out.append(f"…… 还有 {len(fl) - 12} 个")
         return "\n".join(out)
 
     async def _describe_mark(self, sid: str, rec: Dict[str, Any]) -> str:
@@ -4209,7 +4247,20 @@ class LkMarketNotify(Star):
 
         if isinstance(data, dict) and data.get("ok"):
             mark = self._marks().get((data.get("seller") or "").upper())
-            out = self._merchant_block(data, mark)
+            # 顺手查这个商家在花种市场挂的单
+            _sid = str(data.get("seller") or "").upper()
+            _flowers: List[Dict[str, Any]] = []
+            if _sid:
+                try:
+                    _snap = await self._flower_snapshot()
+                    # seller 是昵称，seller_id 才是 ZID
+                    _flowers = [b for b in _snap
+                                if str(b.get("seller_id") or "").upper() == _sid]
+                    _flowers.sort(key=lambda b: (b.get("price") is None,
+                                                 b.get("price") or 0))
+                except Exception as e:
+                    logger.warning(f"[查ID] 拉花种失败: {type(e).__name__}: {e}")
+            out = self._merchant_block(data, mark, _flowers)
             text = out + ("\n" + note if note else "")
             _cands = self._sort_candidates(data)
             if len(_cands) > 1:
