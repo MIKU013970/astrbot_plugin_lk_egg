@@ -78,7 +78,7 @@ def _card():
 
 _PLUGIN_DIR = Path(__file__).resolve().parent
 _PLUGIN_NAME = "astrbot_plugin_lk_egg"
-VERSION = "1.61.0"
+VERSION = "1.62.0"
 
 
 def _data_dir() -> Path:
@@ -141,7 +141,7 @@ def _save_state(state: Dict[str, Any]) -> None:
     "astrbot_plugin_lk_egg",
     "MIKU013970 & DeepSeek",
     "蛋神助手全功能 + 炫彩花种订阅",
-    "1.61.0",
+    "1.62.0",
 )
 class LkMarketNotify(Star):
     def __init__(self, context: Context, config: AstrBotConfig = None):
@@ -2437,28 +2437,168 @@ class LkMarketNotify(Star):
                 lines.append(f"   备注 {b['remark']}")
         return "\n".join(lines)
 
-    def _flower_card(self, species: str, offers: List[Dict[str, Any]]) -> Optional[bytes]:
-        """花种卡片：每行一个挂单，左边画双色块，右边写名字/粒子/价格。"""
+    @staticmethod
+    def _hex_to_rgb(v: str, fallback=(200, 200, 200)) -> tuple:
+        """#RRGGBB → (r, g, b)。"""
+        s = str(v or "").strip().lstrip("#")
+        if len(s) == 3:
+            s = "".join(c * 2 for c in s)
+        if len(s) != 6:
+            return fallback
+        try:
+            return (int(s[0:2], 16), int(s[2:4], 16), int(s[4:6], 16))
+        except Exception:
+            return fallback
+
+    @staticmethod
+    def _draw_particle(dr, cx: int, cy: int, size: int, kind: str, color: tuple):
+        """按粒子名画示意图形（四角星 / 方块 / 爱心 / 其它圆点）。"""
+        h = size / 2.0
+        if "四角星" in kind:
+            dr.polygon([(cx, cy - h), (cx + h * 0.30, cy),
+                        (cx, cy + h), (cx - h * 0.30, cy)], fill=color)
+            dr.polygon([(cx - h, cy), (cx, cy + h * 0.30),
+                        (cx + h, cy), (cx, cy - h * 0.30)], fill=color)
+        elif "方块" in kind:
+            dr.rectangle([cx - h * 0.72, cy - h * 0.72,
+                          cx + h * 0.72, cy + h * 0.72], fill=color)
+        elif "爱心" in kind:
+            r = h * 0.46
+            dr.ellipse([cx - r * 2.2, cy - r * 1.7,
+                        cx - r * 0.2, cy + r * 0.3], fill=color)
+            dr.ellipse([cx + r * 0.2, cy - r * 1.7,
+                        cx + r * 2.2, cy + r * 0.3], fill=color)
+            dr.polygon([(cx - r * 2.05, cy - r * 0.35),
+                        (cx + r * 2.05, cy - r * 0.35),
+                        (cx, cy + h * 0.95)], fill=color)
+        else:
+            dr.ellipse([cx - h * 0.62, cy - h * 0.62,
+                        cx + h * 0.62, cy + h * 0.62], fill=color)
+
+    def _flower_card(self, species: str,
+                     offers: List[Dict[str, Any]]) -> Optional[bytes]:
+        """花种卡片：左边两个色块 + 粒子图形，右边颜色名 / 价格 / 卖家。
+
+        配色跟蛋神里一致：用接口返回的 c1 / c2 两个色值画色块。
+        """
+        try:
+            from PIL import Image, ImageDraw, ImageFont
+        except Exception as e:
+            logger.warning(f"[出图] 花种卡缺 Pillow: {e}")
+            return None
         c = _card()
         if c is None or not c.available():
             return None
-        rows: List[tuple] = []
-        for o in offers:
-            b = self._flower_brief(o)
-            tag = f"{b['appearance_txt']}·{self.FLOWER_TYPE.get(b['type'], b['type'])}"
-            name = b["color_name"] or "颜色未知"
-            col = f"{b['c1']}/{b['c2']}" if b["c1"] else ""
-            price = f"{b['price']} 分" if b.get("price") is not None else "?"
-            rows.append((f"{name}",
-                         f"{tag} · {b['particle_name']} · {price}"))
-            if col:
-                rows.append(("", f"色卡 {col} · 卖家 {b['seller'] or '—'}"))
+
+        kw = self._card_kwargs()
+        base_w = int(kw.get("width") or 700)
+        base_fs = int(kw.get("font_size") or 18)
+        W = max(560, min(1100, base_w))
+
+        rows = [self._flower_brief(o) for o in offers]
+        ROW_H = int(base_fs * 5.2)          # 每行高度随字号缩放
+        HEAD_H = int(base_fs * 3.6)
+        PAD = int(base_fs * 0.9)
+        SW = int(base_fs * 3.1)             # 单个色块边长
+        GAP = max(3, int(base_fs * 0.16))   # 两色块间距
+
+        H = HEAD_H + ROW_H * len(rows) + PAD
+
+        # 主题背景色
         try:
-            return c.render_card(title=f"🌸 {species} · {len(offers)} 个花种",
-                                 rows=rows, **self._card_kwargs())
-        except Exception as e:
-            logger.warning(f"[出图] 花种卡失败: {type(e).__name__}: {e}")
-            return None
+            theme = c._norm_theme(kw.get("theme") or "")
+            bg = c._to_rgb(theme.get("背景", "#FCFAF6"))
+            card_bg = c._to_rgb(theme.get("卡片", "#FFFFFF"))
+            title_rgb = c._to_rgb(theme.get("标题", "#2C2A26"))
+            body_rgb = c._to_rgb(theme.get("正文", "#4A4740"))
+            sub_rgb = c._to_rgb(theme.get("次要", "#9A958C"))
+            accent_rgb = c._to_rgb(theme.get("强调", "#C25828"))
+        except Exception:
+            bg, card_bg = (252, 250, 246), (255, 255, 255)
+            title_rgb, body_rgb = (44, 42, 38), (74, 71, 64)
+            sub_rgb, accent_rgb = (154, 149, 140), (194, 88, 40)
+
+        img = Image.new("RGB", (W, H), bg)
+        dr = ImageDraw.Draw(img)
+
+        # 字体
+        try:
+            fpath = c.find_font(str(kw.get("font_path") or ""))
+            f_title = ImageFont.truetype(fpath, int(base_fs * 1.35)) if fpath else None
+            f_name = ImageFont.truetype(fpath, base_fs) if fpath else None
+            f_small = ImageFont.truetype(fpath, max(10, int(base_fs * 0.78))) if fpath else None
+        except Exception:
+            f_title = f_name = f_small = ImageFont.load_default()
+
+        def F(f, fallback=None):
+            return f if f is not None else (fallback or ImageFont.load_default())
+
+        f_title = F(f_title)
+        f_name = F(f_name, f_title)
+        f_small = F(f_small, f_name)
+
+        # 标题
+        dr.text((PAD, int(HEAD_H * 0.34)),
+                f"🌸 {species} · {len(rows)} 个花种", font=f_title, fill=title_rgb)
+        dr.line([(PAD, HEAD_H - 6), (W - PAD, HEAD_H - 6)], fill=(232, 228, 220), width=1)
+
+        for i, b in enumerate(rows):
+            y = HEAD_H + i * ROW_H
+            # 隔行底色
+            if i % 2 == 0:
+                dr.rectangle([PAD - 6, y + 2, W - PAD + 6, y + ROW_H - 4],
+                             fill=card_bg)
+
+            c1 = self._hex_to_rgb(b["c1"], (222, 222, 222))
+            c2 = self._hex_to_rgb(b["c2"], (245, 245, 245))
+            sx = PAD
+            sy = y + (ROW_H - SW) // 2
+
+            # 两个色块
+            dr.rectangle([sx, sy, sx + SW, sy + SW], fill=c1,
+                         outline=(225, 222, 215), width=1)
+            dr.rectangle([sx + SW + GAP, sy, sx + SW * 2 + GAP, sy + SW], fill=c2,
+                         outline=(225, 222, 215), width=1)
+
+            tx = sx + SW * 2 + GAP + int(base_fs * 0.75)
+
+            # 第一行：颜色名 + 外观 + 类型
+            name = b["color_name"] or "颜色未知"
+            tag = f"{b['appearance_txt']} · {self.FLOWER_TYPE.get(b['type'], b['type'])}"
+            if b.get("star"):
+                tag += f" · {b['star']}星"
+            dr.text((tx, y + int(ROW_H * 0.13)), name, font=f_name, fill=body_rgb)
+            # 外观标签右对齐
+            tw = dr.textlength(tag, font=f_small)
+            dr.text((W - PAD - tw, y + int(ROW_H * 0.17)), tag,
+                    font=f_small, fill=accent_rgb)
+
+            # 第二行：色值
+            dr.text((tx, y + int(ROW_H * 0.42)),
+                    f"{b['c1'] or '—'} / {b['c2'] or '—'}",
+                    font=f_small, fill=sub_rgb)
+
+            # 第三行：粒子 + 价格 + 卖家
+            py = y + int(ROW_H * 0.70)
+            if b.get("particle_name"):
+                # 粒子小图形
+                psz = max(10, int(base_fs * 0.62))
+                pcx = tx + psz // 2
+                pcy = py + psz // 2
+                self._draw_particle(dr, pcx, pcy, psz, b["particle_name"], c1)
+                dr.text((tx + psz + 6, py), b["particle_name"],
+                        font=f_small, fill=body_rgb)
+                off = psz + 6 + dr.textlength(b["particle_name"] + "　　", font=f_small)
+            else:
+                off = 0
+            price = f"{b['price']} 分" if b.get("price") is not None else "?"
+            dr.text((tx + off, py), price, font=f_small, fill=accent_rgb)
+            if b.get("seller"):
+                dr.text((tx + off + dr.textlength(price + "　", font=f_small), py),
+                        b["seller"], font=f_small, fill=sub_rgb)
+
+        return c._png_bytes(img)
+
 
     async def _flower_reply(self, event: Any, query: str):
         """「花种 xxx」：查这个精灵在市场上的所有花种（颜色/粒子/价格）。"""
