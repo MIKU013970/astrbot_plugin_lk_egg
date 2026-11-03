@@ -103,7 +103,7 @@ def _strip_emoji(text: str) -> str:
 
 _PLUGIN_DIR = Path(__file__).resolve().parent
 _PLUGIN_NAME = "astrbot_plugin_lk_egg"
-VERSION = "1.74.0"
+VERSION = "1.75.0"
 
 
 def _data_dir() -> Path:
@@ -166,7 +166,7 @@ def _save_state(state: Dict[str, Any]) -> None:
     "astrbot_plugin_lk_egg",
     "MIKU013970 & DeepSeek",
     "洛克小肥鱼全功能 + 炫彩花种订阅",
-    "1.74.0",
+    "1.75.0",
 )
 class LkMarketNotify(Star):
     def __init__(self, context: Context, config: AstrBotConfig = None):
@@ -2731,6 +2731,22 @@ class LkMarketNotify(Star):
     FLOWER_PARTICLES = ("四角星", "方块", "爱心", "星星", "菱形", "雪花",
                         "闪光", "泡泡", "花瓣", "圆点")
 
+    #: 粒子的同义说法 —— 用户说「菱形」「方形」其实指的就是「方块」
+    FLOWER_PARTICLE_ALIAS = {
+        "四角星": ("四角星", "星星", "星型", "星形", "十字星", "四角",
+                   "星芒", "四边形星", "星"),
+        "方块": ("方块", "方形", "正方形", "矩形", "菱形", "四边", "四方",
+                 "方格", "方型", "四边形", "四边形", "正方形块", "方"),
+        "爱心": ("爱心", "心形", "桃心", "心型", "心心", "红心", "心"),
+        "星星": ("星星", "星"),
+        "菱形": ("菱形", "斜方", "方"),
+        "雪花": ("雪花", "雪", "六角"),
+        "闪光": ("闪光", "闪", "闪亮"),
+        "泡泡": ("泡泡", "泡", "气泡"),
+        "花瓣": ("花瓣", "花"),
+        "圆点": ("圆点", "圆", "圆型", "圆形"),
+    }
+
     async def _flower_snapshot(self, force: bool = False) -> List[Dict[str, Any]]:
         """把市场上所有花种挂单拉一遍（缓存 30 秒）。"""
         now = time.time()
@@ -2778,6 +2794,33 @@ class LkMarketNotify(Star):
             return 0.0
         return len(a & b) / len(a)
 
+    def _flower_particle_alias(self, key: str, real_parts) -> str:
+        """把用户的说法映射到市场里真实存在的粒子名。
+
+        例：市场里有「方块」，用户说「菱形/方形/正方形」都算方块。
+        """
+        k = str(key or "").strip()
+        if not k:
+            return ""
+        # ① 完全相同的先返回
+        if k in real_parts:
+            return k
+        # ② 查同义词表：找到包含 k 的那一组，再看组里哪个在市场里
+        for canon, aliases in self.FLOWER_PARTICLE_ALIAS.items():
+            if k in aliases or any(a == k for a in aliases):
+                # 优先用规范名，其次组里任意一个
+                if canon in real_parts:
+                    return canon
+                for a in aliases:
+                    if a in real_parts:
+                        return a
+        # ③ 反向：k 是市场某个粒子名的同义词
+        for real in real_parts:
+            aliases = self.FLOWER_PARTICLE_ALIAS.get(real) or ()
+            if k in aliases:
+                return real
+        return ""
+
     def _flower_pick_similar(self, key: str, candidates) -> List[str]:
         """从候选名里挑出跟 key 像的（覆盖率 >= 阈值），按相似度降序。"""
         scored = []
@@ -2820,15 +2863,18 @@ class LkMarketNotify(Star):
             if not hits:
                 return await self._say(event, "🌸 现在市场上没有炫彩的花种。")
         else:
-            # ② 粒子：先在市场里收集真实粒子名，再按相似度挑
+            # ② 粒子：先查同义词（菱形/方形 → 方块），再按相似度
             real_parts = sorted({str(b.get("particle_name") or "")
                                  for b in snap} - {""})
-            pool = list(dict.fromkeys(list(self.FLOWER_PARTICLES) + real_parts))
-            picked = self._flower_pick_similar(key, pool)
-            if picked:
-                # 用市场里真实存在的那个名字
-                use = next((p for p in picked if p in real_parts), picked[0])
-                kind = f"粒子「{use}」" if use == key else f"粒子「{use}」（找的是「{key}」）"
+            use = self._flower_particle_alias(key, real_parts)
+            if not use:
+                pool = list(dict.fromkeys(list(self.FLOWER_PARTICLES) + real_parts))
+                picked = self._flower_pick_similar(key, pool)
+                if picked:
+                    use = next((p for p in picked if p in real_parts), picked[0])
+            if use:
+                kind = (f"粒子「{use}」" if use == key
+                        else f"粒子「{use}」（找的是「{key}」）")
                 hits = [b for b in snap if use in str(b.get("particle_name") or "")]
 
             # ③ 颜色：按相似度（浅橙青 → 浅橙蓝 这种也算）
@@ -3140,6 +3186,9 @@ class LkMarketNotify(Star):
         if snap:
             parts = sorted({str(b.get("particle_name") or "") for b in snap} - {""})
             if parts:
+                # 同义词（菱形/方形/星星…）直接认
+                if self._flower_particle_alias(q, parts):
+                    return await self._flower_by_trait(event, q)
                 best = max(parts, key=lambda x: self._flower_sim(q, x))
                 if self._flower_sim(q, best) >= 0.8:
                     return await self._flower_by_trait(event, q)
@@ -4304,7 +4353,8 @@ class LkMarketNotify(Star):
                     avatar = await self._avatar_path(
                         str(data.get("seller") or ""),
                         (data.get("merchant") or {}).get("avatar") or "")
-                    png = await asyncio.to_thread(self._merchant_card, data, mark, avatar)
+                    png = await asyncio.to_thread(
+                        self._merchant_card, data, mark, avatar, _flowers)
                     if png is None:
                         # 渲染器说"画不了"（Pillow / card.py 缺失），得让人知道
                         text += "\n（图片没出来：卡片渲染器不可用，发 /诊断 看详情）"
