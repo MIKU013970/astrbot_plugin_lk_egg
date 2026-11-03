@@ -103,7 +103,7 @@ def _strip_emoji(text: str) -> str:
 
 _PLUGIN_DIR = Path(__file__).resolve().parent
 _PLUGIN_NAME = "astrbot_plugin_lk_egg"
-VERSION = "1.78.1"
+VERSION = "1.78.2"
 
 
 def _data_dir() -> Path:
@@ -166,7 +166,7 @@ def _save_state(state: Dict[str, Any]) -> None:
     "astrbot_plugin_lk_egg",
     "MIKU013970 & DeepSeek",
     "洛克小肥鱼全功能 + 炫彩花种订阅",
-    "1.78.1",
+    "1.78.2",
 )
 class LkMarketNotify(Star):
     def __init__(self, context: Context, config: AstrBotConfig = None):
@@ -2792,6 +2792,30 @@ class LkMarketNotify(Star):
         """这条花种是不是异色（异色没有炫彩色卡）。"""
         return str(b.get("appearance") or "").strip().lower() == "shiny"
 
+    #: 明确是粒子名的词（用来判断「这是在问粒子」，别拿「独角兽」误判）
+    PARTICLE_HINT_WORDS = (
+        "四角星", "五角星", "六角星", "三角星", "星星", "星型", "星形",
+        "十字星", "星芒", "方块", "方形", "正方形", "方型", "矩形",
+        "菱形", "四边形", "爱心", "心形", "心型", "桃心", "红心",
+        "雪花", "闪光", "闪亮", "泡泡", "气泡", "花瓣", "圆点", "圆形",
+        "十字", "月牙", "闪电", "三角形",
+    )
+
+    def _looks_particle(self, q: str) -> bool:
+        """这个词是不是在明确问粒子（而不是精灵名）。
+
+        必须用完整词判断 —— 用单字「角」会把「独角兽」当成粒子。
+        """
+        s = str(q or "").strip()
+        if not s or len(s) > 6:
+            return False
+        if s in self.FLOWER_PARTICLES:
+            return True
+        for _canon, aliases in self.FLOWER_PARTICLE_ALIAS.items():
+            if s in aliases:
+                return True
+        return any(w in s for w in self.PARTICLE_HINT_WORDS)
+
     def _flower_color_text(self, b: Dict[str, Any]) -> str:
         """颜色文字。
 
@@ -3023,8 +3047,9 @@ class LkMarketNotify(Star):
     _FLOWER_SNAP_TTL = 30
 
     #: 常见粒子名（接口里的 particles.n）
-    FLOWER_PARTICLES = ("四角星", "方块", "爱心", "星星", "菱形", "雪花",
-                        "闪光", "泡泡", "花瓣", "圆点")
+    FLOWER_PARTICLES = ("四角星", "五角星", "六角星", "三角星", "方块", "爱心",
+                        "星星", "菱形", "雪花", "闪光", "泡泡", "花瓣",
+                        "圆点", "正方形", "三角形", "十字", "月牙", "闪电")
 
     #: 粒子的同义说法 —— 用户说「菱形」「方形」其实指的就是「方块」
     FLOWER_PARTICLE_ALIAS = {
@@ -3122,12 +3147,19 @@ class LkMarketNotify(Star):
                 return real
         return ""
 
-    def _flower_pick_similar(self, key: str, candidates) -> List[str]:
-        """从候选名里挑出跟 key 像的（覆盖率 >= 阈值），按相似度降序。"""
+    def _flower_pick_similar(self, key: str, candidates,
+                             min_sim: float = -1.0) -> List[str]:
+        """从候选名里挑出跟 key 像的（覆盖率 >= 阈值），按相似度降序。
+
+        min_sim 不传就用 FLOWER_SIM_MIN（0.5，适合颜色）。
+        粒子要用更高的阈值（0.85）—— 否则「五角星」会被匹配成「四角星」，
+        那明明是两种不同的粒子。
+        """
+        th = self.FLOWER_SIM_MIN if min_sim < 0 else min_sim
         scored = []
         for c in candidates:
             s = self._flower_sim(key, c)
-            if s >= self.FLOWER_SIM_MIN:
+            if s >= th:
                 scored.append((s, c))
         scored.sort(key=lambda x: -x[0])
         return [c for _s, c in scored]
@@ -3164,15 +3196,23 @@ class LkMarketNotify(Star):
             if not hits:
                 return await self._say(event, "🌸 现在市场上没有炫彩的花种。")
         else:
-            # ② 粒子：先查同义词（菱形/方形 → 方块），再按相似度
+            # ② 粒子：先查同义词（菱形/方形 → 方块），再按**高阈值**相似度
             real_parts = sorted({str(b.get("particle_name") or "")
                                  for b in snap} - {""})
             use = self._flower_particle_alias(key, real_parts)
             if not use:
-                pool = list(dict.fromkeys(list(self.FLOWER_PARTICLES) + real_parts))
-                picked = self._flower_pick_similar(key, pool)
+                # 只在市场里真有的粒子名之间比，阈值 0.85（五角星 ≠ 四角星）
+                picked = self._flower_pick_similar(key, real_parts, min_sim=0.85)
                 if picked:
-                    use = next((p for p in picked if p in real_parts), picked[0])
+                    use = picked[0]
+            if not use and real_parts:
+                # 看着像在问粒子（星/角/方/心/花/泡…），但市场没有 → 明确说
+                if self._looks_particle(key):
+                    return await self._say(
+                        event,
+                        f"🌸 市场里没有「{key}」这种粒子。\n"
+                        f"（当前只有：{' / '.join(real_parts)}）\n"
+                        f"想看全部花种发「花种」")
             if use:
                 kind = (f"粒子「{use}」" if use == key
                         else f"粒子「{use}」（找的是「{key}」）")
@@ -3557,8 +3597,12 @@ class LkMarketNotify(Star):
                 # 同义词（菱形/方形/星星…）直接认
                 if self._flower_particle_alias(q, parts):
                     return await self._flower_by_trait(event, q)
+                # 明确在问粒子（四角星/五角星/方块…）→ 交给 trait
+                # 注意用完整词，不能用单字「角」——否则「独角兽」会被当成粒子
+                if self._looks_particle(q):
+                    return await self._flower_by_trait(event, q)
                 best = max(parts, key=lambda x: self._flower_sim(q, x))
-                if self._flower_sim(q, best) >= 0.8:
+                if self._flower_sim(q, best) >= 0.85:
                     return await self._flower_by_trait(event, q)
             colors = sorted({str(b.get("color_name") or "") for b in snap} - {""})
             if colors:
