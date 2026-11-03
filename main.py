@@ -103,7 +103,7 @@ def _strip_emoji(text: str) -> str:
 
 _PLUGIN_DIR = Path(__file__).resolve().parent
 _PLUGIN_NAME = "astrbot_plugin_lk_egg"
-VERSION = "1.75.0"
+VERSION = "1.76.0"
 
 
 def _data_dir() -> Path:
@@ -166,7 +166,7 @@ def _save_state(state: Dict[str, Any]) -> None:
     "astrbot_plugin_lk_egg",
     "MIKU013970 & DeepSeek",
     "洛克小肥鱼全功能 + 炫彩花种订阅",
-    "1.75.0",
+    "1.76.0",
 )
 class LkMarketNotify(Star):
     def __init__(self, context: Context, config: AstrBotConfig = None):
@@ -546,11 +546,11 @@ class LkMarketNotify(Star):
     def _render_flower_alert(self, species: str, b: Dict[str, Any],
                              hit: List[str]) -> str:
         """一条花种上新推送。"""
+        look = str(b.get("appearance_txt") or "未标注")
         lines = [
             "🌸 新花种上架",
-            f"精灵：{species}",
-            f"外观：{b.get('appearance_txt') or '未标注'}"
-            f" · {self.FLOWER_TYPE.get(b.get('type') or '', b.get('type') or '')}",
+            f"精灵：{look} {species}",
+            f"类型：{self.FLOWER_TYPE.get(b.get('type') or '', b.get('type') or '')}",
             f"颜色：{b.get('color_name') or '未知'}"
             + (f"  ({b.get('c1')} / {b.get('c2')})" if b.get("c1") else ""),
         ]
@@ -1930,15 +1930,15 @@ class LkMarketNotify(Star):
         if fl:
             rows.append(("花种", f"{len(fl)} 个在售"))
             for b in fl[:8]:
-                bits = [str(b.get("color_name") or "颜色未知"),
-                        str(b.get("appearance_txt") or "未标注")]
+                look = str(b.get("appearance_txt") or "未标注")
+                sp = str(b.get("species") or b.get("name") or "")
+                bits = [str(b.get("color_name") or "颜色未知")]
                 if b.get("particle_name"):
                     bits.append(str(b["particle_name"]))
                 price = b.get("price")
                 tail = f"{price} 分" if price is not None else "?"
-                sp = str(b.get("species") or b.get("name") or "")
-                rows.append(("", (f"· {sp} · {' · '.join(bits)} · {tail}"
-                                  if sp else f"· {' · '.join(bits)} · {tail}")))
+                head = f"{look} {sp}".strip()
+                rows.append(("", f"· {head} · {' · '.join(bits)} · {tail}"))
             if len(fl) > 8:
                 rows.append(("", f"…… 还有 {len(fl) - 8} 个"))
         return rows
@@ -1946,23 +1946,275 @@ class LkMarketNotify(Star):
     def _merchant_card(self, data: Dict[str, Any],
                        mark: Optional[Dict[str, Any]] = None,
                        avatar: Optional[str] = None,
-                       flowers: Optional[List[Dict[str, Any]]] = None) -> Optional[bytes]:
-        """商家卡：头像 + 基本信息 + 货架按精灵分类的蛋图网格。"""
+                       flowers: Optional[List[Dict[str, Any]]] = None,
+                       flower_imgs: Optional[Dict[Any, bytes]] = None) -> Optional[bytes]:
+        """商家卡（自定义布局）：
+
+            ┌─ [头像] 昵称 / 助手ID ─────────────┐
+            │  数据 / 标记 / 游戏UID / 留言        │
+            ├─ 在售蛋（图标格）──────────────────┤
+            ├─ 在售花种（官方色卡图 + 说明）─────┤
+            └────────────────────────────────────┘
+        """
+        try:
+            from PIL import Image, ImageDraw, ImageFont
+        except Exception:
+            return None
         c = _card()
         if c is None or not c.available():
             return None
+
+        kw = self._card_kwargs()
+        base_w = int(kw.get("width") or 700)
+        base_fs = int(kw.get("font_size") or 18)
+        W = max(600, min(1100, base_w))
+        PAD = int(base_fs * 1.0)
+
+        try:
+            theme = c._norm_theme(kw.get("theme") or "")
+            bg = c._to_rgb(theme.get("背景", "#FCFAF6"))
+            card_bg = c._to_rgb(theme.get("卡片", "#FFFFFF"))
+            title_rgb = c._to_rgb(theme.get("标题", "#2C2A26"))
+            body_rgb = c._to_rgb(theme.get("正文", "#4A4740"))
+            sub_rgb = c._to_rgb(theme.get("次要", "#9A958C"))
+            accent_rgb = c._to_rgb(theme.get("强调", "#C25828"))
+            line_rgb = (232, 228, 220)
+        except Exception:
+            bg, card_bg = (252, 250, 246), (255, 255, 255)
+            title_rgb, body_rgb = (44, 42, 38), (74, 71, 64)
+            sub_rgb, accent_rgb = (154, 149, 140), (194, 88, 40)
+            line_rgb = (232, 228, 220)
+
+        try:
+            fpath = c.find_font(str(kw.get("font_path") or ""))
+            f_big = ImageFont.truetype(fpath, int(base_fs * 1.45)) if fpath else None
+            f_name = ImageFont.truetype(fpath, base_fs) if fpath else None
+            f_small = ImageFont.truetype(fpath, max(10, int(base_fs * 0.78))) if fpath else None
+            f_tiny = ImageFont.truetype(fpath, max(9, int(base_fs * 0.68))) if fpath else None
+        except Exception:
+            f_big = f_name = f_small = f_tiny = None
+        f_big = f_big or ImageFont.load_default()
+        f_name = f_name or f_big
+        f_small = f_small or f_name
+        f_tiny = f_tiny or f_small
+
         m = data.get("merchant") or {}
         seller = str(data.get("seller") or m.get("seller") or "—")
-        nick = m.get("nickname") or m.get("displayName") or seller
+        nick = str(m.get("nickname") or m.get("displayName") or seller)
+
+        # ---------- 收集信息行 ----------
+        info: List[tuple] = []
+        listed = m.get("listed")
+        sold = m.get("sold")
+        likes = m.get("likes")
+        dislikes = m.get("dislikes")
+        stat = []
+        for label, v in (("上架", listed), ("售出", sold),
+                         ("好评", likes), ("差评", dislikes)):
+            if v is not None:
+                stat.append(f"{label} {v}")
+        if stat:
+            info.append(("数据", " · ".join(stat)))
+        if mark:
+            kind = "黑名单" if mark.get("t") == "黑" else "白名单"
+            info.append(("标记", kind + (f" · {mark['note']}" if mark.get("note") else "")))
+        else:
+            info.append(("标记", "无"))
+        if m.get("title"):
+            info.append(("称号", str(m.get("title"))))
+
+        roles = [r for r in (data.get("roles") or []) if isinstance(r, dict)]
+        for r in roles[:6]:
+            gid = str(r.get("gameId") or "").strip()
+            nm = str(r.get("name") or "").strip()
+            if not gid and not nm:
+                continue
+            info.append(("游戏UID", f"{gid} · {nm}".strip(" ·") if gid else nm))
+        if not roles:
+            info.append(("游戏UID", "未采集"))
+
+        if m.get("note"):
+            note = str(m["note"]).replace("\r", "")
+            for k, ln in enumerate(note.split("\n")[:3]):
+                info.append(("卖家留言" if k == 0 else "", ln[:60]))
+
+        # ---------- 蛋货架 ----------
         tiles = self._shelf_tiles(data.get("listings") or [])
-        # 没设平台头像的商家（占大多数，都是"玩家xxxx""访客"这种默认号）
-        # 用「神奇的蛋」的图兜底，卡片左边就不会空一块
-        head = avatar or c.icon_path("egg", "神奇蛋")
-        return c.render_card(title=str(nick),
-                             rows=self._merchant_rows(data, mark, flowers),
-                             tiles=(tiles or None), tiles_per_row=4,
-                             head_icons=([head] if head else None),
-                             **self._card_kwargs())
+        TILE = int(base_fs * 5.2)
+        TILE_PER_ROW = 4
+        MAX_TILE_ROWS = 2
+        tile_max = TILE_PER_ROW * MAX_TILE_ROWS
+        tiles_shown = tiles[:tile_max]
+        tile_rows = ((len(tiles_shown) + TILE_PER_ROW - 1) // TILE_PER_ROW
+                     if tiles_shown else 0)
+
+        # ---------- 花种行 ----------
+        fl = flowers or []
+        FL_CARD_W = int(base_fs * 7.2)
+        FL_CARD_H = int(FL_CARD_W / 280 * 154)
+        FL_ROW_H = max(FL_CARD_H + 14, int(base_fs * 3.2))
+        fl_rows = len(fl[:8])
+
+        # ---------- 高度 ----------
+        HEAD_H = int(base_fs * 5.4)
+        ROW_H = int(base_fs * 1.85)
+        SEC_H = int(base_fs * 2.2)
+        info_h = ROW_H * len(info)
+        tiles_h = (SEC_H + tile_rows * (TILE + int(base_fs * 1.3)) + 8) if tiles else 0
+        flowers_h = (SEC_H + fl_rows * FL_ROW_H + 8) if fl else 0
+        H = PAD + HEAD_H + info_h + 12 + tiles_h + flowers_h + PAD
+
+        img = Image.new("RGB", (W, H), bg)
+        dr = ImageDraw.Draw(img)
+
+        # ---------- 头部 ----------
+        y = PAD
+        head_size = int(HEAD_H * 0.72)
+        head_x = PAD
+        drew_head = False
+        if avatar:
+            try:
+                aim = Image.open(avatar).convert("RGBA")
+                aim = aim.resize((head_size, head_size), Image.LANCZOS)
+                # 圆形裁剪
+                mask = Image.new("L", (head_size, head_size), 0)
+                ImageDraw.Draw(mask).ellipse((0, 0, head_size, head_size), fill=255)
+                img.paste(aim, (head_x, y + (HEAD_H - head_size) // 2), mask)
+                drew_head = True
+            except Exception:
+                pass
+        if not drew_head:
+            try:
+                egg_icon = c.icon_path("egg", "神奇蛋")
+                if egg_icon:
+                    eim = Image.open(egg_icon).convert("RGBA")
+                    eim = eim.resize((head_size, head_size), Image.LANCZOS)
+                    img.paste(eim, (head_x, y + (HEAD_H - head_size) // 2), eim)
+                    drew_head = True
+            except Exception:
+                pass
+
+        tx = head_x + (head_size + int(base_fs * 0.9) if drew_head else 0)
+        dr.text((tx, y + int(HEAD_H * 0.16)), _strip_emoji(nick),
+                font=f_big, fill=title_rgb)
+        dr.text((tx, y + int(HEAD_H * 0.60)),
+                f"助手ID {seller}", font=f_small, fill=sub_rgb)
+        y += HEAD_H
+        dr.line([(PAD, y), (W - PAD, y)], fill=line_rgb, width=1)
+        y += 8
+
+        # ---------- 信息行 ----------
+        LABEL_W = int(base_fs * 4.6)
+        for label, val in info:
+            if label:
+                dr.text((PAD + 4, y + 2), _strip_emoji(label),
+                        font=f_small, fill=sub_rgb)
+            if val:
+                # 简单折行
+                avail = W - PAD * 2 - LABEL_W
+                cur = ""
+                lines = []
+                for ch in str(val):
+                    if dr.textlength(cur + ch, font=f_name) > avail:
+                        lines.append(cur)
+                        cur = ch
+                    else:
+                        cur += ch
+                if cur:
+                    lines.append(cur)
+                for k, ln in enumerate(lines[:2]):
+                    dr.text((PAD + LABEL_W, y + 2 + k * int(base_fs * 1.1)),
+                            _strip_emoji(ln), font=f_name, fill=body_rgb)
+                if len(lines) > 2:
+                    y += int(base_fs * 1.1) * 2
+                else:
+                    y += 0
+            y += ROW_H
+        y += 12
+
+        # ---------- 蛋货架 ----------
+        if tiles:
+            dr.text((PAD + 4, y), _strip_emoji(f"在售蛋 {len(tiles)} 件"),
+                    font=f_small, fill=accent_rgb)
+            y += SEC_H
+            for i, item in enumerate(tiles_shown):
+                col = i % TILE_PER_ROW
+                row = i // TILE_PER_ROW
+                cx = PAD + col * (TILE + int(base_fs * 0.5))
+                cy = y + row * (TILE + int(base_fs * 1.3))
+                try:
+                    path, lines = item[0], (item[1] if len(item) > 1 else [])
+                except Exception:
+                    path, lines = item, []
+                if path and str(path).lower().endswith((".png", ".jpg", ".jpeg", ".webp")):
+                    try:
+                        im = Image.open(path).convert("RGBA")
+                        im = im.resize((TILE, TILE), Image.LANCZOS)
+                        img.paste(im, (cx, cy), im)
+                    except Exception:
+                        pass
+                for k, ln in enumerate((lines or [])[:2]):
+                    dr.text((cx, cy + TILE + 1 + k * int(base_fs * 0.85)),
+                            _strip_emoji(str(ln))[:14], font=f_tiny, fill=body_rgb)
+            y += tile_rows * (TILE + int(base_fs * 1.3))
+            if len(tiles) > len(tiles_shown):
+                dr.text((PAD + 4, y), f"…… 还有 {len(tiles) - len(tiles_shown)} 种",
+                        font=f_tiny, fill=sub_rgb)
+                y += int(base_fs * 1.1)
+
+        # ---------- 花种（带色卡图）----------
+        if fl:
+            dr.text((PAD + 4, y), _strip_emoji(f"在售花种 {len(fl)} 个"),
+                    font=f_small, fill=accent_rgb)
+            y += SEC_H
+            imgs = flower_imgs or {}
+            for b in fl[:8]:
+                cw, chh = FL_CARD_W, FL_CARD_H
+                cy = y + (FL_ROW_H - chh) // 2
+                raw = imgs.get(id(b)) or imgs.get(
+                    (b.get("particle_id"), b.get("color_id")))
+                placed = False
+                if raw:
+                    try:
+                        import io as _io
+                        oim = Image.open(_io.BytesIO(raw)).convert("RGBA")
+                        oim = oim.resize((cw, chh), Image.LANCZOS)
+                        img.paste(oim, (PAD, cy), oim)
+                        placed = True
+                    except Exception:
+                        pass
+                if not placed:
+                    c1 = self._hex_to_rgb(b.get("c1"), (222, 222, 222))
+                    c2 = self._hex_to_rgb(b.get("c2"), (245, 245, 245))
+                    hw = cw // 2
+                    dr.rectangle([PAD, cy, PAD + hw - 2, cy + chh], fill=c1)
+                    dr.rectangle([PAD + hw + 2, cy, PAD + cw, cy + chh], fill=c2)
+
+                tx2 = PAD + cw + int(base_fs * 0.7)
+                sp = str(b.get("species") or b.get("name") or "")
+                look = str(b.get("appearance_txt") or "未标注")
+                # 第一行：外观（炫彩/异色）+ 精灵名
+                dr.text((tx2, y + 4), _strip_emoji(look), font=f_small,
+                        fill=accent_rgb)
+                lw = dr.textlength(f"{look} ", font=f_small)
+                dr.text((tx2 + lw, y + 4), _strip_emoji(sp),
+                        font=f_name, fill=body_rgb)
+                # 第二行：颜色
+                dr.text((tx2, y + 6 + int(base_fs * 1.15)),
+                        _strip_emoji(str(b.get("color_name") or "")),
+                        font=f_small, fill=sub_rgb)
+                # 第三行：粒子 + 价格
+                pn = str(b.get("particle_name") or "")
+                price = f"{b.get('price')} 分" if b.get("price") is not None else "?"
+                third = f"{pn + ' · ' if pn else ''}{price}"
+                dr.text((tx2, y + 6 + int(base_fs * 2.2)),
+                        _strip_emoji(third), font=f_small, fill=accent_rgb)
+                y += FL_ROW_H
+            if len(fl) > 8:
+                dr.text((PAD + 4, y), f"…… 还有 {len(fl) - 8} 个",
+                        font=f_tiny, fill=sub_rgb)
+
+        return c._png_bytes(img)
 
     def _text_card(self, text: str, icons=None) -> Optional[bytes]:
         """把任意一段文字画成卡片（和查蛋同款样式）。命中缓存直接返回。"""
@@ -2478,20 +2730,20 @@ class LkMarketNotify(Star):
         else:
             out.append("———— 当前没有在售 ————")
 
-        # 花种货架
+        # 花种货架（外观放精灵名前面）
         fl = flowers or []
         if fl:
             out.append(f"———— 在售花种 {len(fl)} 个 ————")
             for b in fl[:12]:
+                look = str(b.get("appearance_txt") or "未标注")
+                sp = str(b.get("species") or b.get("name") or "")
                 bits = [str(b.get("color_name") or "颜色未知")]
-                bits.append(str(b.get("appearance_txt") or "未标注"))
                 if b.get("particle_name"):
                     bits.append(str(b["particle_name"]))
                 price = b.get("price")
                 tail = f"{price} 分" if price is not None else "?"
-                sp = str(b.get("species") or b.get("name") or "")
-                out.append(f"· {sp} · {' · '.join(bits)} · {tail}"
-                           if sp else f"· {' · '.join(bits)} · {tail}")
+                head = f"{look} {sp}".strip()
+                out.append(f"· {head} · {' · '.join(bits)} · {tail}")
             if len(fl) > 12:
                 out.append(f"…… 还有 {len(fl) - 12} 个")
         return "\n".join(out)
@@ -2768,16 +3020,16 @@ class LkMarketNotify(Star):
         return out
 
     def _flower_line(self, b: Dict[str, Any]) -> str:
-        """一条花种的简短说明。"""
+        """一条花种的简短说明。外观（炫彩/异色）放精灵名前面。"""
+        look = str(b.get("appearance_txt") or "未标注")
+        sp = str(b.get("species") or b.get("name") or "")
         bits = [str(b.get("color_name") or "颜色未知")]
-        look = b.get("appearance_txt") or "未标注"
-        bits.append(look)
         if b.get("particle_name"):
-            bits.append(b["particle_name"])
+            bits.append(str(b["particle_name"]))
         price = b.get("price")
         tail = f"{price} 分" if price is not None else "?"
         seller = str(b.get("seller") or "").strip()
-        line = f"· {b.get('species') or b.get('name')} · {' · '.join(bits)} · {tail}"
+        line = f"· {look} {sp} · {' · '.join(bits)} · {tail}"
         if seller:
             line += f" · {seller}"
         return line
@@ -4309,6 +4561,16 @@ class LkMarketNotify(Star):
                                                  b.get("price") or 0))
                 except Exception as e:
                     logger.warning(f"[查ID] 拉花种失败: {type(e).__name__}: {e}")
+            # 预拉花种的官方色卡图（异步，卡片里要贴）
+            _flower_imgs: Dict[Any, bytes] = {}
+            for _b in _flowers[:8]:
+                try:
+                    _im = await self._chroma_card_bytes(_b.get("particle_id"),
+                                                        _b.get("color_id"))
+                    if _im:
+                        _flower_imgs[id(_b)] = _im
+                except Exception:
+                    pass
             out = self._merchant_block(data, mark, _flowers)
             text = out + ("\n" + note if note else "")
             _cands = self._sort_candidates(data)
@@ -4354,7 +4616,8 @@ class LkMarketNotify(Star):
                         str(data.get("seller") or ""),
                         (data.get("merchant") or {}).get("avatar") or "")
                     png = await asyncio.to_thread(
-                        self._merchant_card, data, mark, avatar, _flowers)
+                        self._merchant_card, data, mark, avatar,
+                        _flowers, _flower_imgs)
                     if png is None:
                         # 渲染器说"画不了"（Pillow / card.py 缺失），得让人知道
                         text += "\n（图片没出来：卡片渲染器不可用，发 /诊断 看详情）"
