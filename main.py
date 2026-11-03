@@ -78,7 +78,7 @@ def _card():
 
 _PLUGIN_DIR = Path(__file__).resolve().parent
 _PLUGIN_NAME = "astrbot_plugin_lk_egg"
-VERSION = "1.60.0"
+VERSION = "1.61.0"
 
 
 def _data_dir() -> Path:
@@ -141,7 +141,7 @@ def _save_state(state: Dict[str, Any]) -> None:
     "astrbot_plugin_lk_egg",
     "MIKU013970 & DeepSeek",
     "蛋神助手全功能 + 炫彩花种订阅",
-    "1.60.0",
+    "1.61.0",
 )
 class LkMarketNotify(Star):
     def __init__(self, context: Context, config: AstrBotConfig = None):
@@ -2462,6 +2462,8 @@ class LkMarketNotify(Star):
 
     async def _flower_reply(self, event: Any, query: str):
         """「花种 xxx」：查这个精灵在市场上的所有花种（颜色/粒子/价格）。"""
+        if not await self._perm_gate(event, "flower"):
+            return
         rec = self._flower_match_pet(query)
         if not rec:
             return await self._say(
@@ -2551,6 +2553,13 @@ class LkMarketNotify(Star):
     @filter.command("花种订阅")
     async def cmd_flower_sub(self, event: AstrMessageEvent):
         """花种订阅 [颜色/粒子/精灵] [值] —— 有匹配的新花种就推送"""
+        if not await self._perm_gate(event, "flower"):
+            return
+        parts = self._cmd_parts(event)
+        if len(parts) < 2:
+            subs = self._flower_subs()
+        if not await self._perm_gate(event, "flower"):
+            return
         parts = self._cmd_parts(event)
         if len(parts) < 2:
             subs = self._flower_subs()
@@ -2850,6 +2859,8 @@ class LkMarketNotify(Star):
     @filter.command("蛋监控")
     async def cmd_watch(self, event: AstrMessageEvent):
         """蛋监控 添加 Z10014514 / 删除 / 列表"""
+        if not await self._perm_gate(event, "watch"):
+            return
         if self._market_paused():
             yield await self._say(event, self.PAUSED_HINT)
             return
@@ -2906,6 +2917,8 @@ class LkMarketNotify(Star):
     # ---------------------------------------------------------------- 指令：黑白名单
     @filter.command("标")
     async def cmd_mark(self, event: AstrMessageEvent):
+        if not await self._perm_gate(event, "marks"):
+            return
         """标 Z10014514 黑 欠钱不还"""
         args = self._cmd_parts(event)
         if len(args) < 3:
@@ -2939,6 +2952,8 @@ class LkMarketNotify(Star):
 
     @filter.command("取消标")
     async def cmd_unmark(self, event: AstrMessageEvent):
+        if not await self._perm_gate(event, "marks"):
+            return
         args = self._cmd_parts(event)
         if len(args) < 2:
             yield await self._say(event, "用法：取消标 Z10014514")
@@ -2949,6 +2964,8 @@ class LkMarketNotify(Star):
 
     @filter.command("黑名单")
     async def cmd_blacklist(self, event: AstrMessageEvent):
+        if not await self._perm_gate(event, "marks"):
+            return
         rows = self._marks_of("黑")
         if not rows:
             yield await self._say(event, "黑名单是空的")
@@ -2965,6 +2982,8 @@ class LkMarketNotify(Star):
 
     @filter.command("白名单")
     async def cmd_whitelist(self, event: AstrMessageEvent):
+        if not await self._perm_gate(event, "marks"):
+            return
         rows = self._marks_of("白")
         if not rows:
             yield await self._say(event, "白名单是空的")
@@ -2986,6 +3005,8 @@ class LkMarketNotify(Star):
     @filter.command("新上架")
     async def cmd_watch_alias(self, event: AstrMessageEvent):
         """新上架 添加 Z10014514 / 删除 / 列表"""
+        if not await self._perm_gate(event, "watch"):
+            return
         if self._market_paused():
             yield await self._say(event, self.PAUSED_HINT)
             return
@@ -3434,6 +3455,8 @@ class LkMarketNotify(Star):
 
     @filter.command("发码记录")
     async def cmd_code_log(self, event: AstrMessageEvent):
+        if not await self._perm_gate(event, "code"):
+            return
         """发码记录 —— 只有管理员能看"""
         if not self._is_admin(event):
             yield await self._say(event, "发码记录只有管理员能看。\n（在配置里把 QQ 号填进 admin_ids）")
@@ -3461,12 +3484,16 @@ class LkMarketNotify(Star):
 
     @filter.command("发码")
     async def cmd_give_code(self, event: AstrMessageEvent):
+        if not await self._perm_gate(event, "code"):
+            return
         """发码 兑换码 —— 随机发到配置里指定的群"""
         async for r in self._give_code(event):
             yield r
 
     @filter.command("输入兑换码")
     async def cmd_give_code_alias(self, event: AstrMessageEvent):
+        if not await self._perm_gate(event, "code"):
+            return
         """输入兑换码 XXX —— 和「发码」等价"""
         async for r in self._give_code(event):
             yield r
@@ -3483,23 +3510,40 @@ class LkMarketNotify(Star):
         return out
 
     def _sender_id(self, event) -> str:
-        for fn in ("get_sender_id",):
+        for fn in ("get_sender_id", "get_sender"):
             try:
-                v = getattr(event, fn)()
-                if v:
-                    return str(v)
+                f = getattr(event, fn, None)
+                if callable(f):
+                    v = f()
+                    if v:
+                        return str(v)
             except Exception:
                 pass
         try:
             obj = getattr(event, "message_obj", None)
             sender = getattr(obj, "sender", None)
-            for attr in ("user_id", "uin", "id"):
-                v = getattr(sender, attr, None)
-                if v:
-                    return str(v)
+            if sender is not None:
+                # 对象属性
+                for attr in ("user_id", "uin", "id", "qq"):
+                    v = getattr(sender, attr, None)
+                    if v:
+                        return str(v)
+                # dict 形式
+                if isinstance(sender, dict):
+                    for k in ("user_id", "uin", "id", "qq"):
+                        v = sender.get(k)
+                        if v:
+                            return str(v)
         except Exception:
             pass
-        return ""
+        # 最后从 umo 里抠
+        umo = str(getattr(event, "unified_msg_origin", "") or "")
+        m = re.search(r"(?:FriendMessage|PrivateMessage|GroupMessage)[:_\s]*(\d{5,15})",
+                      umo)
+        if m:
+            return m.group(1)
+        parts = [p for p in re.split(r"[:\s_]+", umo) if p.isdigit()]
+        return parts[-1] if parts else ""
 
     def _is_admin(self, event) -> bool:
         admins = self._admin_ids()
@@ -3550,6 +3594,81 @@ class LkMarketNotify(Star):
         except Exception:
             pass
         return out
+
+    # ---------------------------------------------------------------- 功能权限（控制台配置）
+    #: 权限配置缓存：(时间戳, dict)
+    _PERM_CACHE: tuple = (0, {})
+
+    async def _perm_config(self, force: bool = False) -> Dict[str, Any]:
+        """从控制台读 permissions 配置（缓存 60 秒）。"""
+        now = time.time()
+        ts, cache = self._PERM_CACHE
+        if not force and cache and now - ts < 60:
+            return cache
+        try:
+            data = await self._api("/api/permissions")
+            perm = (data or {}).get("permissions") if isinstance(data, dict) else None
+            if isinstance(perm, dict):
+                self._PERM_CACHE = (now, perm)
+                return perm
+        except Exception as e:
+            logger.warning(f"[权限] 读控制台权限失败: {type(e).__name__}: {e}")
+        return cache or {}
+
+    async def _perm_allowed(self, event: Any, feature: str) -> bool:
+        """这个会话/这个人能不能用 feature。
+
+        控制台 permissions.enabled=False → 全放开
+        QQ 在 admins → 放行
+        群号在 allowed_groups / QQ 在 allowed_users → 放行
+        feature 不在 restricted → 放行
+        """
+        perm = await self._perm_config()
+        if not perm or not bool(perm.get("enabled")):
+            return True
+        restricted = [str(x) for x in (perm.get("restricted") or [])]
+        if feature not in restricted:
+            return True
+        # 管理员
+        admins = {str(x).strip() for x in (perm.get("admins") or []) if str(x).strip()}
+        qq = self._sender_id(event)
+        if qq and qq in admins:
+            return True
+        # 群号
+        gid = self._group_id(event)
+        if gid and gid in {str(x).strip() for x in (perm.get("allowed_groups") or [])}:
+            return True
+        # QQ
+        if qq and qq in {str(x).strip() for x in (perm.get("allowed_users") or [])}:
+            return True
+        return False
+
+    @staticmethod
+    def _group_id(event: Any) -> str:
+        """取群号；私聊返回空。"""
+        obj = getattr(event, "message_obj", None)
+        gid = getattr(obj, "group_id", None) if obj is not None else None
+        if gid:
+            return str(gid)
+        umo = str(getattr(event, "unified_msg_origin", "") or "")
+        m = re.search(r"GroupMessage[:\s]+(\d{5,15})", umo)
+        if m:
+            return m.group(1)
+        m = re.search(r"group[:\s_]+(\d{5,15})", umo, re.I)
+        return m.group(1) if m else ""
+
+    async def _perm_gate(self, event: Any, feature: str) -> bool:
+        """权限拦一下：不许就回一句提示并返回 False。"""
+        if await self._perm_allowed(event, feature):
+            return True
+        perm = await self._perm_config()
+        admins = "、".join(str(x) for x in (perm.get("admins") or [])[:3]) or "管理员"
+        await self._say(
+            event,
+            f"🔒 这个功能需要授权\n"
+            f"「{feature}」只对指定的群/QQ 开放，或者找 {admins} 开通。\n"
+            f"（纯图鉴查询不受限制：查询 火花 / 查蛋 火花 照常用）")
+        return False
 
     async def _is_console_admin(self, event) -> bool:
         """当前发消息的人是不是市场控制台管理员。"""
@@ -3645,6 +3764,8 @@ class LkMarketNotify(Star):
 
     async def _lookup_id_result(self, event: Any, q: str):
         """查ID 的核心：ID 大小写归一 + 纯数字补 Z 重试。"""
+        if not await self._perm_gate(event, "lookup_id"):
+            return
         q = str(q or "").strip()
         if not q:
             return await self._say(event, 
@@ -4377,6 +4498,8 @@ class LkMarketNotify(Star):
     # 直接发精灵名字也能查（只认图鉴里存在的名字，不认识的直接不理）
     @filter.command("蛋推送绑定")
     async def cmd_bind(self, event: AstrMessageEvent):
+        if not await self._perm_gate(event, "push"):
+            return
         """在哪个会话发这条指令，就把推送目标绑定到哪个会话（推荐）。"""
         umo = getattr(event, "unified_msg_origin", "") or ""
         if not umo:
@@ -4396,6 +4519,8 @@ class LkMarketNotify(Star):
 
     @filter.command("蛋推送解绑")
     async def cmd_unbind(self, event: AstrMessageEvent):
+        if not await self._perm_gate(event, "push"):
+            return
         umo = getattr(event, "unified_msg_origin", "") or ""
         umos = [u for u in (self.state.get("umos") or []) if u != umo]
         self.state["umos"] = umos
@@ -4404,6 +4529,8 @@ class LkMarketNotify(Star):
 
     @filter.command("蛋推送测试")
     async def cmd_test(self, event: AstrMessageEvent):
+        if not await self._perm_gate(event, "push"):
+            return
         """发一条样例消息，确认推送链路。"""
         if self._market_paused():
             yield await self._say(event, self.PAUSED_HINT)
@@ -4419,6 +4546,8 @@ class LkMarketNotify(Star):
 
     @filter.command("蛋推送状态")
     async def cmd_status(self, event: AstrMessageEvent):
+        if not await self._perm_gate(event, "push"):
+            return
         if self._market_paused():
             yield await self._say(event, self.PAUSED_HINT)
             return
@@ -4443,6 +4572,8 @@ class LkMarketNotify(Star):
 
     @filter.command("蛋推送重置")
     async def cmd_reset(self, event: AstrMessageEvent):
+        if not await self._perm_gate(event, "push"):
+            return
         keep_umos = self.state.get("umos") or []
         self.state = {"seen": [], "started": 0, "umos": keep_umos}
         _save_state(self.state)
