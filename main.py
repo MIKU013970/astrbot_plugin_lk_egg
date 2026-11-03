@@ -103,7 +103,7 @@ def _strip_emoji(text: str) -> str:
 
 _PLUGIN_DIR = Path(__file__).resolve().parent
 _PLUGIN_NAME = "astrbot_plugin_lk_egg"
-VERSION = "1.72.0"
+VERSION = "1.72.1"
 
 
 def _data_dir() -> Path:
@@ -166,7 +166,7 @@ def _save_state(state: Dict[str, Any]) -> None:
     "astrbot_plugin_lk_egg",
     "MIKU013970 & DeepSeek",
     "洛克小肥鱼全功能 + 炫彩花种订阅",
-    "1.72.0",
+    "1.72.1",
 )
 class LkMarketNotify(Star):
     def __init__(self, context: Context, config: AstrBotConfig = None):
@@ -2728,6 +2728,28 @@ class LkMarketNotify(Star):
             line += f" · {seller}"
         return line
 
+    #: 相似度阈值：字符覆盖率 >= 这个就算匹配
+    FLOWER_SIM_MIN = 0.5
+
+    @staticmethod
+    def _flower_sim(key: str, target: str) -> float:
+        """两个名字有多像（0~1）：按「用户输入的字有多少被目标覆盖」算。"""
+        a = set(str(key or "").replace(" ", "").replace("-", "").replace("·", ""))
+        b = set(str(target or "").replace(" ", "").replace("-", "").replace("·", ""))
+        if not a or not b:
+            return 0.0
+        return len(a & b) / len(a)
+
+    def _flower_pick_similar(self, key: str, candidates) -> List[str]:
+        """从候选名里挑出跟 key 像的（覆盖率 >= 阈值），按相似度降序。"""
+        scored = []
+        for c in candidates:
+            s = self._flower_sim(key, c)
+            if s >= self.FLOWER_SIM_MIN:
+                scored.append((s, c))
+        scored.sort(key=lambda x: -x[0])
+        return [c for _s, c in scored]
+
     async def _flower_by_trait(self, event: Any, q: str):
         """按粒子 / 颜色 / 异色筛选花种。"""
         key = q.strip()
@@ -2760,29 +2782,32 @@ class LkMarketNotify(Star):
             if not hits:
                 return await self._say(event, "🌸 现在市场上没有炫彩的花种。")
         else:
-            # ② 粒子
-            for pn in self.FLOWER_PARTICLES:
-                if pn in key or key in pn:
-                    kind = f"粒子「{pn}」"
-                    hits = [b for b in snap if pn in str(b.get("particle_name") or "")]
-                    break
-            # ③ 颜色（完整匹配 → 退一步按前缀匹配，浅橙青 能命中 浅橙蓝）
+            # ② 粒子：先在市场里收集真实粒子名，再按相似度挑
+            real_parts = sorted({str(b.get("particle_name") or "")
+                                 for b in snap} - {""})
+            pool = list(dict.fromkeys(list(self.FLOWER_PARTICLES) + real_parts))
+            picked = self._flower_pick_similar(key, pool)
+            if picked:
+                # 用市场里真实存在的那个名字
+                use = next((p for p in picked if p in real_parts), picked[0])
+                kind = f"粒子「{use}」" if use == key else f"粒子「{use}」（找的是「{key}」）"
+                hits = [b for b in snap if use in str(b.get("particle_name") or "")]
+
+            # ③ 颜色：按相似度（浅橙青 → 浅橙蓝 这种也算）
             if not hits:
-                hits = [b for b in snap
-                        if key in str(b.get("color_name") or "")
-                        or key.replace("色", "") in str(b.get("color_name") or "")]
-                if hits:
-                    kind = f"颜色「{key}」"
-            if not hits and len(key) >= 2:
-                for n in (3, 2):
-                    if len(key) < n:
-                        continue
-                    sub = key[:n]
-                    h = [b for b in snap if sub in str(b.get("color_name") or "")]
-                    if h:
-                        hits = h
-                        kind = f"颜色「{sub}」"
-                        break
+                real_colors = sorted({str(b.get("color_name") or "")
+                                      for b in snap} - {""})
+                picked_c = self._flower_pick_similar(key, real_colors)
+                if picked_c:
+                    # 取最像的那几个（同分的都算）
+                    top_s = self._flower_sim(key, picked_c[0])
+                    near = [c for c in picked_c
+                            if self._flower_sim(key, c) >= top_s - 0.001]
+                    kind = (f"颜色「{picked_c[0]}」"
+                            if len(near) == 1 else
+                            f"颜色「{key}」相近的 {len(near)} 种")
+                    hits = [b for b in snap
+                            if str(b.get("color_name") or "") in near]
 
         if not hits:
             # 最后兜底：给出市场里有哪些粒子 / 颜色可选
@@ -2893,6 +2918,17 @@ class LkMarketNotify(Star):
         lines.append("订阅：花种订阅 颜色/粒子/精灵")
         return await self._say(event, "\n".join(lines))
 
+    #: 同一条消息只让一个花种入口响应（否则 command + regex 会各回一张图）
+    @staticmethod
+    def _flower_claim(event: Any) -> bool:
+        if getattr(event, "_lk_flower_done", False):
+            return False
+        try:
+            event._lk_flower_done = True
+        except Exception:
+            pass
+        return True
+
     async def _flower_reply(self, event: Any, query: str):
         """「花种 xxx」智能识别：
 
@@ -2908,12 +2944,35 @@ class LkMarketNotify(Star):
         if not q:
             return await self._flower_all(event)
 
-        # ① 先试图鉴精灵名（最常见）
+        low = q.lower()
+
+        # ① 异色 / 炫彩（先判，这俩是明确的枚举）
+        if low in ("异色", "shiny", "异色花种", "异色炫彩",
+                   "炫彩", "colorful", "炫彩花种"):
+            return await self._flower_by_trait(event, q)
+
+        # ② 粒子 / 颜色：跟市场里真实存在的名字比相似度
+        #    必须放在精灵名前面 —— 否则「星星」会被模糊匹配成精灵「星星眼」，
+        #    「方」会被匹配成「机械方方」。
+        snap = await self._flower_snapshot()
+        if snap:
+            parts = sorted({str(b.get("particle_name") or "") for b in snap} - {""})
+            if parts:
+                best = max(parts, key=lambda x: self._flower_sim(q, x))
+                if self._flower_sim(q, best) >= 0.8:
+                    return await self._flower_by_trait(event, q)
+            colors = sorted({str(b.get("color_name") or "") for b in snap} - {""})
+            if colors:
+                best = max(colors, key=lambda x: self._flower_sim(q, x))
+                if self._flower_sim(q, best) >= 0.5:
+                    return await self._flower_by_trait(event, q)
+
+        # ③ 图鉴精灵名
         rec = self._flower_match_pet(q)
         if rec:
             return await self._flower_by_species(event, rec, q)
 
-        # ② 再按粒子 / 颜色 / 异色筛
+        # ④ 都没命中 → 让筛选逻辑给「市场里有什么」的提示
         return await self._flower_by_trait(event, q)
 
     @filter.command("花种")
