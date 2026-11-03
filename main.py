@@ -103,7 +103,7 @@ def _strip_emoji(text: str) -> str:
 
 _PLUGIN_DIR = Path(__file__).resolve().parent
 _PLUGIN_NAME = "astrbot_plugin_lk_egg"
-VERSION = "1.67.0"
+VERSION = "1.68.0"
 
 
 def _data_dir() -> Path:
@@ -166,7 +166,7 @@ def _save_state(state: Dict[str, Any]) -> None:
     "astrbot_plugin_lk_egg",
     "MIKU013970 & DeepSeek",
     "蛋神助手全功能 + 炫彩花种订阅",
-    "1.67.0",
+    "1.68.0",
 )
 class LkMarketNotify(Star):
     def __init__(self, context: Context, config: AstrBotConfig = None):
@@ -3064,55 +3064,119 @@ class LkMarketNotify(Star):
             return None
         return self._find_species(q)
 
-    MENU = (
-        "🥚 蛋神助手 · 可用指令\n"
+    #: 帮助菜单分段 —— 按权限拼（没权限的段不显示）
+    MENU_HEAD = "🥚 蛋神助手 · 可用指令"
+
+    MENU_BASIC = (
         "—————— 查蛋 ——————\n"
         "查询 火花               区间数/蛋组/进化链/身高体重/过线值\n"
         "查蛋 火花               跟「查询」完全一样\n"
         "/查询火花               不加空格也行（前面带斜线）\n"
         "查询 火神               进化链上任意名字都行\n"
         "查询 鸭吉吉             多形态会列出每种规格\n"
-        "查询 治愈兔 最近        最近成交：4 种牌子各 10 笔\n"
         "查询 拟人组             按蛋组列全部精灵（一阶段名称）\n"
         "查询 组                 看有哪些蛋组、各多少只\n"
         "0.32 2.12               身高体重查蛋（身高按米算）\n"
-        "34/3.617                身高厘米 + 体重千克\n"
+        "34/3.617                身高厘米 + 体重千克（斜杠也行）\n"
         "34 3617                 整数体重按克算\n"
-        "（查蛋会显示真实孵化概率，低于 1% 默认隐藏）\n"
+        "（查蛋会显示真实孵化概率，低于 1% 默认隐藏）"
+    )
+
+    MENU_MARKET = (
+        "—————— 市场价 ——————\n"
+        "查询 火花 最近          最近成交：4 种牌子各 10 笔\n"
+        "（查蛋时会顺带显示实时行情）"
+    )
+
+    MENU_FLOWER = (
         "—————— 花种（炫彩花种市场）——————\n"
-        "花种                     列市场上所有花种品种（挂单数/最低价）\n"
-        "花种 罗隐                看这只精灵市面上的花种：颜色/粒子/价格\n"
+        "花种                     列市场上所有花种品种\n"
+        "花种 罗隐                看这只精灵的颜色/粒子/价格\n"
         "花种 卡拉波斯            进化链任意阶段名都行\n"
         "花种订阅 颜色 浅橙青      订阅某个颜色\n"
-        "花种订阅 粒子 四角星      订阅某种粒子（四角星/方块/爱心）\n"
-        "花种订阅 精灵 罗隐        订阅某只精灵的花种\n"
+        "花种订阅 粒子 四角星      订阅某种粒子\n"
+        "花种订阅 精灵 罗隐        订阅某只精灵\n"
         "花种订阅 / 花种订阅 列表  看当前订阅\n"
         "花种订阅 删除 1          删掉第 1 条\n"
-        "（有匹配的新花种上架就推给你，异色会标出来）\n"
+        "（有匹配的新花种上架就推给你）"
+    )
+
+    MENU_ID = (
         "—————— 查助手（商家）——————\n"
-        "查ID Z10014514          昵称/上架/售出/好评差评/货架明细\n"
-        "查ID z10014514          大小写都行 / 纯数字自动补 Z\n"
-        "查询ID xxx              和 查ID 完全一样\n"
+        "查ID Z10014514          昵称/绑定角色/上架/售出/好评差评\n"
+        "查询ID xxx              和 查ID 完全一样"
+    )
+
+    MENU_MARKS = (
         "—————— 名单 ——————\n"
         "标 Z10014514 黑 备注     加黑名单（备注可省略）\n"
         "标 Z10014514 白 备注     加白名单\n"
         "取消标 Z10014514         移出名单\n"
-        "黑名单 / 白名单          列全部\n"
+        "黑名单 / 白名单          列全部"
+    )
+
+    MENU_WATCH = (
         "—————— 新上架提醒 ——————\n"
         "新上架 添加 Z10014514    开始监控这个商家\n"
         "新上架 删除 Z10014514    取消监控\n"
-        "新上架 列表              看监控列表\n"
+        "新上架 列表              看监控列表"
+    )
+
+    MENU_PUSH = (
         "—————— 推送 ——————\n"
-        "蛋推送绑定 / 解绑 / 测试 / 状态 / 重置\n"
-        "（购买成功默认只私聊管理员；要发群改 buy_notify_target）\n"
+        "蛋推送绑定 / 解绑 / 测试 / 状态 / 重置"
+    )
+
+    MENU_TAIL = (
         "—————— 其它 ——————\n"
         "UID 503671642           用游戏 UID 查等级/在线/家园/收集度\n"
-        "改绑记录 / 改名记录      看绑定角色有没有被换绑 / 改名（仅管理员）\n"
         "帮助 / 菜单              看这张卡片\n"
-        "诊断                     管理员用：查图片链路哪里挂了\n"
         "回复默认都是图片         配置里关掉 reply_as_image 就发文字\n"
-        "（提示：直接发精灵名字的功能已关闭，请用「查询 名字」）\n"
+        "（提示：直接发精灵名字的功能已关闭，请用「查询 名字」）"
     )
+
+    #: 完整版（管理员看的，全列出）
+    MENU = "\n".join([MENU_HEAD, MENU_BASIC, MENU_MARKET, MENU_FLOWER,
+                     MENU_ID, MENU_MARKS, MENU_WATCH, MENU_PUSH, MENU_TAIL])
+
+    async def _menu_for(self, event: Any) -> str:
+        """按这个人的权限拼菜单：没权限的功能整段不显示。"""
+        parts = [self.MENU_HEAD, self.MENU_BASIC]
+        if await self._perm_allowed(event, "market"):
+            parts.append(self.MENU_MARKET)
+        if await self._perm_allowed(event, "flower"):
+            parts.append(self.MENU_FLOWER)
+        if await self._perm_allowed(event, "lookup_id"):
+            parts.append(self.MENU_ID)
+        if await self._perm_allowed(event, "marks"):
+            parts.append(self.MENU_MARKS)
+        if await self._perm_allowed(event, "watch"):
+            parts.append(self.MENU_WATCH)
+        if await self._perm_allowed(event, "push"):
+            parts.append(self.MENU_PUSH)
+
+        tail = self.MENU_TAIL
+        # 管理员才看得到的：诊断 / 改绑改名记录
+        if self._is_admin(event):
+            tail = tail.replace(
+                "帮助 / 菜单              看这张卡片\n",
+                "帮助 / 菜单              看这张卡片\n"
+                "诊断                     管理员用：查图片链路哪里挂了\n"
+                "改绑记录 / 改名记录      看绑定角色有没有被换绑 / 改名\n")
+        parts.append(tail)
+
+        # 有被隐藏的功能时，末尾提示一句
+        hidden = []
+        for feat, label in (("market", "市场价"), ("flower", "花种"),
+                            ("lookup_id", "查ID"), ("marks", "名单"),
+                            ("watch", "新上架监控"), ("push", "蛋推送")):
+            if not await self._perm_allowed(event, feat):
+                hidden.append(label)
+        if hidden:
+            parts.append("（{} 需要管理员开通，找管理员申请）".format("、".join(hidden))
+                         if len(hidden) < 6 else
+                         "（上面只列了公开功能；查ID / 花种 / 监控 / 推送 等需要管理员开通）")
+        return "\n".join(parts)
 
     FORMAT_HINTS = {
         "查询": "格式：查询 火花（查蛋 也一样）\n进化链上任意名字都行：查询 火神 / 查询 焰火\n查蛋组：查询 拟人组 / 查询 拟人 / 查询 海洋\n查最近成交：查询 火花 最近",
@@ -3309,7 +3373,7 @@ class LkMarketNotify(Star):
 
     @filter.command("帮助")
     async def cmd_help(self, event: AstrMessageEvent):
-        yield await self._say(event, self.MENU)
+        yield await self._say(event, await self._menu_for(event))
 
     @filter.command("新上架")
     async def cmd_watch_alias(self, event: AstrMessageEvent):
@@ -3412,7 +3476,8 @@ class LkMarketNotify(Star):
                 return                    # 不是精灵名 / 组名就闭嘴
             yield await self._group_reply(event, grp)
             return
-        _t, _p = await self._species_payload(rec)
+        _wm = await self._perm_allowed(event, "market")
+        _t, _p = await self._species_payload(rec, with_market=_wm)
         yield await self._reply(event, _t, _p)
 
     @filter.regex(r"^\s*/?\s*\d+(?:\.\d+)?\s*[/\s,，、x×*]\s*\d+(?:\.\d+)?\s*$")
@@ -3756,18 +3821,30 @@ class LkMarketNotify(Star):
 
     async def _lookup_id_result(self, event: Any, q: str):
         """查ID 的核心：ID 大小写归一 + 纯数字补 Z 重试。"""
+        q = str(q or "").strip()
+
+        # ① 先查受保护名单：**必须在权限检查之前**
+        #    否则没权限的人查了受保护对象会直接返回，管理员收不到通知。
+        if q:
+            _prot = await self._protected_hit(q)
+            if _prot:
+                await self._protected_notify(event, q, _prot)
+                if not await self._perm_allowed(event, "lookup_id"):
+                    # 连查ID 权限都没有：只回权限提示（不给任何信息）
+                    return await self._say(
+                        event,
+                        "🔒 这个功能需要授权\n"
+                        "「lookup_id」只对指定的群/QQ 开放，或者找管理员开通。\n"
+                        "（纯图鉴查询不受限制：查询 火花 / 查蛋 火花 照常用）")
+                return await self._say(
+                    event, "这个商家信息不对外提供。\n（有疑问请联系管理员）")
+
+        # ② 再走权限
         if not await self._perm_gate(event, "lookup_id"):
             return
-        q = str(q or "").strip()
         if not q:
             return await self._say(event, 
                 "格式：查ID Z10014514\n也可以用昵称：查ID 咕咕\n（大小写、空格都随意）")
-        # 受保护对象：不返回结果，只通知管理员
-        _hit = await self._protected_hit(q)
-        if _hit:
-            await self._protected_notify(event, q, _hit)
-            return await self._say(
-                event, "这个商家信息不对外提供。\n（有疑问请联系管理员）")
         if self._market_paused():
             return await self._say(event, self.PAUSED_HINT)
 
@@ -4224,11 +4301,15 @@ class LkMarketNotify(Star):
                 f"「{q}」暂未收录。\n"
                 f"（传说精灵、活动限定这些官方图鉴没公开的品种查不到；"
                 f"知道身高体重就直接发，比如 34/3.617 或 0.34 3.617）")
-        text, png = await self._species_payload(rec, q)
+        _with_market = await self._perm_allowed(event, "market")
+        text, png = await self._species_payload(rec, q,
+                                                with_market=_with_market)
         return await self._reply(event, text, png, t0=_t0)
 
     async def _recent_reply(self, event: Any, name: str):
         """最近成交：走控制台 /api/market/recent（底层是 getPrivateMarketTrend）。"""
+        if not await self._perm_gate(event, "market"):
+            return
         q = str(name or "").strip()
         if not q:
             return await self._say(event, "格式：查询 火花 最近")
