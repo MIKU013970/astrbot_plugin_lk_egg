@@ -103,7 +103,7 @@ def _strip_emoji(text: str) -> str:
 
 _PLUGIN_DIR = Path(__file__).resolve().parent
 _PLUGIN_NAME = "astrbot_plugin_lk_egg"
-VERSION = "1.69.0"
+VERSION = "1.70.0"
 
 
 def _data_dir() -> Path:
@@ -166,7 +166,7 @@ def _save_state(state: Dict[str, Any]) -> None:
     "astrbot_plugin_lk_egg",
     "MIKU013970 & DeepSeek",
     "洛克小肥鱼全功能 + 炫彩花种订阅",
-    "1.69.0",
+    "1.70.0",
 )
 class LkMarketNotify(Star):
     def __init__(self, context: Context, config: AstrBotConfig = None):
@@ -4005,6 +4005,13 @@ class LkMarketNotify(Star):
             bits.append(f"{db}dB")
         if eg:
             bits.append(eg.replace(" / ", "/"))
+        # 身上带蛋的标一下
+        try:
+            ecnt = int(r.get("eggCount") or 0)
+        except (TypeError, ValueError):
+            ecnt = 0
+        if r.get("hasHomeEgg") or ecnt > 0:
+            bits.append(f"🥚带蛋×{ecnt}" if ecnt > 1 else "🥚带蛋")
         tail = " ".join(str(x) for x in bits if str(x).strip())
         return f"{idx}. {name}{(' ' + tail) if tail else ''}"
 
@@ -4069,8 +4076,29 @@ class LkMarketNotify(Star):
         if public is False:
             head.append("未公开")
         lines.append(" · ".join(head))
-        if egg_status.get("count"):
-            lines.append(f"家园里的蛋：{egg_status.get('count')} 个")
+        # 生蛋状态（不管有没有都说清楚）
+        try:
+            egg_cnt = int(egg_status.get("count") or 0)
+        except (TypeError, ValueError):
+            egg_cnt = 0
+        details = [x for x in (egg_status.get("eggDetails") or [])
+                   if isinstance(x, dict)]
+        scene = [x for x in (home.get("sceneEggs") or []) if isinstance(x, dict)]
+        if egg_cnt > 0 or details:
+            lines.append(f"🥚 家园里现在有 {egg_cnt or len(details)} 个蛋：")
+            for ed in details[:10]:
+                nm = str(ed.get("name") or "未知蛋")
+                rarity = str(ed.get("rarity") or "").strip()
+                lines.append(f"  · {nm}" + (f"（{rarity}）" if rarity else ""))
+            if len(details) > 10:
+                lines.append(f"  …… 还有 {len(details) - 10} 个")
+            if scene:
+                lines.append(f"  （场景里另有 {len(scene)} 个）")
+        elif egg_status.get("status"):
+            # 接口明确回过状态但没蛋
+            lines.append("🥚 家园里现在没有蛋")
+        else:
+            lines.append("🥚 蛋状态：接口没给（对方家园可能没公开）")
 
         if residents:
             lines.append(f"———— 住民 {len(residents)} 只 ————")
