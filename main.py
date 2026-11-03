@@ -103,7 +103,7 @@ def _strip_emoji(text: str) -> str:
 
 _PLUGIN_DIR = Path(__file__).resolve().parent
 _PLUGIN_NAME = "astrbot_plugin_lk_egg"
-VERSION = "1.77.3"
+VERSION = "1.78.0"
 
 
 def _data_dir() -> Path:
@@ -166,7 +166,7 @@ def _save_state(state: Dict[str, Any]) -> None:
     "astrbot_plugin_lk_egg",
     "MIKU013970 & DeepSeek",
     "洛克小肥鱼全功能 + 炫彩花种订阅",
-    "1.77.3",
+    "1.78.0",
 )
 class LkMarketNotify(Star):
     def __init__(self, context: Context, config: AstrBotConfig = None):
@@ -2114,9 +2114,23 @@ class LkMarketNotify(Star):
             imgs = flower_imgs or {}
             for b in fl_shown:
                 cy = y + (FL_RH - FL_CH) // 2
-                raw = imgs.get(id(b)) or imgs.get(
-                    (b.get("particle_id"), b.get("color_id")))
                 placed = False
+                # 异色：画异色精灵图标（异色没有炫彩色卡）
+                thumb = self._flower_thumb_path(b)
+                if thumb:
+                    try:
+                        tim = Image.open(thumb).convert("RGBA")
+                        side = min(FL_CH, FL_CW)
+                        tim = tim.resize((side, side), Image.LANCZOS)
+                        img.paste(tim, (PAD + (FL_CW - side) // 2,
+                                        cy + (FL_CH - side) // 2), tim)
+                        placed = True
+                    except Exception:
+                        placed = False
+                raw = None
+                if not placed:
+                    raw = imgs.get(id(b)) or imgs.get(
+                        (b.get("particle_id"), b.get("color_id")))
                 if raw:
                     try:
                         import io as _io
@@ -2766,6 +2780,28 @@ class LkMarketNotify(Star):
                 lines.append(f"   备注 {b['remark']}")
         return "\n".join(lines)
 
+    def _flower_is_shiny(self, b: Dict[str, Any]) -> bool:
+        """这条花种是不是异色（异色没有炫彩色卡）。"""
+        return str(b.get("appearance") or "").strip().lower() == "shiny"
+
+    def _flower_thumb_path(self, b: Dict[str, Any]) -> Optional[str]:
+        """异色花种 → 异色精灵图标路径；炫彩/其它 → None（用色卡）。"""
+        if not self._flower_is_shiny(b):
+            return None
+        c = _card()
+        if c is None:
+            return None
+        nm = str(b.get("species") or b.get("name") or "").strip()
+        if not nm:
+            return None
+        try:
+            p = c.icon_path("shiny", nm)
+            if p:
+                return p
+            return c.icon_path("pet", nm)
+        except Exception:
+            return None
+
     @staticmethod
     def _hex_to_rgb(v: str, fallback=(200, 200, 200)) -> tuple:
         """#RRGGBB → (r, g, b)。"""
@@ -2883,10 +2919,23 @@ class LkMarketNotify(Star):
             sx = PAD
             sy = y + (ROW_H - SW) // 2
 
-            # 优先贴官方色卡图（两个色块 + 粒子效果都在这张图里）
-            card_img = await self._chroma_card_bytes(b.get("particle_id"),
-                                                     b.get("color_id"))
+            # 异色 → 异色精灵图标；炫彩 → 官方色卡图
+            card_img = None
             placed = False
+            _thumb = self._flower_thumb_path(b)
+            if _thumb:
+                try:
+                    _tim = Image.open(_thumb).convert("RGBA")
+                    _side = min(SW * 2 + GAP, ROW_H - 8)
+                    _tim = _tim.resize((_side, _side), Image.LANCZOS)
+                    img.paste(_tim, (sx + (SW * 2 + GAP - _side) // 2,
+                                     y + (ROW_H - _side) // 2), _tim)
+                    placed = True
+                except Exception:
+                    placed = False
+            if not placed:
+                card_img = await self._chroma_card_bytes(b.get("particle_id"),
+                                                         b.get("color_id"))
             if card_img:
                 try:
                     import io as _io
@@ -3383,11 +3432,24 @@ class LkMarketNotify(Star):
                 dr.rectangle([PAD - 6, y + 2, W - PAD + 6, y + ROW_H - 4],
                              fill=card_bg)
 
-            # 左：官方色卡图
-            img_bytes = await self._chroma_card_bytes(b.get("particle_id"),
-                                                      b.get("color_id"))
+            # 左：异色 → 异色图标；炫彩 → 官方色卡图
             cx, cy = PAD, y + (ROW_H - CARD_H) // 2
             placed = False
+            thumb = self._flower_thumb_path(b)
+            if thumb:
+                try:
+                    tim = Image.open(thumb).convert("RGBA")
+                    side = min(CARD_H, CARD_W)
+                    tim = tim.resize((side, side), Image.LANCZOS)
+                    img.paste(tim, (cx + (CARD_W - side) // 2,
+                                    cy + (CARD_H - side) // 2), tim)
+                    placed = True
+                except Exception:
+                    placed = False
+            img_bytes = None
+            if not placed:
+                img_bytes = await self._chroma_card_bytes(b.get("particle_id"),
+                                                          b.get("color_id"))
             if img_bytes:
                 try:
                     oim = Image.open(_io.BytesIO(img_bytes)).convert("RGBA")
