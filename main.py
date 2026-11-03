@@ -103,7 +103,7 @@ def _strip_emoji(text: str) -> str:
 
 _PLUGIN_DIR = Path(__file__).resolve().parent
 _PLUGIN_NAME = "astrbot_plugin_lk_egg"
-VERSION = "1.70.0"
+VERSION = "1.70.1"
 
 
 def _data_dir() -> Path:
@@ -166,7 +166,7 @@ def _save_state(state: Dict[str, Any]) -> None:
     "astrbot_plugin_lk_egg",
     "MIKU013970 & DeepSeek",
     "洛克小肥鱼全功能 + 炫彩花种订阅",
-    "1.70.0",
+    "1.70.1",
 )
 class LkMarketNotify(Star):
     def __init__(self, context: Context, config: AstrBotConfig = None):
@@ -3969,6 +3969,62 @@ class LkMarketNotify(Star):
             logger.warning(f"[家园] UID 反查失败: {type(e).__name__}: {e}")
         return ""
 
+    @staticmethod
+    def _ago_text(iso: str) -> str:
+        """把 ISO 时间 / 毫秒时间戳 变成「X分钟前 / X小时前 / X天前」。"""
+        s = str(iso or "").strip()
+        if not s:
+            return ""
+        t = None
+        # 2026-10-31T00:47:16.876Z
+        m = re.match(r"(\d{4})-(\d{2})-(\d{2})[T ](\d{2}):(\d{2}):(\d{2})",
+                     s)
+        if m:
+            try:
+                tt = time.strptime("%s-%s-%s %s:%s:%s" % m.groups(),
+                                   "%Y-%m-%d %H:%M:%S")
+                # ISO 里的时间是 UTC，要用 timegm 转成时间戳（mktime 会当本地）
+                import calendar as _cal
+                t = _cal.timegm(tt)
+            except Exception:
+                t = None
+        if t is None:
+            try:
+                n = float(s)
+                if n > 1e12:
+                    n /= 1000.0
+                t = n
+            except Exception:
+                return ""
+        if t is None:
+            return ""
+        diff = time.time() - t
+        if diff < 0:
+            return "刚更新"
+        if diff < 90:
+            return "刚刚"
+        if diff < 3600:
+            return f"{int(diff // 60)} 分钟前"
+        if diff < 86400:
+            return f"{int(diff // 3600)} 小时前"
+        d = int(diff // 86400)
+        return f"{d} 天前" if d < 30 else f"{d // 30} 个月前"
+
+    @staticmethod
+    def _stamp_text(iso: str) -> str:
+        """ISO → 本地「MM-DD HH:MM」。"""
+        s = str(iso or "").strip()
+        m = re.match(r"(\d{4})-(\d{2})-(\d{2})[T ](\d{2}):(\d{2}):(\d{2})", s)
+        if not m:
+            return ""
+        try:
+            import calendar as _cal
+            tt = time.strptime("%s-%s-%s %s:%s:%s" % m.groups(), "%Y-%m-%d %H:%M:%S")
+            lt = time.localtime(_cal.timegm(tt))     # UTC 时间戳 → 本地时间
+            return time.strftime("%m-%d %H:%M", lt)
+        except Exception:
+            return ""
+
     def _home_resident_line(self, idx: int, r: Dict[str, Any]) -> str:
         """一行住民信息。"""
         name = str(r.get("name") or "?")
@@ -4134,9 +4190,26 @@ class LkMarketNotify(Star):
         else:
             lines.append("（家园里没有住民，或者家园没公开）")
 
-        cap = home.get("capturedAt")
+        # 数据新鲜度：平台缓存，不是实时抓的，得让人知道多旧
+        cap = home.get("capturedAt") or egg_status.get("queriedAt")
         if cap:
-            lines.append(f"（数据时间 {str(cap)[:19].replace('T', ' ')}）")
+            stamp = self._stamp_text(cap) or str(cap)[:16].replace("T", " ")
+            ago = self._ago_text(cap)
+            if ago:
+                lines.append(f"（数据时间 {stamp} · {ago}）")
+            else:
+                lines.append(f"（数据时间 {stamp}）")
+            # 太旧就明确提醒
+            d = 0
+            m2 = re.match(r"(\d+) 天前", ago)
+            if m2:
+                d = int(m2.group(1))
+            if d >= 3:
+                lines.append("⚠️ 这是平台缓存的老数据，对方家园现在可能已经变了")
+            elif d >= 1:
+                lines.append("（不是实时的，平台有缓存；想看最新可以晚点再查）")
+            else:
+                lines.append("（平台缓存数据，不是实时抓的）")
         return await self._say(event, "\n".join(lines))
 
     @filter.command("家园")
