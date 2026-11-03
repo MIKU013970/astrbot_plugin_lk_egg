@@ -103,7 +103,7 @@ def _strip_emoji(text: str) -> str:
 
 _PLUGIN_DIR = Path(__file__).resolve().parent
 _PLUGIN_NAME = "astrbot_plugin_lk_egg"
-VERSION = "1.64.0"
+VERSION = "1.65.0"
 
 
 def _data_dir() -> Path:
@@ -166,7 +166,7 @@ def _save_state(state: Dict[str, Any]) -> None:
     "astrbot_plugin_lk_egg",
     "MIKU013970 & DeepSeek",
     "蛋神助手全功能 + 炫彩花种订阅",
-    "1.64.0",
+    "1.65.0",
 )
 class LkMarketNotify(Star):
     def __init__(self, context: Context, config: AstrBotConfig = None):
@@ -2738,35 +2738,74 @@ class LkMarketNotify(Star):
                 logger.warning(f"[出图] 花种卡异常: {type(e).__name__}: {e}")
         return await self._reply(event, text, png)
 
+    #: 同一条消息只让一个花种入口响应（否则 command + regex 会各回一张图）
+    @staticmethod
+    def _flower_claim(event: Any) -> bool:
+        if getattr(event, "_lk_flower_done", False):
+            return False
+        try:
+            event._lk_flower_done = True
+        except Exception:
+            pass
+        return True
+
+    async def _flower_all(self, event: Any):
+        """「花种」不带参数：列出当前花种市场的所有品种。"""
+        catalog = await self._flower_catalog()
+        if not catalog:
+            return await self._say(
+                event,
+                "花种接口没返回数据。\n"
+                f"检查一下：\n"
+                f"1. 蛋神助手控制台是不是在跑（{self.api_base}）\n"
+                f"2. 控制台是不是旧版本——花种接口要 1.60.0 之后重启过控制台才有\n"
+                f"3. 账号 session 还有效吗（发「蛋推送状态」看接口通不通）")
+        items = [x for x in catalog if x.get("petId")]
+        if not items:
+            return await self._say(event, "花种市场现在没有任何品种。")
+        # 挂单多的排前面，其次按最低价
+        items.sort(key=lambda x: (-(int(x.get("offers") or 0)),
+                                  int(x.get("minPrice") or 999999)))
+        lim = 25
+        lines = [f"花种市场 · {len(items)} 个品种 · 共 "
+                 f"{sum(int(x.get('offers') or 0) for x in items)} 个挂单"]
+        for i, it in enumerate(items[:lim], 1):
+            nm = str(it.get("name") or "?")
+            offers = int(it.get("offers") or 0)
+            low = it.get("minPrice")
+            lines.append(f"{i}. {nm} · {offers} 个挂单"
+                         + (f" · 最低 {low} 分" if low is not None else ""))
+        if len(items) > lim:
+            lines.append(f"…… 还有 {len(items) - lim} 个品种")
+        lines.append("")
+        lines.append("发「花种 名字」看颜色和粒子效果")
+        lines.append("订阅：花种订阅 颜色/粒子/精灵")
+        return await self._say(event, "\n".join(lines))
+
     @filter.command("花种")
     async def cmd_flower(self, event: AstrMessageEvent):
-        """花种 罗隐 —— 看这只精灵市面上的花种（颜色/粒子/价格）"""
+        """花种 —— 列全部品种；花种 罗隐 —— 看这只精灵的花种"""
+        if not self._flower_claim(event):
+            return
         arg = self._cmd_args(event)
         if not arg:
             m = re.match(r"^\s*[/#]?\s*花\s*种\s*(.+)$",
                          str(getattr(event, "message_str", "") or ""))
             arg = m.group(1).strip() if m else ""
         if not arg:
-            yield await self._say(
-                event, "用法：花种 罗隐\n"
-                       "也可以：花种 卡拉波斯（进化链任意阶段都行）\n"
-                       "订阅：花种订阅 颜色 浅橙青 / 花种订阅 粒子 四角星 / 花种订阅 精灵 罗隐")
+            yield await self._flower_all(event)
             return
         yield await self._flower_reply(event, arg)
 
     @filter.regex(r"^\s*[/#]?\s*花\s*种\s*[\u4e00-\u9fa5A-Za-z0-9·]{2,20}\s*$")
     async def on_flower_loose(self, event: AstrMessageEvent):
         """兜底：/花种罗隐 这种不加空格的写法。"""
+        if not self._flower_claim(event):
+            return
         raw = str(getattr(event, "message_str", "") or "").lstrip("/#").strip()
         m = re.match(r"^花\s*种\s*(.+)$", raw)
         if not m:
             return
-        if getattr(event, "_lk_flower_done", False):
-            return
-        try:
-            event._lk_flower_done = True
-        except Exception:
-            pass
         yield await self._flower_reply(event, m.group(1).strip())
 
     # ---------------------------------------------------------------- 花种订阅
@@ -3041,6 +3080,7 @@ class LkMarketNotify(Star):
         "34 3617                 整数体重按克算\n"
         "（查蛋会显示真实孵化概率，低于 1% 默认隐藏）\n"
         "—————— 花种（炫彩花种市场）——————\n"
+        "花种                     列市场上所有花种品种（挂单数/最低价）\n"
         "花种 罗隐                看这只精灵市面上的花种：颜色/粒子/价格\n"
         "花种 卡拉波斯            进化链任意阶段名都行\n"
         "花种订阅 颜色 浅橙青      订阅某个颜色\n"
