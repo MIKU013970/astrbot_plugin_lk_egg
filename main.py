@@ -103,7 +103,7 @@ def _strip_emoji(text: str) -> str:
 
 _PLUGIN_DIR = Path(__file__).resolve().parent
 _PLUGIN_NAME = "astrbot_plugin_lk_egg"
-VERSION = "1.77.1"
+VERSION = "1.77.2"
 
 
 def _data_dir() -> Path:
@@ -166,7 +166,7 @@ def _save_state(state: Dict[str, Any]) -> None:
     "astrbot_plugin_lk_egg",
     "MIKU013970 & DeepSeek",
     "洛克小肥鱼全功能 + 炫彩花种订阅",
-    "1.77.1",
+    "1.77.2",
 )
 class LkMarketNotify(Star):
     def __init__(self, context: Context, config: AstrBotConfig = None):
@@ -770,14 +770,18 @@ class LkMarketNotify(Star):
         lines = data.get("lines") or []
         return [str(x) for x in lines if str(x).strip()][:8]
 
-    async def _species_payload(self, rec: Dict[str, Any], query: str = ""):
-        """图鉴正文 + 行情；返回 (文字版, 图片版或 None)。"""
+    async def _species_payload(self, rec: Dict[str, Any], query: str = "",
+                               with_market: bool = True):
+        """图鉴正文 + 行情；返回 (文字版, 图片版或 None)。
+
+        with_market=False 时不取行情（没 market 权限的人看不到市场价）。
+        """
         text = self._render_species(rec)
         lines: List[str] = []
         items: List[Dict[str, Any]] = []
-        eggs = self._distinct_eggs(rec)
+        eggs = self._distinct_eggs(rec) if with_market else []
         try:
-            for egg_name, _forms in (eggs or [(rec.get("精灵") or "", [])]):
+            for egg_name, _forms in (eggs or []):
                 data = await self._market_quote_raw(egg_name)
                 seg = [str(x) for x in (data.get("lines") or []) if str(x).strip()][:8]
                 if not seg:

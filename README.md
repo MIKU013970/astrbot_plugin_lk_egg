@@ -376,6 +376,9 @@ astrbot_plugin_lk_egg/
 
 ## 九、版本
 
+**v1.77.2**
+- 修查询精灵报错（`_species_payload` 缺 `with_market` 参数，1.68.0 遗留）
+
 **v1.77.1**
 - 查ID 卡片里「还有 N 种」往下挪 2 行
 
