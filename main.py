@@ -103,7 +103,7 @@ def _strip_emoji(text: str) -> str:
 
 _PLUGIN_DIR = Path(__file__).resolve().parent
 _PLUGIN_NAME = "astrbot_plugin_lk_egg"
-VERSION = "1.78.0"
+VERSION = "1.78.1"
 
 
 def _data_dir() -> Path:
@@ -166,7 +166,7 @@ def _save_state(state: Dict[str, Any]) -> None:
     "astrbot_plugin_lk_egg",
     "MIKU013970 & DeepSeek",
     "洛克小肥鱼全功能 + 炫彩花种订阅",
-    "1.78.0",
+    "1.78.1",
 )
 class LkMarketNotify(Star):
     def __init__(self, context: Context, config: AstrBotConfig = None):
@@ -2156,10 +2156,11 @@ class LkMarketNotify(Star):
                 lw = dr.textlength(f"{look} ", font=f_small)
                 dr.text((tx2 + lw, y + 2), _strip_emoji(sp),
                         font=f_name, fill=body_rgb)
-                # 第二行：颜色
-                dr.text((tx2, y + 4 + int(base_fs * 1.15)),
-                        _strip_emoji(str(b.get("color_name") or "")),
-                        font=f_small, fill=sub_rgb)
+                # 第二行：颜色（异色没有色卡 → 这行空着，不写「颜色未知」）
+                _c2 = self._flower_color_text(b)
+                if _c2:
+                    dr.text((tx2, y + 4 + int(base_fs * 1.15)),
+                            _strip_emoji(_c2), font=f_small, fill=sub_rgb)
                 # 第三行：粒子 + 价格
                 pn = str(b.get("particle_name") or "")
                 price = f"{b.get('price')} 分" if b.get("price") is not None else "?"
@@ -2714,13 +2715,17 @@ class LkMarketNotify(Star):
             for b in fl[:12]:
                 look = str(b.get("appearance_txt") or "未标注")
                 sp = str(b.get("species") or b.get("name") or "")
-                bits = [str(b.get("color_name") or "颜色未知")]
+                bits = []
+                _ctxt = self._flower_color_text(b)
+                if _ctxt:
+                    bits.append(_ctxt)
                 if b.get("particle_name"):
                     bits.append(str(b["particle_name"]))
                 price = b.get("price")
                 tail = f"{price} 分" if price is not None else "?"
                 head = f"{look} {sp}".strip()
-                out.append(f"· {head} · {' · '.join(bits)} · {tail}")
+                body_txt = (" · ".join(bits) + " · ") if bits else ""
+                out.append(f"· {head} · {body_txt}{tail}")
             if len(fl) > 12:
                 out.append(f"…… 还有 {len(fl) - 12} 个")
         if items:
@@ -2763,9 +2768,12 @@ class LkMarketNotify(Star):
             b = self._flower_brief(o)
             head = [f"{b['appearance_txt']}", f"{self.FLOWER_TYPE.get(b['type'], b['type'])}"]
             price = b.get("price")
-            lines.append(f"{i}. {b['color_name'] or '颜色未知'} · " + " · ".join(head)
+            _ctxt = self._flower_color_text(b)
+            _left = ([_ctxt] if _ctxt else []) + head
+            lines.append(f"{i}. " + " · ".join(_left)
                          + f" · {price if price is not None else '?'} 分")
-            col = f"   色卡 {b['c1']} / {b['c2']}" if b["c1"] or b["c2"] else ""
+            col = (f"   色卡 {b['c1']} / {b['c2']}"
+                   if (b["c1"] or b["c2"]) and not self._flower_is_shiny(b) else "")
             if col:
                 lines.append(col)
             if b["particle_name"]:
@@ -2783,6 +2791,16 @@ class LkMarketNotify(Star):
     def _flower_is_shiny(self, b: Dict[str, Any]) -> bool:
         """这条花种是不是异色（异色没有炫彩色卡）。"""
         return str(b.get("appearance") or "").strip().lower() == "shiny"
+
+    def _flower_color_text(self, b: Dict[str, Any]) -> str:
+        """颜色文字。
+
+        异色本来就没有炫彩色卡 → 不给「颜色未知」这种误导性的东西，直接留空
+        （外观那栏已经写了「异色」）；炫彩才显示颜色名。
+        """
+        if self._flower_is_shiny(b):
+            return ""
+        return str(b.get("color_name") or "颜色未知")
 
     def _flower_thumb_path(self, b: Dict[str, Any]) -> Optional[str]:
         """异色花种 → 异色精灵图标路径；炫彩/其它 → None（用色卡）。"""
@@ -2962,7 +2980,7 @@ class LkMarketNotify(Star):
             tx = sx + SW * 2 + GAP + int(base_fs * 0.75)
 
             # 第一行：颜色名 + 外观 + 类型
-            name = b["color_name"] or "颜色未知"
+            name = self._flower_color_text(b) or b.get("species") or b.get("name") or ""
             tag = f"{b['appearance_txt']} · {self.FLOWER_TYPE.get(b['type'], b['type'])}"
             dr.text((tx, y + int(ROW_H * 0.13)), name, font=f_name, fill=body_rgb)
             # 外观标签右对齐
@@ -3045,10 +3063,16 @@ class LkMarketNotify(Star):
         return out
 
     def _flower_line(self, b: Dict[str, Any]) -> str:
-        """一条花种的简短说明。外观（炫彩/异色）放精灵名前面。"""
+        """一条花种的简短说明。外观（炫彩/异色）放精灵名前面。
+
+        异色没有色卡 → 不写「颜色未知」。
+        """
         look = str(b.get("appearance_txt") or "未标注")
         sp = str(b.get("species") or b.get("name") or "")
-        bits = [str(b.get("color_name") or "颜色未知")]
+        bits = []
+        _ctxt = self._flower_color_text(b)
+        if _ctxt:
+            bits.append(_ctxt)
         if b.get("particle_name"):
             bits.append(str(b["particle_name"]))
         price = b.get("price")
@@ -3476,10 +3500,11 @@ class LkMarketNotify(Star):
             dr.text((W - PAD - tw, y + int(ROW_H * 0.15)), look,
                     font=f_small, fill=accent_rgb)
 
-            # 第二行：颜色
-            dr.text((tx, y + int(ROW_H * 0.40)),
-                    str(b.get("color_name") or "颜色未知"),
-                    font=f_small, fill=sub_rgb)
+            # 第二行：颜色（异色没有色卡 → 不写「颜色未知」）
+            _c3 = self._flower_color_text(b)
+            if _c3:
+                dr.text((tx, y + int(ROW_H * 0.40)), _strip_emoji(_c3),
+                        font=f_small, fill=sub_rgb)
 
             # 第三行：粒子 + 价格 + 卖家
             py = y + int(ROW_H * 0.66)
