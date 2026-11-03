@@ -103,7 +103,7 @@ def _strip_emoji(text: str) -> str:
 
 _PLUGIN_DIR = Path(__file__).resolve().parent
 _PLUGIN_NAME = "astrbot_plugin_lk_egg"
-VERSION = "1.66.0"
+VERSION = "1.67.0"
 
 
 def _data_dir() -> Path:
@@ -166,7 +166,7 @@ def _save_state(state: Dict[str, Any]) -> None:
     "astrbot_plugin_lk_egg",
     "MIKU013970 & DeepSeek",
     "蛋神助手全功能 + 炫彩花种订阅",
-    "1.66.0",
+    "1.67.0",
 )
 class LkMarketNotify(Star):
     def __init__(self, context: Context, config: AstrBotConfig = None):
@@ -3563,7 +3563,7 @@ class LkMarketNotify(Star):
         """从控制台读 permissions 配置（缓存 60 秒）。"""
         now = time.time()
         ts, cache = self._PERM_CACHE
-        if not force and cache and now - ts < 60:
+        if not force and cache and now - ts < 20:
             return cache
         try:
             data = await self._api("/api/permissions")
@@ -3624,7 +3624,7 @@ class LkMarketNotify(Star):
         """从控制台拉受保护名单（ZID / UID / 昵称），缓存 60 秒。"""
         now = time.time()
         ts, cache = self._PROTECT_CACHE
-        if cache is not None and now - ts < 60:
+        if cache is not None and now - ts < 20:
             return cache
         data = None
         try:

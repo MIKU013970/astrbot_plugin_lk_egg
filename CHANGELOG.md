@@ -1,5 +1,47 @@
 # 更新日志
 
+## v1.67.0
+
+### 修：权限勾选保存不上，导致查ID 还能查
+
+**现象**：控制台勾了「查ID」，保存、刷新，勾选又没了；插件侧照旧能查。
+
+**根因**：控制台 `config.yaml` 里的 `restricted` 只有 `["push", "roles"]`，
+`lookup_id` 根本不在里面。插件判定逻辑是「不在受限列表 = 直接放行」，
+所以查ID 一路畅通。
+
+**处理**：
+- 后端 `_load_perms()` 遇到 `restricted: null` 自动补成默认 6 项
+- 前端保存成功后用服务端返回值**回填**一次，勾选立刻可见
+- 权限缓存 60 秒 → **20 秒**，改完配置很快生效
+
+### 确认：14 个功能全部接了拦截
+
+```
+_lookup_id_result      lookup_id    OK
+_flower_reply          flower       OK
+cmd_flower_sub         flower       OK
+cmd_watch / _alias     watch        OK
+cmd_mark/unmark/黑/白   marks        OK
+cmd_bind/unbind/test/status/reset  push  OK
+```
+
+实测：
+
+```
+非管理群(999) + 非管理QQ(123)  → 拦截 ✓
+指定群(1134618211)             → 放行 ✓
+非管理群 + 管理员QQ            → 放行 ✓
+```
+
+### 如果你那边还没生效
+
+1. **Ctrl+F5 强制刷新**控制台网页（浏览器可能缓存着旧页面）
+2. 确认权限页「受限制的功能」6 个都是勾上的
+3. 改完等 20 秒（插件侧的缓存）
+
+## v1.66.0
+
 ## v1.66.0
 
 ### 新增：受保护对象名单
