@@ -103,7 +103,7 @@ def _strip_emoji(text: str) -> str:
 
 _PLUGIN_DIR = Path(__file__).resolve().parent
 _PLUGIN_NAME = "astrbot_plugin_lk_egg"
-VERSION = "1.68.0"
+VERSION = "1.68.1"
 
 
 def _data_dir() -> Path:
@@ -165,8 +165,8 @@ def _save_state(state: Dict[str, Any]) -> None:
 @register(
     "astrbot_plugin_lk_egg",
     "MIKU013970 & DeepSeek",
-    "蛋神助手全功能 + 炫彩花种订阅",
-    "1.68.0",
+    "洛克小肥鱼全功能 + 炫彩花种订阅",
+    "1.68.1",
 )
 class LkMarketNotify(Star):
     def __init__(self, context: Context, config: AstrBotConfig = None):
@@ -2720,7 +2720,7 @@ class LkMarketNotify(Star):
                     f"🌸 {species}\n"
                     f"花种接口没返回数据。\n"
                     f"检查一下：\n"
-                    f"1. 蛋神助手控制台是不是在跑（{self.api_base}）\n"
+                    f"1. 洛克小肥鱼控制台是不是在跑（{self.api_base}）\n"
                     f"2. 控制台是不是**旧版本**——花种接口要 1.60.0 之后重启过控制台才有\n"
                     f"3. 账号 session 还有效吗（发「蛋推送状态」看接口通不通）")
             return await self._say(
@@ -2757,7 +2757,7 @@ class LkMarketNotify(Star):
                 event,
                 "花种接口没返回数据。\n"
                 f"检查一下：\n"
-                f"1. 蛋神助手控制台是不是在跑（{self.api_base}）\n"
+                f"1. 洛克小肥鱼控制台是不是在跑（{self.api_base}）\n"
                 f"2. 控制台是不是旧版本——花种接口要 1.60.0 之后重启过控制台才有\n"
                 f"3. 账号 session 还有效吗（发「蛋推送状态」看接口通不通）")
         items = [x for x in catalog if x.get("petId")]
@@ -3065,7 +3065,7 @@ class LkMarketNotify(Star):
         return self._find_species(q)
 
     #: 帮助菜单分段 —— 按权限拼（没权限的段不显示）
-    MENU_HEAD = "🥚 蛋神助手 · 可用指令"
+    MENU_HEAD = "🥚 洛克小肥鱼 · 可用指令"
 
     MENU_BASIC = (
         "—————— 查蛋 ——————\n"
@@ -3131,8 +3131,7 @@ class LkMarketNotify(Star):
         "—————— 其它 ——————\n"
         "UID 503671642           用游戏 UID 查等级/在线/家园/收集度\n"
         "帮助 / 菜单              看这张卡片\n"
-        "回复默认都是图片         配置里关掉 reply_as_image 就发文字\n"
-        "（提示：直接发精灵名字的功能已关闭，请用「查询 名字」）"
+        "回复默认都是图片         配置里关掉 reply_as_image 就发文字"
     )
 
     #: 完整版（管理员看的，全列出）
@@ -3165,17 +3164,6 @@ class LkMarketNotify(Star):
                 "改绑记录 / 改名记录      看绑定角色有没有被换绑 / 改名\n")
         parts.append(tail)
 
-        # 有被隐藏的功能时，末尾提示一句
-        hidden = []
-        for feat, label in (("market", "市场价"), ("flower", "花种"),
-                            ("lookup_id", "查ID"), ("marks", "名单"),
-                            ("watch", "新上架监控"), ("push", "蛋推送")):
-            if not await self._perm_allowed(event, feat):
-                hidden.append(label)
-        if hidden:
-            parts.append("（{} 需要管理员开通，找管理员申请）".format("、".join(hidden))
-                         if len(hidden) < 6 else
-                         "（上面只列了公开功能；查ID / 花种 / 监控 / 推送 等需要管理员开通）")
         return "\n".join(parts)
 
     FORMAT_HINTS = {
