@@ -103,7 +103,7 @@ def _strip_emoji(text: str) -> str:
 
 _PLUGIN_DIR = Path(__file__).resolve().parent
 _PLUGIN_NAME = "astrbot_plugin_lk_egg"
-VERSION = "1.77.2"
+VERSION = "1.77.3"
 
 
 def _data_dir() -> Path:
@@ -166,7 +166,7 @@ def _save_state(state: Dict[str, Any]) -> None:
     "astrbot_plugin_lk_egg",
     "MIKU013970 & DeepSeek",
     "洛克小肥鱼全功能 + 炫彩花种订阅",
-    "1.77.2",
+    "1.77.3",
 )
 class LkMarketNotify(Star):
     def __init__(self, context: Context, config: AstrBotConfig = None):
@@ -3177,25 +3177,76 @@ class LkMarketNotify(Star):
                 logger.warning(f"[出图] 花种列表卡失败: {type(e).__name__}: {e}")
         return await self._reply(event, text, png)
 
+    @staticmethod
+    def _chain_alias_set(rec: Dict[str, Any]) -> set:
+        """把图鉴记录的进化链拆成名字集合（含去掉括号说明的版本）。
+
+        花种市场挂的往往是**最高阶段**（比如「白金独角兽」），
+        而图鉴主记录是**一阶段**（「小独角兽」），名字对不上。
+        所以要用整条进化链去匹配。
+        """
+        names = set()
+        species = str(rec.get("精灵") or "").strip()
+        if species:
+            names.add(species)
+
+        def _add(raw: str):
+            s = str(raw or "").strip()
+            if not s:
+                return
+            names.add(s)
+            base = re.sub(r"[（(].*?[)）]", "", s).strip()
+            if base:
+                names.add(base)
+
+        for src_key in ("进化链", "_chain", "chain"):
+            chain = str(rec.get(src_key) or "")
+            if not chain:
+                continue
+            for part in re.split(r"\s*[→>→]\s*", chain):
+                _add(part)
+        for v in (rec.get("variants") or []):
+            if isinstance(v, dict):
+                _add(v.get("精灵"))
+                _add(v.get("蛋名"))
+                _add(str(v.get("蛋名") or "").replace("蛋", ""))
+        _add(rec.get("蛋名"))
+        return {x for x in names if x}
+
     async def _flower_by_species(self, event: Any, rec: Dict[str, Any],
                                  query: str):
-        """按精灵查（原来的逻辑）。"""
+        """按精灵查：支持进化链任意阶段（小独角兽 ←→ 白金独角兽）。"""
         species = str(rec.get("精灵") or query)
-        pet_ids = []
+        aliases = self._chain_alias_set(rec)
+        pet_ids: List[int] = []
         for v in (rec.get("variants") or [rec]):
             pid = v.get("精灵ID") or v.get("petConfId") or v.get("基础ID")
             if pid:
                 pet_ids.append(int(pid))
         catalog = await self._flower_catalog()
+
+        # 用整条进化链的名字去对 catalog
         if not pet_ids:
             for it in catalog:
-                if str(it.get("name") or "") == species:
-                    pet_ids.append(int(it.get("petId")))
+                pid = it.get("petId")
+                if not pid:
+                    continue
+                nm = str(it.get("name") or "").strip()
+                base = re.sub(r"[（(].*?[)）]", "", nm).strip()
+                if nm in aliases or base in aliases:
+                    pet_ids.append(int(pid))
+        # 还没中就退回包含匹配
         if not pet_ids:
             for it in catalog:
+                pid = it.get("petId")
+                if not pid:
+                    continue
                 nm = str(it.get("name") or "")
-                if species in nm or nm in species:
-                    pet_ids.append(int(it.get("petId")))
+                base = re.sub(r"[（(].*?[)）]", "", nm).strip()
+                if any(a and (a in nm or a in base or nm in a or base in a)
+                       for a in aliases):
+                    pet_ids.append(int(pid))
+        pet_ids = list(dict.fromkeys(pet_ids))
         if not pet_ids:
             if not catalog:
                 return await self._say(
@@ -3206,9 +3257,11 @@ class LkMarketNotify(Star):
                     f"1. 洛克小肥鱼控制台是不是在跑（{self.api_base}）\n"
                     f"2. 控制台是不是旧版本——花种接口要 1.60.0 之后重启过控制台才有\n"
                     f"3. 账号 session 还有效吗")
+            chain = str(rec.get("进化链") or "")
+            extra = f"\n（它整条进化链：{chain}）" if chain else ""
             return await self._say(
-                event, f"🌸 {species}\n市场上现在没有它的花种。\n"
-                       f"（当前花种市场只有：{'、'.join(str(x.get('name')) for x in catalog[:8])}）")
+                event, f"🌸 {species}\n市场上现在没有它的花种。{extra}\n"
+                       f"（当前花种市场只有：{'、'.join(str(x.get('name')) for x in catalog[:10])}）")
         offers: List[Dict[str, Any]] = []
         for pid in pet_ids:
             offers.extend(await self._flower_offers(pid))
