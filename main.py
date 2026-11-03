@@ -103,7 +103,7 @@ def _strip_emoji(text: str) -> str:
 
 _PLUGIN_DIR = Path(__file__).resolve().parent
 _PLUGIN_NAME = "astrbot_plugin_lk_egg"
-VERSION = "1.77.0"
+VERSION = "1.77.1"
 
 
 def _data_dir() -> Path:
@@ -166,7 +166,7 @@ def _save_state(state: Dict[str, Any]) -> None:
     "astrbot_plugin_lk_egg",
     "MIKU013970 & DeepSeek",
     "洛克小肥鱼全功能 + 炫彩花种订阅",
-    "1.77.0",
+    "1.77.1",
 )
 class LkMarketNotify(Star):
     def __init__(self, context: Context, config: AstrBotConfig = None):
@@ -2033,7 +2033,8 @@ class LkMarketNotify(Star):
         tile_rows = ((len(tiles_shown) + PER_ROW - 1) // PER_ROW
                      if tiles_shown else 0)
         tiles_h = (SEC_H + tile_rows * (TILE + int(base_fs * 1.3))
-                   + (int(base_fs * 1.2) if len(tiles) > len(tiles_shown) else 0)
+                   + ((int(base_fs * 1.8) + int(base_fs * 1.2))
+                      if len(tiles) > len(tiles_shown) else 0)
                    if tile_rows else 0)
 
         info_h = ROW_H * len(info)
@@ -2180,6 +2181,7 @@ class LkMarketNotify(Star):
                             _strip_emoji(str(ln))[:14], font=f_tiny, fill=body_rgb)
             y += tile_rows * (TILE + int(base_fs * 1.3))
             if len(tiles) > len(tiles_shown):
+                y += int(base_fs * 1.8)          # 和蛋格说明拉开几行
                 dr.text((PAD + 4, y), f"…… 还有 {len(tiles) - len(tiles_shown)} 种",
                         font=f_tiny, fill=sub_rgb)
                 y += int(base_fs * 1.2)
