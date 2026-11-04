@@ -103,7 +103,7 @@ def _strip_emoji(text: str) -> str:
 
 _PLUGIN_DIR = Path(__file__).resolve().parent
 _PLUGIN_NAME = "astrbot_plugin_lk_egg"
-VERSION = "1.81.1"
+VERSION = "1.82.0"
 
 
 def _data_dir() -> Path:
@@ -166,7 +166,7 @@ def _save_state(state: Dict[str, Any]) -> None:
     "astrbot_plugin_lk_egg",
     "MIKU013970 & DeepSeek",
     "洛克小肥鱼全功能 + 炫彩花种订阅",
-    "1.81.1",
+    "1.82.0",
 )
 class LkMarketNotify(Star):
     def __init__(self, context: Context, config: AstrBotConfig = None):
@@ -613,6 +613,12 @@ class LkMarketNotify(Star):
             self._warm_task = None
         if not bool(self._cfg("enabled", True)):
             logger.info("[市集推送] 配置 enabled=false，插件不启动")
+            return
+        # 防重复启动：热重载时 initialize 会被再调一次，
+        # 不检查的话会有两个 _loop 同时跑 → 同一件商品推两遍
+        _old = getattr(self, "_task", None)
+        if _old is not None and not _old.done():
+            logger.info("[市集推送] 轮询已在运行，跳过重复启动")
             return
         self._task = asyncio.create_task(self._loop())
 
@@ -2485,38 +2491,31 @@ class LkMarketNotify(Star):
             return []
         return [x for x in (data.get("items") or []) if isinstance(x, dict)]
 
-    def _pushed_ids(self) -> Dict[str, float]:
-        """已推送过的商品 id → 时间戳（永久累积，防止重复提醒）。"""
-        d = self.state.get("pushed_ids")
-        if not isinstance(d, dict):
-            d = {}
-            self.state["pushed_ids"] = d
-        return d
-
     async def _poll_listings(self) -> int:
         """逐个监控商家拉实时货架，发现新挂单就推送。
 
-        **单件只推一次**：
-          - 已推过的 id 记在 state["pushed_ids"]（id → 时间戳），永久累积
-          - 接口一次只给 30 条，且顺序会变；只比对"当前列表"会导致
-            换一批就重复推，所以必须累积记
-          - 再过 10 分钟窗口防重（同一 id 绝不连推）
+        **同一件商品只推一次**，靠三件事保证：
+          1. pushed_ids 每次都从**磁盘**读（不信任内存副本）——
+             AstrBot 热重载 / 起两个实例时，各记各的内存状态就会重复推
+          2. **先写盘再推送** —— 推送过程中崩了也不会重推
+          3. 10 分钟窗口 + 2 天清理
         """
         sent = 0
         watch = self._watch()
         if not watch:
             return 0
 
-        pushed = self._pushed_ids()
         now = time.time()
-        # 顺便清理 2 天前的记录，别无限涨
-        for k in [k for k, ts in pushed.items() if now - float(ts or 0) > 172800]:
-            pushed.pop(k, None)
-
         for sid in watch:
             items = await self._listing_items(sid)
             if not items:
                 continue
+
+            disk = _load_state()
+            pushed: Dict[str, Any] = dict(disk.get("pushed_ids") or {})
+            for k in [k for k, ts in pushed.items()
+                      if now - float(ts or 0) > 172800]:
+                pushed.pop(k, None)
 
             fresh: List[Dict[str, Any]] = []
             for it in items:
@@ -2524,12 +2523,16 @@ class LkMarketNotify(Star):
                 if not lid:
                     continue
                 last = float(pushed.get(lid) or 0)
-                if last and now - last < 600:      # 10 分钟内推过 → 跳过
+                if last and now - last < 600:
                     continue
                 if lid not in pushed:
                     fresh.append(it)
-                pushed[lid] = now                  # 见过的都记下时间
-                    # 注意：这里即使不推也要记时间，避免下轮又当新的
+                pushed[lid] = now
+
+            # 先落盘，再推送
+            disk["pushed_ids"] = pushed
+            self.state["pushed_ids"] = pushed
+            _save_state(disk)
 
             if fresh:
                 text = self._render_listing(sid, "", fresh, len(items))
@@ -2538,9 +2541,7 @@ class LkMarketNotify(Star):
                     self.stats["sent"] += 1
                     logger.info(f"[市集推送] {sid} 新上架 {len(fresh)} 件")
 
-        _save_state(self.state)
         return sent
-
 
     # ---------------------------------------------------------------- 黑白名单
     def _marks(self) -> Dict[str, Any]:
@@ -3216,8 +3217,7 @@ class LkMarketNotify(Star):
         if not snap:
             return await self._say(
                 event,
-                "花种数据暂时没拉到，过一会儿再试。\n"
-                f"（控制台：{self.api_base}）")
+                "花种数据暂时没拉到，过一会儿再试。\n")
 
         hits: List[Dict[str, Any]] = []
         kind = ""
@@ -3408,8 +3408,7 @@ class LkMarketNotify(Star):
                 return await self._say(
                     event,
                     f"🌸 {species}\n"
-                    "花种数据暂时没拉到，过一会儿再试。\n"
-                f"（控制台：{self.api_base}）")
+                    "花种数据暂时没拉到，过一会儿再试。\n")
             chain = str(rec.get("进化链") or "")
             extra = f"\n（它整条进化链：{chain}）" if chain else ""
             return await self._say(
@@ -3442,8 +3441,7 @@ class LkMarketNotify(Star):
         if not catalog:
             return await self._say(
                 event,
-                "花种数据暂时没拉到，过一会儿再试。\n"
-                f"（控制台：{self.api_base}）")
+                "花种数据暂时没拉到，过一会儿再试。\n")
         items = [x for x in catalog if x.get("petId")]
         if not items:
             return await self._say(event, "花种市场现在没有任何品种。")
