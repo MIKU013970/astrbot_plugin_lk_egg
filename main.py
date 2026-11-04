@@ -103,7 +103,7 @@ def _strip_emoji(text: str) -> str:
 
 _PLUGIN_DIR = Path(__file__).resolve().parent
 _PLUGIN_NAME = "astrbot_plugin_lk_egg"
-VERSION = "1.88.0"
+VERSION = "1.89.0"
 
 
 def _cand_dirs() -> List[Path]:
@@ -194,20 +194,50 @@ def _state_files() -> List[Path]:
 #: 这些是「推送记录」——读的时候所有位置合并，写的时候先跟磁盘合并。
 #: 12 个地方用 _save_state(self.state)，而 self.state 里的记录是启动时的旧值，
 #: 直接写会把刚写的覆盖掉，导致同一件商品重复推送。
-_MERGE_KEYS = ("pushed_ids", "flower_seen", "seen")
+#:
+#: 时间戳字典（key → 时间）一律取「较大的时间」，也就是新操作永远赢：
+#:   pushed_ids    已推过的挂单 id
+#:   pushed_sig    已推过的「蛋内容指纹」（同款蛋重新上架换新 id 也认得）
+#:   watch_ops     新上架 添加 的时间（> watch_deleted 才算在监控里）
+#:   watch_deleted 新上架 删除 的时间（压过配置里的 watch_sellers）
+_MERGE_DICT_KEYS = ("pushed_ids", "pushed_sig", "watch_ops", "watch_deleted")
+_MERGE_LIST_KEYS = ("flower_seen", "seen")
+_MERGE_KEYS = _MERGE_DICT_KEYS + _MERGE_LIST_KEYS
+
+
+def _merge_ts(old: Any, cur: Any) -> Dict[str, Any]:
+    """两个「key → 时间戳」字典合并：同一个 key 取较大的时间。"""
+    out: Dict[str, Any] = {}
+    for src in (old, cur):
+        if not isinstance(src, dict):
+            continue
+        for k, v in src.items():
+            try:
+                fv = float(v or 0)
+            except (TypeError, ValueError):
+                fv = 0.0
+            try:
+                fo = float(out.get(k) or 0)
+            except (TypeError, ValueError):
+                fo = 0.0
+            if k not in out or fv > fo:
+                out[k] = v
+    return out
 
 
 def _load_state() -> Dict[str, Any]:
     """读状态。
 
-    - **标量/列表字段（watch、umos…）：以「最后修改的那个文件」为准** ——
-      否则你删了监控，另一个位置里的旧 watch 会把它盖回来
-    - **推送记录（pushed_ids / flower_seen / seen）：所有位置合并**，
-      哪个位置丢了都不影响去重
+    - **标量/列表字段（started、umos、marks、listings…）：以「最后修改的那个文件」为准**
+    - **推送记录 + 监控开关：所有位置合并**
+        · pushed_ids / pushed_sig / watch_ops / watch_deleted 按时间戳取较大的
+        · flower_seen / seen 取并集
+      哪个位置丢了都不影响去重，也不会出现「删了监控又被别的文件加回来」。
     """
     _migrate_old_state()
     base: Dict[str, Any] = {"seen": [], "started": 0, "umos": [], "watch": [],
-                            "listings": {}, "marks": {}}
+                            "listings": {}, "marks": {}, "watch_ops": {},
+                            "watch_deleted": {}, "pushed_ids": {}, "pushed_sig": {}}
 
     files = []
     for fp in _state_files():
@@ -217,15 +247,13 @@ def _load_state() -> Dict[str, Any]:
         except Exception:
             continue
     if not files:
-        base["pushed_ids"] = {}
         return base
 
     # 最新的排前面
     files.sort(key=lambda x: -x[0])
 
-    merged_pushed: Dict[str, Any] = {}
-    merged_flower: List[Any] = []
-    merged_seen: List[Any] = []
+    merged_dict: Dict[str, Dict[str, Any]] = {k: {} for k in _MERGE_DICT_KEYS}
+    merged_list: Dict[str, List[Any]] = {k: [] for k in _MERGE_LIST_KEYS}
 
     for idx, (mt, fp) in enumerate(files):
         try:
@@ -239,65 +267,65 @@ def _load_state() -> Dict[str, Any]:
             for k, v in d.items():
                 if k not in _MERGE_KEYS:
                     base[k] = v
-        # ② 推送记录：全部合并
-        p = d.get("pushed_ids")
-        if isinstance(p, dict):
-            for k, ts in p.items():
-                try:
-                    if float(ts) > float(merged_pushed.get(k) or 0):
-                        merged_pushed[k] = ts
-                except (TypeError, ValueError):
-                    merged_pushed.setdefault(k, ts)
-        v = d.get("flower_seen")
-        if isinstance(v, list):
-            merged_flower.extend(v)
-        v = d.get("seen")
-        if isinstance(v, list):
-            merged_seen.extend(v)
+        # ② 推送记录 / 监控开关：全部合并
+        for k in _MERGE_DICT_KEYS:
+            merged_dict[k] = _merge_ts(merged_dict[k], d.get(k))
+        for k in _MERGE_LIST_KEYS:
+            v = d.get(k)
+            if isinstance(v, list):
+                merged_list[k].extend(v)
 
-    base["pushed_ids"] = merged_pushed
-    base["flower_seen"] = list(dict.fromkeys(merged_flower))
-    base["seen"] = list(dict.fromkeys(merged_seen))
+    for k in _MERGE_DICT_KEYS:
+        base[k] = merged_dict[k]
+    for k in _MERGE_LIST_KEYS:
+        base[k] = list(dict.fromkeys(merged_list[k]))
     return base
 
+
+def _write_state(state: Dict[str, Any]) -> None:
+    """把状态原子写到所有候选目录（不做任何合并）。"""
+    payload = json.dumps(state, ensure_ascii=False, indent=1)
+    wrote = 0
+    errs = []
+    for d in _cand_dirs():
+        try:
+            d.mkdir(parents=True, exist_ok=True)
+            fp = d / "notified.json"
+            tmp = fp.with_suffix(".json.tmp")
+            tmp.write_text(payload, encoding="utf-8")
+            tmp.replace(fp)            # 原子写，防写一半被读到
+            wrote += 1
+        except Exception as e:
+            errs.append(f"{d}: {type(e).__name__}")
+    if not wrote:
+        logger.warning(f"[市集推送] 状态保存全部失败: {'; '.join(errs)}")
+
+
 def _save_state(state: Dict[str, Any]) -> None:
-    """保存状态；推送记录先跟磁盘上的合并（磁盘优先，只增不减）。"""
+    """保存状态；推送记录先跟磁盘上的合并（只增不减 / 取较新）。"""
     try:
-        # 合并：磁盘上已有的记录 + 内存里的记录
         if _STATE_PATH.is_file():
             try:
                 disk = json.loads(_STATE_PATH.read_text(encoding="utf-8"))
-                for key in _MERGE_KEYS:
+                for key in _MERGE_DICT_KEYS:
+                    state[key] = _merge_ts(disk.get(key), state.get(key))
+                for key in _MERGE_LIST_KEYS:
                     old = disk.get(key)
-                    cur = state.get(key)
-                    if isinstance(old, dict):
-                        merged = dict(old)
-                        if isinstance(cur, dict):
-                            merged.update(cur)          # 内存里的补上
-                        state[key] = merged
-                    elif isinstance(old, list) and old:
-                        if isinstance(cur, list):
-                            state[key] = list(dict.fromkeys(list(old) + list(cur)))
-                        else:
-                            state[key] = list(old)
+                    if isinstance(old, list) and old:
+                        cur = state.get(key)
+                        state[key] = list(dict.fromkeys(
+                            (list(cur) if isinstance(cur, list) else []) + list(old)))
             except Exception:
                 pass
+        _write_state(state)
+    except Exception as e:
+        logger.warning(f"[市集推送] 保存状态失败: {type(e).__name__}: {e}")
 
-        payload = json.dumps(state, ensure_ascii=False, indent=1)
-        wrote = 0
-        errs = []
-        for d in _cand_dirs():
-            try:
-                d.mkdir(parents=True, exist_ok=True)
-                fp = d / "notified.json"
-                tmp = fp.with_suffix(".json.tmp")
-                tmp.write_text(payload, encoding="utf-8")
-                tmp.replace(fp)            # 原子写，防写一半被读到
-                wrote += 1
-            except Exception as e:
-                errs.append(f"{d}: {type(e).__name__}")
-        if not wrote:
-            logger.warning(f"[市集推送] 状态保存全部失败: {'; '.join(errs)}")
+
+def _hard_save_state(state: Dict[str, Any]) -> None:
+    """强制覆盖写：连磁盘上的推送记录一起清掉（蛋推送重置 用）。"""
+    try:
+        _write_state(state)
     except Exception as e:
         logger.warning(f"[市集推送] 保存状态失败: {type(e).__name__}: {e}")
 
@@ -306,7 +334,7 @@ def _save_state(state: Dict[str, Any]) -> None:
     "astrbot_plugin_lk_egg",
     "MIKU013970 & DeepSeek",
     "洛克小肥鱼全功能 + 炫彩花种订阅",
-    "1.88.0",
+    "1.89.0",
 )
 class LkMarketNotify(Star):
     def __init__(self, context: Context, config: AstrBotConfig = None):
@@ -2595,21 +2623,73 @@ class LkMarketNotify(Star):
         return local, "概率接口不可用，下面是本地区间匹配（可能含低概率品种）"
 
     # ---------------------------------------------------------------- 新上架提醒
-    def _watch(self) -> List[str]:
-        """监控名单 = state 里的 + 配置里的 watch_sellers − 已删除的。
+    def _cfg_watch_ids(self) -> List[str]:
+        return [x.strip().upper()
+                for x in str(self._cfg("watch_sellers", "") or "")
+                .replace("，", ",").split(",") if x.strip()]
 
-        「蛋监控 删除」必须能盖过配置 —— 否则用户在插件配置里填的
-        watch_sellers 会一直把人加回来，删了还在推。
+    def _watch(self) -> List[str]:
+        """监控名单 = (配置 watch_sellers ∪ 新上架 添加) − 新上架 删除。
+
+        删除必须能压过配置 —— 否则你在插件设置里填过的商家，用指令删了
+        下一轮又被配置加回来，删了照样推。规则：
+
+            watch_ops[sid]      = 新上架 添加 的时间
+            watch_deleted[sid]  = 新上架 删除 的时间
+            删除时间 > 添加时间 → 不在名单（哪怕配置里写了）
         """
-        # 「蛋监控」指令已移除 → 监控名单只看配置里的 watch_sellers
-        cfg_ids = [x.strip().upper()
-                   for x in str(self._cfg("watch_sellers", "") or "")
-                   .replace("，", ",").split(",") if x.strip()]
-        out = []
-        for x in cfg_ids:
-            if x and x not in out:
-                out.append(x)
+        cfg_ids = self._cfg_watch_ids()
+        added = dict(self.state.get("watch_ops") or {})
+        deleted = dict(self.state.get("watch_deleted") or {})
+        legacy = [str(x).strip().upper() for x in (self.state.get("watch") or []) if x]
+
+        def _f(d: Dict[str, Any], k: str) -> float:
+            try:
+                return float(d.get(k) or 0)
+            except (TypeError, ValueError):
+                return 0.0
+
+        def _alive(sid: str) -> bool:
+            a = _f(added, sid)
+            if not a and sid in legacy:
+                a = 1.0                      # 老版本存在 state["watch"] 里的，按「很早就加了」算
+            d = _f(deleted, sid)
+            if d > a:
+                return False                 # 删得比加得晚 → 死了
+            if a > 0:
+                return True                  # 指令加过且没被删
+            return sid in cfg_ids            # 只剩配置里那份
+
+        out: List[str] = []
+        for sid in list(added.keys()) + legacy + cfg_ids:
+            if sid and sid not in out and _alive(sid):
+                out.append(sid)
         return out
+
+    def _set_watch(self, sid: str, on: bool) -> bool:
+        """加/删监控。返回操作前它是否在名单里。"""
+        sid = str(sid or "").strip().upper()
+        if not sid:
+            return False
+        was = sid in self._watch()
+        added = dict(self.state.get("watch_ops") or {})
+        deleted = dict(self.state.get("watch_deleted") or {})
+        now = time.time()
+        # 老版本那个 list 也要清，否则 _alive() 会把它当「很早就加了」
+        self.state["watch"] = [x for x in (self.state.get("watch") or [])
+                               if str(x).strip().upper() != sid]
+        if on:
+            added[sid] = now
+            deleted.pop(sid, None)
+        else:
+            deleted[sid] = now
+            added.pop(sid, None)
+        self.state["watch_ops"] = added
+        self.state["watch_deleted"] = deleted
+        _save_state(self.state)
+        logger.info(f"[市集推送] 监控{'添加' if on else '删除'} {sid}"
+                    f" → 现在监控 {len(self._watch())} 个")
+        return was
 
     def _render_listing(self, seller: str, nickname: str, items: List[Dict[str, Any]],
                         total: int) -> str:
@@ -2638,14 +2718,34 @@ class LkMarketNotify(Star):
             return []
         return [x for x in (data.get("items") or []) if isinstance(x, dict)]
 
+    #: 已推记录保留时长（秒）。以前是 2 天，会害人：
+    #: 货架接口一次只给**最新 30 条**，热门商家一上新，老挂单就掉出窗口；
+    #: 掉出去 2 天后再回窗口 → id 早被清掉了 → 又被当成「新上架」推一遍。
+    LISTING_KEEP = 30 * 86400
+
+    @staticmethod
+    def _listing_sig(sid: str, it: Dict[str, Any]) -> str:
+        """同一颗蛋的「内容指纹」（换挂单 id 也不变）。
+
+        卖家把同一颗蛋下架再重新上架，服务端会发新 id，
+        只按 id 去重就会重复推 —— 这里再用内容兜一层。
+        """
+        raw = "|".join([sid] + [str(x) for x in (
+            it.get("name"), it.get("points"), it.get("weight_g"),
+            it.get("height_cm"), it.get("nature"),
+            ",".join(it.get("tags") or []), it.get("note"))])
+        return hashlib.md5(raw.encode("utf-8")).hexdigest()[:16]
+
     async def _poll_listings(self) -> int:
         """逐个监控商家拉实时货架，发现新挂单就推送。
 
-        **同一件商品只推一次**，靠三件事保证：
-          1. pushed_ids 每次都从**磁盘**读（不信任内存副本）——
+        **同一件商品只推一次**，靠四件事保证：
+          1. pushed_ids / pushed_sig 每次都从**磁盘**读（不信任内存副本）——
              AstrBot 热重载 / 起两个实例时，各记各的内存状态就会重复推
           2. **先写盘再推送** —— 推送过程中崩了也不会重推
-          3. 10 分钟窗口 + 2 天清理
+          3. 还在货架上的挂单每轮「续命」，30 天内不掉记录 ——
+             掉出 30 条窗口再回来也不会当成新上架
+          4. 内容指纹兜底：同一颗蛋重新上架换了 id，同样不推
         """
         sent = 0
         watch = self._watch()
@@ -2653,6 +2753,7 @@ class LkMarketNotify(Star):
             return 0
 
         now = time.time()
+        keep = self.LISTING_KEEP
         for sid in watch:
             items = await self._listing_items(sid)
             if not items:
@@ -2660,25 +2761,34 @@ class LkMarketNotify(Star):
 
             disk = _load_state()
             pushed: Dict[str, Any] = dict(disk.get("pushed_ids") or {})
+            sigs: Dict[str, Any] = dict(disk.get("pushed_sig") or {})
             for k in [k for k, ts in pushed.items()
-                      if now - float(ts or 0) > 172800]:
+                      if now - float(ts or 0) > keep]:
                 pushed.pop(k, None)
+            for k in [k for k, ts in sigs.items()
+                      if now - float(ts or 0) > keep]:
+                sigs.pop(k, None)
 
             fresh: List[Dict[str, Any]] = []
             for it in items:
                 lid = str(it.get("id") or "")
                 if not lid:
                     continue
-                last = float(pushed.get(lid) or 0)
-                if last and now - last < 600:
+                sig = self._listing_sig(sid, it)
+                if lid in pushed or sig in sigs:
+                    # 见过：续命，别让 30 天清理把还在货架上的老挂单忘掉
+                    pushed[lid] = now
+                    sigs[sig] = now
                     continue
-                if lid not in pushed:
-                    fresh.append(it)
+                fresh.append(it)
                 pushed[lid] = now
+                sigs[sig] = now
 
             # 先落盘，再推送
             disk["pushed_ids"] = pushed
+            disk["pushed_sig"] = sigs
             self.state["pushed_ids"] = pushed
+            self.state["pushed_sig"] = sigs
             _save_state(disk)
 
             if fresh:
@@ -2686,7 +2796,8 @@ class LkMarketNotify(Star):
                 if await self._send(text, kind="listing"):
                     sent += 1
                     self.stats["sent"] += 1
-                    logger.info(f"[市集推送] {sid} 新上架 {len(fresh)} 件")
+                    logger.info(f"[市集推送] {sid} 新上架 {len(fresh)} 件"
+                                f"（已推 id {len(pushed)} 个）")
 
         return sent
 
@@ -4268,6 +4379,61 @@ class LkMarketNotify(Star):
     # ---------------------------------------------------------------- 指令
 
     # ---------------------------------------------------------------- 指令：新上架监控
+    @filter.command("新上架")
+    async def cmd_watch(self, event: AstrMessageEvent):
+        """新上架 添加 Z10014514 / 新上架 删除 Z10014514 / 新上架 列表"""
+        if not await self._perm_gate(event, "watch"):
+            return
+        args = self._cmd_parts(event)
+        sub = (args[1].strip() if len(args) > 1 else "")
+        sub_low = sub.lower()
+        target = (args[2].strip().upper() if len(args) > 2 else "")
+        hint = self.FORMAT_HINTS["新上架"]
+
+        # 新上架 列表
+        if sub_low in ("列表", "名单", "list", "查看", "ls") or sub in ("列表", "名单"):
+            watch = self._watch()
+            if not watch:
+                yield await self._say(event, "监控名单是空的\n加一个：新上架 添加 Z10014514")
+                return
+            cfg_ids = set(self._cfg_watch_ids())
+            added = set((self.state.get("watch_ops") or {}).keys())
+            lines = [f"新上架监控（{len(watch)} 个）"]
+            for sid in watch:
+                src = "指令" if sid in added else ("配置" if sid in cfg_ids else "旧记录")
+                lines.append(f"· {sid}（{src}）")
+            lines.append("加：新上架 添加 Z10014514 / 删：新上架 删除 Z10014514")
+            yield await self._say(event, "\n".join(lines))
+            return
+
+        # 允许「新上架 Z10014514」直接当添加
+        if re.fullmatch(r"[Zz]\d{5,12}", sub):
+            target, sub_low = sub.upper(), "添加"
+
+        if not target:
+            yield await self._say(event, hint)
+            return
+
+        if sub_low in ("添加", "加", "add", "监控", "开", "订阅"):
+            was = self._set_watch(target, True)
+            n = len(self._watch())
+            yield await self._say(event,
+                                  (f"{target} 已经在监控里了（共 {n} 个）" if was
+                                   else f"✅ 已开始监控 {target}\n监控名单：{n} 个"))
+            return
+
+        if sub_low in ("删除", "删", "del", "remove", "取消", "关", "停止", "退订"):
+            was = self._set_watch(target, False)
+            n = len(self._watch())
+            yield await self._say(event,
+                                  (f"🗑 已停止监控 {target}，之后不再推它的新上架\n"
+                                   f"（配置里的 watch_sellers 也盖得住，"
+                                   f"剩下的监控：{n} 个）" if was
+                                   else f"{target} 本来就不在监控里（现在 {n} 个）"))
+            return
+
+        yield await self._say(event, hint)
+
     def _cmd_parts(self, event) -> list:
         """['/标','Z123','黑','备注'] → ['标','Z123','黑','备注']"""
         prefix = str(self._cfg("wake_prefix", "/") or "/")
@@ -5613,10 +5779,16 @@ class LkMarketNotify(Star):
     async def cmd_reset(self, event: AstrMessageEvent):
         if not await self._perm_gate(event, "push"):
             return
-        keep_umos = self.state.get("umos") or []
-        self.state = {"seen": [], "started": 0, "umos": keep_umos}
-        _save_state(self.state)
-        yield await self._say(event, "已清空推送记录（绑定关系保留），下一轮会把现有记录当新的处理")
+        # 只清「推送记录」，绑定关系和监控名单留着 ——
+        # 以前这里整个 state 换掉，顺手把监控名单/黑名单也清了
+        keep = {k: self.state.get(k) for k in
+                ("umos", "watch", "watch_ops", "watch_deleted", "marks")}
+        self.state = {"seen": [], "started": 0, "pushed_ids": {}, "pushed_sig": {},
+                      "listings": {}, "flower_seen": []}
+        self.state.update(keep)
+        _hard_save_state(self.state)          # 这次要真清，不能跟磁盘合并
+        yield await self._say(event, "已清空推送记录（绑定和监控名单保留），"
+                                     "下一轮会把现有记录当新的处理")
 
 
 def _mark_low(low, median) -> str:

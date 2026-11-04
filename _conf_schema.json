@@ -72,9 +72,10 @@
     "hint": "占位符：{name} {points} {pets} {size} {seller} {courier} {code} {time}（多行会自动拆成多段发送）"
   },
   "watch_sellers": {
-    "description": "监控的商家助手ID（逗号分隔，如 Z10014514,Z10020486）。「蛋监控」指令已移除，只能在这里填；留空则不监控任何商家。",
+    "description": "监控的商家助手ID（逗号分隔，如 Z10014514,Z10020486）；留空则不监控任何商家。",
     "type": "string",
-    "default": ""
+    "default": "",
+    "hint": "也可以在群里发「新上架 添加 Z10014514 / 新上架 删除 Z10014514 / 新上架 列表」管理。指令里的「删除」会记住删除时间，压过这里填的 ID（删了就是删了，不会下一轮又被配置加回来）。"
   },
   "listing_template": {
     "description": "新上架提醒模板（留空用内置排版），可用 {nickname} {seller} {items} {total}",
