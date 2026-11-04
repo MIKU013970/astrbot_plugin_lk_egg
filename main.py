@@ -103,7 +103,7 @@ def _strip_emoji(text: str) -> str:
 
 _PLUGIN_DIR = Path(__file__).resolve().parent
 _PLUGIN_NAME = "astrbot_plugin_lk_egg"
-VERSION = "1.80.1"
+VERSION = "1.81.0"
 
 
 def _data_dir() -> Path:
@@ -166,7 +166,7 @@ def _save_state(state: Dict[str, Any]) -> None:
     "astrbot_plugin_lk_egg",
     "MIKU013970 & DeepSeek",
     "洛克小肥鱼全功能 + 炫彩花种订阅",
-    "1.80.1",
+    "1.81.0",
 )
 class LkMarketNotify(Star):
     def __init__(self, context: Context, config: AstrBotConfig = None):
@@ -400,9 +400,12 @@ class LkMarketNotify(Star):
             out = [_priv(q) for q in admins]
             return out or [_priv(q) for q in self._targets()]
         if mode in ("bind", "绑定", "旧", "legacy", "老"):
-            # 绑过的会话都发（每个目标各一次）；
-            # 「同一件商品不会重复」靠 _poll_listings 里的 pushed_ids 保证
-            return self._candidate_umos()
+            # 只发**最近绑定**的那个会话 —— 换过群之后旧群不该还收到推送。
+            # 想去多个群就显式配 listing_notify_target: g:xxx,g:yyy
+            _us = [u for u in (self.state.get("umos") or []) if u]
+            if _us:
+                return _us[-1:]
+            return self._candidate_umos()[:1]
         out: List[str] = []
         for item in re.split(r"[,，\s]+", raw):
             item = item.strip()
@@ -3215,9 +3218,8 @@ class LkMarketNotify(Star):
         if not snap:
             return await self._say(
                 event,
-                "花种接口没返回数据。\n"
-                f"检查一下控制台是不是在跑（{self.api_base}），"
-                f"以及是不是 1.60.0 之后重启过。")
+                "花种数据暂时没拉到，过一会儿再试。\n"
+                f"（控制台：{self.api_base}）")
 
         hits: List[Dict[str, Any]] = []
         kind = ""
@@ -3408,11 +3410,8 @@ class LkMarketNotify(Star):
                 return await self._say(
                     event,
                     f"🌸 {species}\n"
-                    f"花种接口没返回数据。\n"
-                    f"检查一下：\n"
-                    f"1. 洛克小肥鱼控制台是不是在跑（{self.api_base}）\n"
-                    f"2. 控制台是不是旧版本——花种接口要 1.60.0 之后重启过控制台才有\n"
-                    f"3. 账号 session 还有效吗")
+                    "花种数据暂时没拉到，过一会儿再试。\n"
+                f"（控制台：{self.api_base}）")
             chain = str(rec.get("进化链") or "")
             extra = f"\n（它整条进化链：{chain}）" if chain else ""
             return await self._say(
@@ -3445,11 +3444,8 @@ class LkMarketNotify(Star):
         if not catalog:
             return await self._say(
                 event,
-                "花种接口没返回数据。\n"
-                f"检查一下：\n"
-                f"1. 洛克小肥鱼控制台是不是在跑（{self.api_base}）\n"
-                f"2. 控制台是不是旧版本——花种接口要 1.60.0 之后重启过控制台才有\n"
-                f"3. 账号 session 还有效吗")
+                "花种数据暂时没拉到，过一会儿再试。\n"
+                f"（控制台：{self.api_base}）")
         items = [x for x in catalog if x.get("petId")]
         if not items:
             return await self._say(event, "花种市场现在没有任何品种。")
