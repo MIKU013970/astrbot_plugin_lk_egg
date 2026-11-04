@@ -103,7 +103,7 @@ def _strip_emoji(text: str) -> str:
 
 _PLUGIN_DIR = Path(__file__).resolve().parent
 _PLUGIN_NAME = "astrbot_plugin_lk_egg"
-VERSION = "1.82.0"
+VERSION = "1.82.1"
 
 
 def _data_dir() -> Path:
@@ -166,7 +166,7 @@ def _save_state(state: Dict[str, Any]) -> None:
     "astrbot_plugin_lk_egg",
     "MIKU013970 & DeepSeek",
     "洛克小肥鱼全功能 + 炫彩花种订阅",
-    "1.82.0",
+    "1.82.1",
 )
 class LkMarketNotify(Star):
     def __init__(self, context: Context, config: AstrBotConfig = None):
@@ -504,7 +504,7 @@ class LkMarketNotify(Star):
             return 0
         seen = set(self.state.get("flower_seen") or [])
         catalog = await self._flower_catalog()
-        if not catalog:
+        if not catalog:            # 失败 或 市场空，都不推
             return 0
         pushed = 0
         new_seen = list(seen)
@@ -3116,7 +3116,7 @@ class LkMarketNotify(Star):
             return cache
         catalog = await self._flower_catalog()
         out: List[Dict[str, Any]] = []
-        for it in catalog:
+        for it in (catalog or []):
             pid = it.get("petId")
             if not pid:
                 continue
@@ -3213,11 +3213,18 @@ class LkMarketNotify(Star):
         """按粒子 / 颜色 / 异色筛选花种。"""
         key = q.strip()
         low = key.lower()
+        # 先分清是「接口坏了」还是「市场真空」
+        _cat = await self._flower_catalog()
+        if _cat is None:
+            return await self._say(
+                event, "花种数据暂时没拉到，过一会儿再试。")
+        if not _cat:
+            return await self._say(
+                event, "花种市场当前没有挂单（0 个品种）。\n"
+                       "有人上架就能查到；也可以用「花种订阅」等通知。")
         snap = await self._flower_snapshot()
         if not snap:
-            return await self._say(
-                event,
-                "花种数据暂时没拉到，过一会儿再试。\n")
+            return await self._say(event, "花种市场当前没有挂单。")
 
         hits: List[Dict[str, Any]] = []
         kind = ""
@@ -3380,6 +3387,12 @@ class LkMarketNotify(Star):
             if pid:
                 pet_ids.append(int(pid))
         catalog = await self._flower_catalog()
+        if catalog is None:
+            return await self._say(event,
+                                   "花种数据暂时没拉到，过一会儿再试。")
+        if not catalog:
+            return await self._say(
+                event, "花种市场当前没有挂单（0 个品种）。\n有人上架就能查到。")
 
         # 用整条进化链的名字去对 catalog
         if not pet_ids:
@@ -3438,10 +3451,13 @@ class LkMarketNotify(Star):
     async def _flower_all(self, event: Any):
         """「花种」不带参数：列出当前花种市场的所有品种。"""
         catalog = await self._flower_catalog()
+        if catalog is None:
+            return await self._say(
+                event, "花种数据暂时没拉到，过一会儿再试。")
         if not catalog:
             return await self._say(
-                event,
-                "花种数据暂时没拉到，过一会儿再试。\n")
+                event, "花种市场当前没有挂单（0 个品种）。\n"
+                       "有人上架就能查到；也可以用「花种订阅」等通知。")
         items = [x for x in catalog if x.get("petId")]
         if not items:
             return await self._say(event, "花种市场现在没有任何品种。")
@@ -3838,7 +3854,7 @@ class LkMarketNotify(Star):
         "refunded": "已退款",
     }
 
-    async def _flower_catalog(self) -> List[Dict[str, Any]]:
+    async def _flower_catalog(self) -> Optional[List[Dict[str, Any]]]:
         """花种品种列表：每个品种带挂单数和最低价。
 
         **必须翻页**：服务端把 pageSize 强制成 12（传 50/100 都没用），
@@ -3846,6 +3862,7 @@ class LkMarketNotify(Star):
         """
         out: List[Dict[str, Any]] = []
         page = 1
+        failed = False
         while page <= 30:
             try:
                 data = await self._api(
@@ -3853,13 +3870,16 @@ class LkMarketNotify(Star):
             except Exception as e:
                 logger.warning(f"[花种] 取目录失败(page {page}): "
                                f"{type(e).__name__}: {e}")
+                failed = True
                 break
             if not isinstance(data, dict):
-                logger.warning("[花种] 目录接口返回异常（控制台可能需要重启）")
+                logger.warning("[花种] 目录接口返回异常")
+                failed = True
                 break
             if not data.get("ok", True):
                 logger.warning(f"[花种] 目录接口报错: "
                                f"{str(data.get('error'))[:80]}")
+                failed = True
                 break
             items = [x for x in (data.get("items") or []) if isinstance(x, dict)]
             out.extend(items)
@@ -3870,7 +3890,9 @@ class LkMarketNotify(Star):
             if page >= pages or not items:
                 break
             page += 1
-        return out
+        if failed and not out:
+            return None            # 接口失败
+        return out                 # 可能是空列表（市场真没货）
 
     async def _flower_offers(self, pet_id: Any) -> List[Dict[str, Any]]:
         """某个花种的全部挂单（同样翻页，服务端 pageSize 上限 12）。"""
