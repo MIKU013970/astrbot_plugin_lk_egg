@@ -103,7 +103,7 @@ def _strip_emoji(text: str) -> str:
 
 _PLUGIN_DIR = Path(__file__).resolve().parent
 _PLUGIN_NAME = "astrbot_plugin_lk_egg"
-VERSION = "1.91.0"
+VERSION = "1.92.0"
 
 
 def _cand_dirs() -> List[Path]:
@@ -334,7 +334,7 @@ def _hard_save_state(state: Dict[str, Any]) -> None:
     "astrbot_plugin_lk_egg",
     "MIKU013970 & DeepSeek",
     "洛克小肥鱼全功能 + 炫彩花种订阅",
-    "1.91.0",
+    "1.92.0",
 )
 class LkMarketNotify(Star):
     def __init__(self, context: Context, config: AstrBotConfig = None):
@@ -616,6 +616,12 @@ class LkMarketNotify(Star):
     def _push_switch_text(self) -> str:
         s = self._push_switch_state()
         on, off = "🟢 开", "🔴 关"
+
+        def _tpl_state(key: str) -> str:
+            if self._tpl_off(key):
+                return "关"
+            return "内置排版" if not str(self._cfg(key, "") or "").strip() else "自定义"
+
         return (
             f"推送总开关：{off if s['push_off'] else on}\n"
             f"① 购买播报：{off if s['purchase_off'] else on}\n"
@@ -624,6 +630,8 @@ class LkMarketNotify(Star):
             f"③ 花种订阅：{off if s['flower_push_off'] else on}"
             f"（配置 flower_enabled={'开' if bool(self._cfg('flower_enabled', True)) else '关'}）\n"
             f"群聊推送：{'🔴 关（只发私聊）' if s['group_off'] else on}\n"
+            f"模板：新上架={_tpl_state('listing_template')} · 购买={_tpl_state('template')}"
+            f"（模板留空＝内置排版，照样推；填「关」才是关）\n"
             f"配置里的目标：购买={self._cfg('buy_notify_target', '') or '空(只私聊管理员)'}"
             f" · 新上架={self._cfg('listing_notify_target', 'bind') or '空'}"
         )
@@ -661,6 +669,9 @@ class LkMarketNotify(Star):
             return 0
         if self._kind_off(kind):
             logger.info(f"[市集推送] {self.KIND_NAMES.get(kind, kind)} 已关，这条不发")
+            return 0
+        if kind == "purchase" and self._tpl_off("template"):
+            logger.info("[市集推送] template = 关 → 购买播报整条关掉，不发")
             return 0
         group_off = bool(float(self.state.get("group_off") or 0))
         umos = self._notify_targets(kind)
@@ -828,8 +839,15 @@ class LkMarketNotify(Star):
         if self._market_paused():
             logger.info("[市集推送] 市场服务暂停（market_paused=true），不轮询终端")
             return
-        logger.info(f"[市集推送] 轮询 {self.api_base} 每 {self.interval:g}s"
-                    f" · 平台 {self._platform()} · 目标 {len(self._candidate_umos())} 个")
+        logger.info(f"[市集推送/lk_egg v{VERSION}] 轮询 {self.api_base} 每 {self.interval:g}s"
+                    f" · 平台 {self._platform()} · 目标 {len(self._candidate_umos())} 个"
+                    f" · 监控商家 {len(self._watch())} 个")
+        # 最常见的误解：把「新上架提醒模板」的内容删干净，以为就不推了
+        if (not self._tpl_off("listing_template")
+                and not str(self._cfg("listing_template", "") or "").strip()
+                and self._watch()):
+            logger.info("[市集推送] listing_template 是空的 → 用内置排版，新上架提醒照样会推。"
+                        "不想推：清空 watch_sellers / 发「蛋推送新关」/ 模板填「关」")
         while True:
             if self._market_paused():
                 logger.info("[市集推送] 市场服务已暂停，停止轮询")
@@ -2775,6 +2793,15 @@ class LkMarketNotify(Star):
                     f" → 现在监控 {len(self._watch())} 个")
         return was
 
+    #: `listing_template` / `template` 填这些值 = 直接关掉那条推送。
+    #: 注意：**留空不等于关闭** —— 留空是「用内置排版」，照样会推。
+    #: 用户把模板内容删干净了还以为关了，就是踩这个坑。
+    OFF_VALUES = ("关", "关闭", "不推", "关闭推送", "别推", "off", "false", "no", "none", "0", "-")
+
+    def _tpl_off(self, key: str) -> bool:
+        raw = str(self._cfg(key, "") or "").strip().lower()
+        return raw in [x.lower() for x in self.OFF_VALUES]
+
     def _render_listing(self, seller: str, nickname: str, items: List[Dict[str, Any]],
                         total: int) -> str:
         tpl = str(self._cfg("listing_template", "") or "")
@@ -2832,6 +2859,11 @@ class LkMarketNotify(Star):
           4. 内容指纹兜底：同一颗蛋重新上架换了 id，同样不推
         """
         sent = 0
+        if self._tpl_off("listing_template"):
+            if not self.stats.get("listing_off_logged"):
+                self.stats["listing_off_logged"] = 1
+                logger.info("[市集推送] listing_template = 关 → 新上架提醒整条关掉，不推也不拉货架")
+            return 0
         watch = self._watch()
         if not watch:
             return 0

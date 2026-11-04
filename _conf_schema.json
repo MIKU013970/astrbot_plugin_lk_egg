@@ -66,21 +66,22 @@
     "hint": "默认关闭，避免一装插件就把几十条历史全推一遍"
   },
   "template": {
-    "description": "消息模板",
+    "description": "消息模板（购买播报）",
     "type": "text",
     "default": "🥚 购买成功\n蛋名：{name}\n消耗：{points} 积分\n可能孵出：{pets}\n尺寸：{size}\n卖家：{seller}\n时间：{time}",
-    "hint": "占位符：{name} {points} {pets} {size} {seller} {courier} {code} {time}（多行会自动拆成多段发送）"
+    "hint": "占位符：{name} {points} {pets} {size} {seller} {courier} {code} {time}（多行会自动拆成多段发送）。注意：留空 = 用内置排版、照常推送；想关掉购买播报，这里填「关」（或发指令 蛋推送买关）"
   },
   "watch_sellers": {
     "description": "监控的商家助手ID（逗号分隔，如 Z10014514,Z10020486）；留空则不监控任何商家。",
     "type": "string",
     "default": "",
-    "hint": "也可以在群里发「新上架 添加 Z10014514 / 新上架 删除 Z10014514 / 新上架 列表」管理。指令里的「删除」会记住删除时间，压过这里填的 ID（删了就是删了，不会下一轮又被配置加回来）。"
+    "hint": "也可以在群里发「新上架 添加 Z10014514 / 新上架 删除 Z10014514 / 新上架 列表」管理。指令里的「删除」会记住删除时间，压过这里填的 ID（删了就是删了，不会下一轮又被配置加回来）。注意：这里只管「新上架提醒」一条线，买到的蛋播报走 buy_notify_target。"
   },
   "listing_template": {
     "description": "新上架提醒模板（留空用内置排版），可用 {nickname} {seller} {items} {total}",
     "type": "string",
-    "default": ""
+    "default": "",
+    "hint": "重要：留空 ≠ 关闭。留空只是换成内置排版，新上架提醒照样会推。真要停推送：清空 watch_sellers、或这里填「关」、或在群里发「蛋推送新关」。"
   },
   "bare_name_private": {
     "description": "私聊里直接发精灵名字就查（群聊始终需要 / 前缀）",
