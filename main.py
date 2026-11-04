@@ -103,7 +103,7 @@ def _strip_emoji(text: str) -> str:
 
 _PLUGIN_DIR = Path(__file__).resolve().parent
 _PLUGIN_NAME = "astrbot_plugin_lk_egg"
-VERSION = "1.87.0"
+VERSION = "1.88.0"
 
 
 def _cand_dirs() -> List[Path]:
@@ -306,7 +306,7 @@ def _save_state(state: Dict[str, Any]) -> None:
     "astrbot_plugin_lk_egg",
     "MIKU013970 & DeepSeek",
     "洛克小肥鱼全功能 + 炫彩花种订阅",
-    "1.87.0",
+    "1.88.0",
 )
 class LkMarketNotify(Star):
     def __init__(self, context: Context, config: AstrBotConfig = None):
@@ -2601,14 +2601,13 @@ class LkMarketNotify(Star):
         「蛋监控 删除」必须能盖过配置 —— 否则用户在插件配置里填的
         watch_sellers 会一直把人加回来，删了还在推。
         """
-        ids = [str(x).strip().upper() for x in (self.state.get("watch") or []) if x]
-        cfg_ids = [x.strip().upper() for x in str(self._cfg("watch_sellers", "") or "")
+        # 「蛋监控」指令已移除 → 监控名单只看配置里的 watch_sellers
+        cfg_ids = [x.strip().upper()
+                   for x in str(self._cfg("watch_sellers", "") or "")
                    .replace("，", ",").split(",") if x.strip()]
-        off = {str(x).strip().upper()
-               for x in (self.state.get("watch_off") or []) if x}
         out = []
-        for x in ids + cfg_ids:
-            if x and x not in out and x not in off:
+        for x in cfg_ids:
+            if x and x not in out:
                 out.append(x)
         return out
 
@@ -4261,7 +4260,6 @@ class LkMarketNotify(Star):
         "查ID": "格式：查ID Z10014514\n也可以用平台昵称：查ID 咕咕",
         "查询ID": "格式：查询ID Z10014514（和 查ID 一样）",
         "新上架": "格式：\n新上架 添加 Z10014514\n新上架 删除 Z10014514\n新上架 列表",
-        "蛋监控": "格式：\n蛋监控 添加 Z10014514\n蛋监控 删除 Z10014514\n蛋监控 列表",
         "标": "格式：标 Z10014514 黑 备注写这里\n（第二项只能是「黑」或「白」）",
         "黑名单": "直接发「黑名单」就能列出全部\n加人：标 Z10014514 黑 备注",
         "白名单": "直接发「白名单」就能列出全部\n加人：标 Z10014514 白 备注",
@@ -4298,7 +4296,7 @@ class LkMarketNotify(Star):
 
     # AstrBot 在派发前已经剥掉了 / 前缀，插件这边不能再校验前缀（否则恒为 False）
     COMMAND_WORDS = ("查询ID", "查询", "查蛋", "查ID", "标", "取消标", "黑名单", "白名单",
-                     "新上架", "蛋监控", "帮助", "菜单", "蛋推送",
+                     "新上架", "帮助", "菜单", "蛋推送",
                      "花种", "花种订阅", "家园", "UID", "查UID", "游戏ID",
                      "改绑记录", "改名记录", "诊断")
 
@@ -4307,70 +4305,6 @@ class LkMarketNotify(Star):
         if self._ID_CMD_RE.match(t):
             return True
         return any(t.startswith(w) for w in self.COMMAND_WORDS)
-
-    @filter.command("蛋监控")
-    async def cmd_watch(self, event: AstrMessageEvent):
-        """蛋监控 添加 Z10014514 / 删除 / 列表"""
-        if not await self._perm_gate(event, "watch"):
-            return
-        if self._market_paused():
-            yield await self._say(event, self.PAUSED_HINT)
-            return
-        args = self._cmd_parts(event)
-        q = self._cmd_args(event)
-        sub = args[1] if len(args) > 1 else ""
-        rest = args[2:]
-
-        if sub in ("列表", "list", ""):
-            watch = self._watch()
-            if not watch:
-                yield await self._say(event, "还没有监控任何商家。\n用：蛋监控 添加 Z10014514（换成真实助手ID）")
-                return
-            lines = [f"监控中的商家（{len(watch)} 个）"]
-            for sid in watch[:20]:
-                info = await self._seller_info(sid)
-                nick = (info or {}).get("nickname") or "—"
-                lines.append(f"· {nick}（{sid}）在售 {(info or {}).get('listed', '—')} 件")
-            yield await self._say(event, "\n".join(lines))
-            return
-
-        if sub in ("添加", "add"):
-            added = []
-            for x in rest:
-                x = x.strip().upper()
-                if not x.startswith("Z"):
-                    continue
-                if x not in self.state["watch"]:
-                    self.state["watch"].append(x)
-                    added.append(x)
-            _save_state(self.state)
-            yield await self._say(event, 
-                ("已添加监控：" + "、".join(added) + f"\n共 {len(self.state['watch'])} 个")
-                if added else "没识别到要添加的助手ID（Z 开头）")
-            return
-
-        if sub in ("删除", "del", "remove"):
-            removed, missing = [], []
-            off = self.state.setdefault("watch_off", [])
-            for x in rest:
-                x = x.strip().upper()
-                hit = x in self.state["watch"]
-                if hit:
-                    self.state["watch"].remove(x)
-                    self.state["listings"].pop(x, None)
-                    removed.append(x)
-                else:
-                    missing.append(x)
-                # 不管原来在不在，都记进「别再监控」名单 ——
-                # 这样配置里的 watch_sellers 也不会再把它拉回来
-                if x and x not in off:
-                    off.append(x)
-            _save_state(self.state)
-            yield await self._say(event, 
-                ("已删除监控：" + "、".join(removed)) if removed else "列表里没有这些 ID")
-            return
-
-        yield await self._say(event, "用法：\n蛋监控 添加 Z10014514\n蛋监控 删除 Z10014514\n蛋监控 列表")
 
     # ---------------------------------------------------------------- 指令：黑白名单
     @filter.command("标")
@@ -4460,99 +4394,6 @@ class LkMarketNotify(Star):
     async def cmd_help(self, event: AstrMessageEvent):
         yield await self._say(event, await self._menu_for(event))
 
-    @filter.command("新上架")
-    async def cmd_watch_alias(self, event: AstrMessageEvent):
-        """新上架 添加 Z10014514 / 删除 / 列表"""
-        if not await self._perm_gate(event, "watch"):
-            return
-        if self._market_paused():
-            yield await self._say(event, self.PAUSED_HINT)
-            return
-        args = self._cmd_parts(event)
-        sub = args[1] if len(args) > 1 else ""
-        rest = args[2:]
-        # 兼容「添加Z10014514」这种不带空格的写法
-        for kw in ("添加", "删除", "列表"):
-            if sub.startswith(kw) and sub != kw:
-                tail = sub[len(kw):].strip()
-                if tail:
-                    rest = [tail] + rest
-                sub = kw
-                break
-
-        if sub in ("列表", "list", ""):
-            watch = self._watch()
-            if not watch:
-                yield await self._say(event, self.FORMAT_HINTS.get("新上架", "格式：\n新上架 添加 Z10014514\n新上架 删除 Z10014514\n新上架 列表"))
-                return
-            lines = [f"监控中的商家（{len(watch)} 个）"]
-            for sid in watch[:20]:
-                info = await self._seller_info(sid)
-                lines.append(f"· {(info or {}).get('nickname') or '—'}（{sid}）"
-                             f"在售 {(info or {}).get('listed', '—')} 件")
-            yield await self._say(event, "\n".join(lines))
-            return
-
-        if sub in ("添加", "add"):
-            added, dup, bad = [], [], []
-            off = self.state.setdefault("watch_off", [])
-            for x in rest:
-                x = x.strip().upper()
-                if not x.startswith("Z"):
-                    bad.append(x)
-                elif x in self._watch():
-                    dup.append(x)
-                else:
-                    self.state["watch"].append(x)
-                    added.append(x)
-                    if x in off:              # 重新添加 → 解除屏蔽
-                        off.remove(x)
-            _save_state(self.state)
-            total = len(self.state["watch"])
-            parts = []
-            if added:
-                parts.append("已添加监控：" + "、".join(added))
-            if dup:
-                parts.append("已经在监控里了：" + "、".join(dup))
-            if bad:
-                parts.append("不是助手ID（要 Z 开头）：" + "、".join(bad))
-            if not rest:
-                parts = ["没写要监控谁。\n格式：新上架 添加 Z10014514"]
-            parts.append(f"当前共 {total} 个")
-            yield await self._say(event, "\n".join(parts))
-            return
-
-        if sub in ("删除", "del", "remove"):
-            removed, missing = [], []
-            for x in rest:
-                x = x.strip().upper()
-                if x in self.state["watch"]:
-                    self.state["watch"].remove(x)
-                    self.state["listings"].pop(x, None)
-                    removed.append(x)
-                else:
-                    missing.append(x)
-            _save_state(self.state)
-            parts = []
-            if removed:
-                parts.append("已删除监控：" + "、".join(removed))
-            if missing:
-                parts.append("本来就不在监控里：" + "、".join(missing))
-            if not rest:
-                parts = ["没写要删除谁。\n格式：新上架 删除 Z10014514"]
-            n_now = len(self._watch())
-            parts.append(f"当前监控 {n_now} 个")
-            if any(removed):
-                cfg = str(self._cfg("watch_sellers", "") or "")
-                if any(x in cfg.upper() for x in removed):
-                    parts.append("注意：插件配置里的 watch_sellers 也写了它，"
-                                 "已一并屏蔽；想彻底清掉可以去配置里删")
-            yield await self._say(event, "\n".join(parts))
-            return
-
-        yield await self._say(event, self.FORMAT_HINTS.get("新上架", "格式：\n新上架 添加 Z10014514\n新上架 删除 Z10014514\n新上架 列表"))
-
-    # 只发了关键词、没带参数 → 直接教格式
     @filter.regex(r"^\s*[\u4e00-\u9fa5A-Za-z0-9·]{2,12}\s*$")
     async def on_bare_species(self, event: AstrMessageEvent):
         """私聊里直接发精灵名字也能查；群里必须带 /"""

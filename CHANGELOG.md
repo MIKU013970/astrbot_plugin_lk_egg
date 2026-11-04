@@ -1,5 +1,55 @@
 # 更新日志
 
+## v1.88.0
+
+### ① `蛋监控` 指令整个删掉了
+
+带 `@filter.command` 的 `cmd_watch` 和 `cmd_watch_alias` 两个方法全删（153 行），
+`FORMAT_HINTS` / `COMMAND_WORDS` / 菜单里的相关条目一起清掉。
+
+监控名单**只认配置**：
+
+```yaml
+watch_sellers: Z10014514,Z10020486     # 逗号分隔；留空 = 不监控任何商家
+```
+
+```python
+def _watch(self):
+    ids = 配置里的 watch_sellers
+    return ids          # state["watch"] 不再参与
+```
+
+这样就不会出现「指令说删了、配置里还有、结果还在推」这种事。
+
+### ② 清理插件设置里没用的配置项（45 → 38）
+
+删了 7 个代码里**从来没引用**的：
+
+| 配置项 | 为什么删 |
+|---|---|
+| `auto_buy_count` | 自动买单功能已移除 |
+| `auto_buy_max_points` | 同上 |
+| `auto_buy_keyword` | 同上 |
+| `auto_buy_ceiling_points` | 同上 |
+| `auto_buy_step` | 同上 |
+| `show_timing` | 出图耗时早就不显示了 |
+| `flower_notify_target` | 一直没生效（`kind="flower"` 实际走 `buy_notify_target`） |
+
+### 实测
+
+```
+cmd_watch:       已移除 OK
+cmd_watch_alias: 已移除 OK
+配置 watch_sellers = ''
+_watch() = []
+_poll_listings() 推送 0 次  OK 不推
+
+菜单里 蛋监控/auto_buy/show_timing：全没了
+菜单行数: 45
+```
+
+## v1.87.0
+
 ## v1.87.0
 
 ### 修：删了监控还在推（真因：合并逻辑把删除覆盖了）
