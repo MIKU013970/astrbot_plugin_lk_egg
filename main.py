@@ -103,7 +103,7 @@ def _strip_emoji(text: str) -> str:
 
 _PLUGIN_DIR = Path(__file__).resolve().parent
 _PLUGIN_NAME = "astrbot_plugin_lk_egg"
-VERSION = "1.85.0"
+VERSION = "1.86.0"
 
 
 def _cand_dirs() -> List[Path]:
@@ -287,7 +287,7 @@ def _save_state(state: Dict[str, Any]) -> None:
     "astrbot_plugin_lk_egg",
     "MIKU013970 & DeepSeek",
     "洛克小肥鱼全功能 + 炫彩花种订阅",
-    "1.85.0",
+    "1.86.0",
 )
 class LkMarketNotify(Star):
     def __init__(self, context: Context, config: AstrBotConfig = None):
@@ -2577,12 +2577,19 @@ class LkMarketNotify(Star):
 
     # ---------------------------------------------------------------- 新上架提醒
     def _watch(self) -> List[str]:
+        """监控名单 = state 里的 + 配置里的 watch_sellers − 已删除的。
+
+        「蛋监控 删除」必须能盖过配置 —— 否则用户在插件配置里填的
+        watch_sellers 会一直把人加回来，删了还在推。
+        """
         ids = [str(x).strip().upper() for x in (self.state.get("watch") or []) if x]
         cfg_ids = [x.strip().upper() for x in str(self._cfg("watch_sellers", "") or "")
                    .replace("，", ",").split(",") if x.strip()]
+        off = {str(x).strip().upper()
+               for x in (self.state.get("watch_off") or []) if x}
         out = []
         for x in ids + cfg_ids:
-            if x and x not in out:
+            if x and x not in out and x not in off:
                 out.append(x)
         return out
 
@@ -4325,14 +4332,20 @@ class LkMarketNotify(Star):
 
         if sub in ("删除", "del", "remove"):
             removed, missing = [], []
+            off = self.state.setdefault("watch_off", [])
             for x in rest:
                 x = x.strip().upper()
-                if x in self.state["watch"]:
+                hit = x in self.state["watch"]
+                if hit:
                     self.state["watch"].remove(x)
                     self.state["listings"].pop(x, None)
                     removed.append(x)
                 else:
                     missing.append(x)
+                # 不管原来在不在，都记进「别再监控」名单 ——
+                # 这样配置里的 watch_sellers 也不会再把它拉回来
+                if x and x not in off:
+                    off.append(x)
             _save_state(self.state)
             yield await self._say(event, 
                 ("已删除监控：" + "、".join(removed)) if removed else "列表里没有这些 ID")
@@ -4463,6 +4476,7 @@ class LkMarketNotify(Star):
 
         if sub in ("添加", "add"):
             added, dup, bad = [], [], []
+            off = self.state.setdefault("watch_off", [])
             for x in rest:
                 x = x.strip().upper()
                 if not x.startswith("Z"):
@@ -4472,6 +4486,8 @@ class LkMarketNotify(Star):
                 else:
                     self.state["watch"].append(x)
                     added.append(x)
+                    if x in off:              # 重新添加 → 解除屏蔽
+                        off.remove(x)
             _save_state(self.state)
             total = len(self.state["watch"])
             parts = []
@@ -4505,7 +4521,13 @@ class LkMarketNotify(Star):
                 parts.append("本来就不在监控里：" + "、".join(missing))
             if not rest:
                 parts = ["没写要删除谁。\n格式：新上架 删除 Z10014514"]
-            parts.append(f"当前共 {len(self.state['watch'])} 个")
+            n_now = len(self._watch())
+            parts.append(f"当前监控 {n_now} 个")
+            if any(removed):
+                cfg = str(self._cfg("watch_sellers", "") or "")
+                if any(x in cfg.upper() for x in removed):
+                    parts.append("注意：插件配置里的 watch_sellers 也写了它，"
+                                 "已一并屏蔽；想彻底清掉可以去配置里删")
             yield await self._say(event, "\n".join(parts))
             return
 

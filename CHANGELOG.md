@@ -1,5 +1,56 @@
 # 更新日志
 
+## v1.86.0
+
+### 修：删了监控还在推
+
+`_watch()` 会合并**两个来源**：
+
+```python
+ids = state["watch"]                       # /蛋监控 添加的
+cfg_ids = 配置里的 watch_sellers            # 插件配置界面填的
+for x in ids + cfg_ids: ...                # 合起来
+```
+
+`/蛋监控 删除` 只删了 `state["watch"]`，**配置里的 `watch_sellers` 还在**，
+下一轮又被 `_watch()` 加回来 → 继续监控继续推。
+
+而且第二次删会回「本来就不在监控里」—— 因为 state 里确实没了，
+你以为删掉了，其实配置里还挂着。
+
+### 修法：加「已删除」黑名单
+
+```python
+def _watch(self):
+    off = {x.upper() for x in (state.get("watch_off") or [])}
+    for x in ids + cfg_ids:
+        if x and x not in out and x not in off:   # 已删除的排除掉
+            out.append(x)
+```
+
+- `蛋监控 删除 X` → X 进 `state["watch_off"]`（不管原来在不在）
+- `蛋监控 添加 X` → X 从 `watch_off` 移除（解除屏蔽）
+- 删除时如果配置里也写了，会提示「插件配置里的 watch_sellers 也写了它，已一并屏蔽」
+
+### 实测
+
+```
+配置 watch_sellers = Z10010877
+_watch() = ['Z10010877']
+
+第 1 轮推送: 1 次
+
+执行 蛋监控 删除 Z10010877
+列表里没有这些 ID          ← 你说的「本来就不在监控里」
+_watch() 现在 = []          ← 但配置也一起屏蔽了
+watch_off = ['Z10010877']
+
+删除后 4 轮: 全 0 条
+→ OK 已停止推送
+```
+
+## v1.85.0
+
 ## v1.85.0
 
 ### 状态文件改成「多位置双写 + 读时合并」
