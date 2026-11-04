@@ -103,37 +103,59 @@ def _strip_emoji(text: str) -> str:
 
 _PLUGIN_DIR = Path(__file__).resolve().parent
 _PLUGIN_NAME = "astrbot_plugin_lk_egg"
-VERSION = "1.84.0"
+VERSION = "1.85.0"
 
 
-def _data_dir() -> Path:
-    """持久化数据目录。
+def _cand_dirs() -> List[Path]:
+    """状态文件的候选目录（按优先级）。
 
-    **必须用绝对路径**：以前回退到 `Path("data")/...`，那是相对 AstrBot 的 cwd 的，
-    cwd 一变（重启 / 换启动方式）状态文件就换了个地方，
-    pushed_ids 变空 → 同一件商品被反复推送。
+    三个都写、读的时候合并 —— 这样：
+      · 插件升级覆盖目录（data/ 被删）→ ① 里的还在
+      · 换电脑 → 每台机器各自生成，各记各的（本来就是不同环境）
+      · 某个目录不可写 → 还有别的顶上
     """
-    # ① 插件自己目录下的 data（绝对路径，跟 cwd 无关，最可靠）
-    try:
-        d = Path(__file__).resolve().parent / "data"
-        d.mkdir(parents=True, exist_ok=True)
-        return d
-    except Exception as e:
-        logger.warning(f"[市集推送] 插件目录不可写: {e}")
+    out: List[Path] = []
 
-    # ② AstrBot 标准数据目录
+    # ① AstrBot 标准数据目录（插件升级不丢，平台规范）
     try:
         from astrbot.core.utils.astrbot_path import get_astrbot_data_path
-        d = Path(get_astrbot_data_path()) / "plugin_data" / _PLUGIN_NAME
-        d.mkdir(parents=True, exist_ok=True)
-        return d
+        out.append(Path(get_astrbot_data_path()) / "plugin_data" / _PLUGIN_NAME)
     except Exception:
         pass
 
-    # ③ 最后兜底：用户目录（还是绝对路径）
-    d = Path.home() / ".astrbot" / "plugin_data" / _PLUGIN_NAME
-    d.mkdir(parents=True, exist_ok=True)
-    return d
+    # ② 插件目录下的 data（__file__ 运行时定位，换电脑自动适配；
+    #    不是硬编码路径，装在哪算哪）
+    try:
+        out.append(Path(__file__).resolve().parent / "data")
+    except Exception:
+        pass
+
+    # ③ 用户目录兜底
+    try:
+        out.append(Path.home() / ".astrbot" / "plugin_data" / _PLUGIN_NAME)
+    except Exception:
+        pass
+
+    # 去重 + 只留能建的
+    seen = set()
+    ok: List[Path] = []
+    for d in out:
+        k = str(d)
+        if k in seen:
+            continue
+        seen.add(k)
+        try:
+            d.mkdir(parents=True, exist_ok=True)
+            ok.append(d)
+        except Exception:
+            continue
+    return ok or [Path.cwd() / "data" / _PLUGIN_NAME]
+
+
+def _data_dir() -> Path:
+    """主目录（写这里 + 其它可写目录也同步一份）。"""
+    ds = _cand_dirs()
+    return ds[0] if ds else Path("data") / _PLUGIN_NAME
 
 
 _STATE_PATH = _data_dir() / "notified.json"
@@ -164,13 +186,53 @@ def _migrate_old_state() -> None:
         logger.warning(f"[市集推送] 迁移旧状态失败: {e}")
 
 
+def _state_files() -> List[Path]:
+    """所有可能存在状态文件的位置。"""
+    return [d / "notified.json" for d in _cand_dirs()]
+
+
 def _load_state() -> Dict[str, Any]:
+    """读状态：**所有位置的推送记录合并**（哪个还在就用哪个）。"""
     _migrate_old_state()
-    try:
-        return json.loads(_STATE_PATH.read_text(encoding="utf-8"))
-    except Exception:
-        return {"seen": [], "started": 0, "umos": [], "watch": [],
-                "listings": {}, "marks": {}}
+    base: Dict[str, Any] = {"seen": [], "started": 0, "umos": [], "watch": [],
+                            "listings": {}, "marks": {}}
+    merged_pushed: Dict[str, Any] = {}
+    merged_flower: List[Any] = []
+    merged_seen: List[Any] = []
+    got = False
+    for fp in _state_files():
+        try:
+            if not fp.is_file():
+                continue
+            d = json.loads(fp.read_text(encoding="utf-8"))
+        except Exception:
+            continue
+        got = True
+        # 主字段以第一个读到的为准，后面的补空
+        for k, v in d.items():
+            if k not in _MERGE_KEYS and k not in base:
+                base[k] = v
+            elif k not in _MERGE_KEYS and not base.get(k):
+                base[k] = v
+        # 推送记录全部合并（取时间更晚的）
+        p = d.get("pushed_ids")
+        if isinstance(p, dict):
+            for k, ts in p.items():
+                try:
+                    if float(ts) > float(merged_pushed.get(k) or 0):
+                        merged_pushed[k] = ts
+                except (TypeError, ValueError):
+                    merged_pushed.setdefault(k, ts)
+        for key, tgt in (("flower_seen", merged_flower), ("seen", merged_seen)):
+            v = d.get(key)
+            if isinstance(v, list):
+                tgt.extend(v)
+    if not got:
+        return base
+    base["pushed_ids"] = merged_pushed
+    base["flower_seen"] = list(dict.fromkeys(merged_flower))
+    base["seen"] = list(dict.fromkeys(merged_seen))
+    return base
 
 
 #: 这些是「推送记录」，磁盘上的永远更权威 ——
@@ -202,21 +264,30 @@ def _save_state(state: Dict[str, Any]) -> None:
             except Exception:
                 pass
 
-        _STATE_PATH.parent.mkdir(parents=True, exist_ok=True)
-        tmp = _STATE_PATH.with_suffix(".json.tmp")
-        tmp.write_text(json.dumps(state, ensure_ascii=False, indent=1),
-                       encoding="utf-8")
-        tmp.replace(_STATE_PATH)          # 原子写入，防止写一半被读到
+        payload = json.dumps(state, ensure_ascii=False, indent=1)
+        wrote = 0
+        errs = []
+        for d in _cand_dirs():
+            try:
+                d.mkdir(parents=True, exist_ok=True)
+                fp = d / "notified.json"
+                tmp = fp.with_suffix(".json.tmp")
+                tmp.write_text(payload, encoding="utf-8")
+                tmp.replace(fp)            # 原子写，防写一半被读到
+                wrote += 1
+            except Exception as e:
+                errs.append(f"{d}: {type(e).__name__}")
+        if not wrote:
+            logger.warning(f"[市集推送] 状态保存全部失败: {'; '.join(errs)}")
     except Exception as e:
-        logger.warning(f"[市集推送] 保存状态失败（{_STATE_PATH}）: "
-                       f"{type(e).__name__}: {e}")
+        logger.warning(f"[市集推送] 保存状态失败: {type(e).__name__}: {e}")
 
 
 @register(
     "astrbot_plugin_lk_egg",
     "MIKU013970 & DeepSeek",
     "洛克小肥鱼全功能 + 炫彩花种订阅",
-    "1.84.0",
+    "1.85.0",
 )
 class LkMarketNotify(Star):
     def __init__(self, context: Context, config: AstrBotConfig = None):
