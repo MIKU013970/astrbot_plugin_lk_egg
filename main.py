@@ -400,12 +400,10 @@ class LkMarketNotify(Star):
             out = [_priv(q) for q in admins]
             return out or [_priv(q) for q in self._targets()]
         if mode in ("bind", "绑定", "旧", "legacy", "老"):
-            # 只发**最近绑定**的那个会话 —— 换过群之后旧群不该还收到推送。
-            # 想去多个群就显式配 listing_notify_target: g:xxx,g:yyy
-            _us = [u for u in (self.state.get("umos") or []) if u]
-            if _us:
-                return _us[-1:]
-            return self._candidate_umos()[:1]
+            # 绑了几个会话就发几个（用户明确要的）。
+            # 「同一件商品不重复」靠 _poll_listings 里的 pushed_ids 保证 ——
+            # 同一件商品每轮只会进 fresh 一次，所以每个目标各收一条。
+            return self._candidate_umos()
         out: List[str] = []
         for item in re.split(r"[,，\s]+", raw):
             item = item.strip()
