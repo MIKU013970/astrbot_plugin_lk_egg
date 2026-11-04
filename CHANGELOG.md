@@ -1,5 +1,55 @@
 # 更新日志
 
+## v1.93.0
+
+### 真凶找到了：监控名单存了两个地方，你只清掉了其中一个
+
+| 存储位置 | 字段 | 谁认它 |
+|---|---|---|
+| 配置文件 `data\config\astrbot_plugin_lk_egg_config.json` | `watch_sellers` | 配置是「种子」，旧版运行时**只把它当初始值** |
+| 状态文件 `data\plugin_data\astrbot_plugin_lk_egg\notified.json` | `watch` 数组 | **旧版（≤1.87）和老 notify 插件运行时真正认的是这个** |
+
+所以：配置清空 ✅ 完全没影响它继续监控 —— 日志里一直在刷的就是它：
+
+```
+/api/merchants/listings?seller=Z10014514 请求失败: Cannot connect to host 127.0.0.1:8777
+```
+
+### 修法
+
+1. **`watch` 数组不再参与监控**（`_legacy_watch()` 只用于提示）
+2. 启动/每次取名单时**自动清空**残留，并记一条 warning：
+
+```
+[市集推送] 检测到旧版残留 watch=['Z10014514'] —— 旧版代码只认这个数组，
+清配置/发删除指令都动不到它，这就是「删了还在推」的真凶。已清空，不再监控。
+```
+
+3. 清掉的内容记进 `watch_legacy_cleaned`，`蛋推送状态` / `新上架 列表` 里能看到
+   `旧版残留已清理：Z10014514`
+4. 老插件 `astrbot_plugin_lk_market_notify` **1.4.1**：`_watch()` 增加 `watch_deleted`
+   扣减 —— 删除指令现在压得过它自己的 `watch` 数组和配置 `watch_sellers`；
+   添加会撤销删除记录（删过的还能加回来）
+
+### 实测（真接口 + 真插件代码）
+
+```
+配置 watch_sellers='' + 状态 watch=['Z10014514']
+  → _watch() = []          不监控
+  → _poll_listings() 推 0 条
+  → 磁盘 watch 被清空，watch_legacy_cleaned 记下 Z10014514
+配置 watch_sellers='Z10010877' → 只监控它（该认的还认）
+老插件：watch=[A] + 配置[A,B] + watch_deleted[A] → 只剩 B
+```
+
+### 排查工具也升级了
+
+`检查推送来源.py` 现在会：
+
+- 把状态文件里的 `watch` **具体内容**打出来并标红：「这是第二个存储位置」
+- 打印 `watch_deleted` / `watch_ops` / 最近 3 条推送
+- **测试 `api_base` 能不能连上**（连不上时日志就是那句 `Cannot connect to host`）
+
 ## v1.92.1
 
 ### 修：状态文件带 UTF-8 BOM 时，已推记录会被读丢 → 每轮都重推

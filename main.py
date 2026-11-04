@@ -103,7 +103,7 @@ def _strip_emoji(text: str) -> str:
 
 _PLUGIN_DIR = Path(__file__).resolve().parent
 _PLUGIN_NAME = "astrbot_plugin_lk_egg"
-VERSION = "1.92.1"
+VERSION = "1.93.0"
 
 
 def _cand_dirs() -> List[Path]:
@@ -334,7 +334,7 @@ def _hard_save_state(state: Dict[str, Any]) -> None:
     "astrbot_plugin_lk_egg",
     "MIKU013970 & DeepSeek",
     "洛克小肥鱼全功能 + 炫彩花种订阅",
-    "1.92.1",
+    "1.93.0",
 )
 class LkMarketNotify(Star):
     def __init__(self, context: Context, config: AstrBotConfig = None):
@@ -634,6 +634,9 @@ class LkMarketNotify(Star):
             f"（模板留空＝内置排版，照样推；填「关」才是关）\n"
             f"配置里的目标：购买={self._cfg('buy_notify_target', '') or '空(只私聊管理员)'}"
             f" · 新上架={self._cfg('listing_notify_target', 'bind') or '空'}"
+            + (f"\n旧版残留已清理：{'、'.join(sorted((self.state.get('watch_legacy_cleaned') or {}).keys()))}"
+               f"（旧版 wire 在 notified.json 的 watch 数组里，新版不再认它）"
+               if self.state.get("watch_legacy_cleaned") else "")
         )
 
     def _set_push_switch(self, key: str, on: bool) -> None:
@@ -2730,6 +2733,35 @@ class LkMarketNotify(Star):
                 for x in str(self._cfg("watch_sellers", "") or "")
                 .replace("，", ",").split(",") if x.strip()]
 
+    def _legacy_watch(self) -> List[str]:
+        """旧版（≤1.87，以及老插件 astrbot_plugin_lk_market_notify）写在
+        `state["watch"]` 里的监控名单。
+
+        **新版不再认它**。那个数组只在旧代码里生效：
+          · 配置 `watch_sellers` 清空 → 动不到它
+          · 发「新上架 删除」→ 动不到它（旧版根本没这个指令）
+        于是表现为「配置清空了、列表也删了，它还在监控 Z10014514 拼命拉货架」。
+        这里只用来提示 + 清理。
+        """
+        return [str(x).strip().upper() for x in (self.state.get("watch") or []) if x]
+
+    def _drop_legacy_watch(self) -> List[str]:
+        """把旧版残留的 watch 清掉（只清一次，会记日志）。返回清掉的内容。"""
+        legacy = self._legacy_watch()
+        if not legacy:
+            return []
+        self.state["watch"] = []
+        cleaned = dict(self.state.get("watch_legacy_cleaned") or {})
+        for sid in legacy:
+            cleaned[sid] = time.time()
+        self.state["watch_legacy_cleaned"] = cleaned
+        _save_state(self.state)
+        logger.warning(
+            f"[市集推送] 检测到旧版残留 watch={legacy} —— 旧版代码只认这个数组，"
+            f"清配置/发删除指令都动不到它，这就是「删了还在推」的真凶。"
+            f"已清空，不再监控。要监控请用「新上架 添加 Z…」或配置 watch_sellers")
+        return legacy
+
     def _watch(self) -> List[str]:
         """监控名单 = (配置 watch_sellers ∪ 新上架 添加) − 新上架 删除。
 
@@ -2739,11 +2771,13 @@ class LkMarketNotify(Star):
             watch_ops[sid]      = 新上架 添加 的时间
             watch_deleted[sid]  = 新上架 删除 的时间
             删除时间 > 添加时间 → 不在名单（哪怕配置里写了）
+
+        旧版的 `state["watch"]` 数组**不参与**（见 `_legacy_watch`）。
         """
+        self._drop_legacy_watch()
         cfg_ids = self._cfg_watch_ids()
         added = dict(self.state.get("watch_ops") or {})
         deleted = dict(self.state.get("watch_deleted") or {})
-        legacy = [str(x).strip().upper() for x in (self.state.get("watch") or []) if x]
 
         def _f(d: Dict[str, Any], k: str) -> float:
             try:
@@ -2753,8 +2787,6 @@ class LkMarketNotify(Star):
 
         def _alive(sid: str) -> bool:
             a = _f(added, sid)
-            if not a and sid in legacy:
-                a = 1.0                      # 老版本存在 state["watch"] 里的，按「很早就加了」算
             d = _f(deleted, sid)
             if d > a:
                 return False                 # 删得比加得晚 → 死了
@@ -2763,7 +2795,7 @@ class LkMarketNotify(Star):
             return sid in cfg_ids            # 只剩配置里那份
 
         out: List[str] = []
-        for sid in list(added.keys()) + legacy + cfg_ids:
+        for sid in list(added.keys()) + cfg_ids:
             if sid and sid not in out and _alive(sid):
                 out.append(sid)
         return out
