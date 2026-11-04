@@ -1,5 +1,64 @@
 # 更新日志
 
+## v1.84.0
+
+### 重复推送的真正元凶：状态文件路径是相对的
+
+```python
+# 以前（兜底分支）
+return Path("data") / "plugin_data" / _PLUGIN_NAME     # ← 相对路径！
+```
+
+相对路径是相对**当前工作目录**的。AstrBot 的 cwd 一变（重启方式不同、
+从别的目录启动），`notified.json` 就跑到别的地方去了 ——
+新位置没有 `pushed_ids`，于是**每一件商品都当新的推一遍**。
+
+我在你机器上找 `notified.json`，只找到我自己测试用的两个，
+**AstrBot 真正在用的那个根本找不到**（说明它一直写在了某个临时 cwd 里，
+重启就换了地方）。
+
+### 修法：绝对路径
+
+```python
+def _data_dir() -> Path:
+    # ① 插件自己目录下的 data（绝对路径，跟 cwd 无关，最可靠）
+    d = Path(__file__).resolve().parent / "data"
+    d.mkdir(parents=True, exist_ok=True)
+    return d
+    # ② 退回 AstrBot 标准目录 ③ 退回 ~/.astrbot
+```
+
+现在固定写到：
+
+```
+<插件目录>/data/notified.json
+```
+
+绝对路径，重启不会变。
+
+### 另外加了排查日志
+
+启动时会打印：
+
+```
+[市集推送] 状态文件: <绝对路径>/data/notified.json
+```
+
+保存失败时也会打印路径和原因，下次有类似问题一看日志就知道。
+
+### 实测（新路径，8 轮）
+
+```
+state 路径: C:\...\astrbot_plugin_lk_egg\data\notified.json
+  绝对路径: True
+
+第 1 轮: 推送 1 次 · 磁盘记录 30 个
+第 2~8 轮: 每轮夹杂 _save_state → 全是 0 条
+→ OK 无重复
+```
+
+## v1.83.0
+
 ## v1.83.0
 
 ### 真正找到重复推送的根因了

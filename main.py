@@ -103,17 +103,37 @@ def _strip_emoji(text: str) -> str:
 
 _PLUGIN_DIR = Path(__file__).resolve().parent
 _PLUGIN_NAME = "astrbot_plugin_lk_egg"
-VERSION = "1.83.0"
+VERSION = "1.84.0"
 
 
 def _data_dir() -> Path:
-    """按平台规范：持久化数据放 data/plugin_data/<plugin_name>/"""
+    """持久化数据目录。
+
+    **必须用绝对路径**：以前回退到 `Path("data")/...`，那是相对 AstrBot 的 cwd 的，
+    cwd 一变（重启 / 换启动方式）状态文件就换了个地方，
+    pushed_ids 变空 → 同一件商品被反复推送。
+    """
+    # ① 插件自己目录下的 data（绝对路径，跟 cwd 无关，最可靠）
+    try:
+        d = Path(__file__).resolve().parent / "data"
+        d.mkdir(parents=True, exist_ok=True)
+        return d
+    except Exception as e:
+        logger.warning(f"[市集推送] 插件目录不可写: {e}")
+
+    # ② AstrBot 标准数据目录
     try:
         from astrbot.core.utils.astrbot_path import get_astrbot_data_path
-        return Path(get_astrbot_data_path()) / "plugin_data" / _PLUGIN_NAME
+        d = Path(get_astrbot_data_path()) / "plugin_data" / _PLUGIN_NAME
+        d.mkdir(parents=True, exist_ok=True)
+        return d
     except Exception:
-        # 兼容旧版 AstrBot / 独立测试
-        return Path("data") / "plugin_data" / _PLUGIN_NAME
+        pass
+
+    # ③ 最后兜底：用户目录（还是绝对路径）
+    d = Path.home() / ".astrbot" / "plugin_data" / _PLUGIN_NAME
+    d.mkdir(parents=True, exist_ok=True)
+    return d
 
 
 _STATE_PATH = _data_dir() / "notified.json"
@@ -188,14 +208,15 @@ def _save_state(state: Dict[str, Any]) -> None:
                        encoding="utf-8")
         tmp.replace(_STATE_PATH)          # 原子写入，防止写一半被读到
     except Exception as e:
-        logger.warning(f"[市集推送] 保存状态失败: {e}")
+        logger.warning(f"[市集推送] 保存状态失败（{_STATE_PATH}）: "
+                       f"{type(e).__name__}: {e}")
 
 
 @register(
     "astrbot_plugin_lk_egg",
     "MIKU013970 & DeepSeek",
     "洛克小肥鱼全功能 + 炫彩花种订阅",
-    "1.83.0",
+    "1.84.0",
 )
 class LkMarketNotify(Star):
     def __init__(self, context: Context, config: AstrBotConfig = None):
@@ -649,6 +670,7 @@ class LkMarketNotify(Star):
         if _old is not None and not _old.done():
             logger.info("[市集推送] 轮询已在运行，跳过重复启动")
             return
+        logger.info(f"[市集推送] 状态文件: {_STATE_PATH}")
         self._task = asyncio.create_task(self._loop())
 
     async def terminate(self) -> None:
