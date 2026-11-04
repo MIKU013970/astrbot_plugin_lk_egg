@@ -103,7 +103,7 @@ def _strip_emoji(text: str) -> str:
 
 _PLUGIN_DIR = Path(__file__).resolve().parent
 _PLUGIN_NAME = "astrbot_plugin_lk_egg"
-VERSION = "1.89.0"
+VERSION = "1.90.0"
 
 
 def _cand_dirs() -> List[Path]:
@@ -334,7 +334,7 @@ def _hard_save_state(state: Dict[str, Any]) -> None:
     "astrbot_plugin_lk_egg",
     "MIKU013970 & DeepSeek",
     "洛克小肥鱼全功能 + 炫彩花种订阅",
-    "1.89.0",
+    "1.90.0",
 )
 class LkMarketNotify(Star):
     def __init__(self, context: Context, config: AstrBotConfig = None):
@@ -588,11 +588,49 @@ class LkMarketNotify(Star):
                 out.append(item)
         return out or self._candidate_umos()
 
+    # ---------------------------------------------------------------- 推送开关
+    @staticmethod
+    def _is_group_umo(umo: str) -> bool:
+        s = str(umo or "")
+        return "GroupMessage" in s or "group" in s.lower()
+
+    def _push_switch_state(self) -> Dict[str, Any]:
+        return {
+            "push_off": bool(float(self.state.get("push_off") or 0)),
+            "listing_push_off": bool(float(self.state.get("listing_push_off") or 0)),
+            "group_off": bool(float(self.state.get("group_off") or 0)),
+        }
+
+    def _push_switch_text(self) -> str:
+        s = self._push_switch_state()
+        return (
+            f"推送总开关：{'🔴 关' if s['push_off'] else '🟢 开'}\n"
+            f"新上架提醒：{'🔴 关' if s['listing_push_off'] else '🟢 开'}\n"
+            f"群聊推送：{'🔴 关（只发私聊）' if s['group_off'] else '🟢 开'}\n"
+            f"监控商家：{len(self._watch())} 个"
+        )
+
+    def _set_push_switch(self, key: str, on: bool) -> None:
+        self.state[key] = 0 if on else time.time()
+        _save_state(self.state)
+        logger.info(f"[市集推送] 开关 {key} → {'开' if on else '关'}")
+
     async def _send(self, text: str, kind: str = "purchase") -> int:
+        # 运行期开关（指令切换，写在 state 里，重启不丢）
+        if float(self.state.get("push_off") or 0):
+            logger.info("[市集推送] 推送总开关是关的，这条不发")
+            return 0
+        if kind == "listing" and float(self.state.get("listing_push_off") or 0):
+            logger.info("[市集推送] 新上架提醒已关，这条不发")
+            return 0
+        group_off = bool(float(self.state.get("group_off") or 0))
         umos = self._notify_targets(kind)
+        if group_off:
+            umos = [u for u in umos if not self._is_group_umo(u)]
         if not umos:
             logger.warning("[市集推送] 没有推送目标：先在目标会话发一次 /蛋推送绑定，"
-                           "或在配置里填 target_qq")
+                           "或在配置里填 target_qq"
+                           + ("（群聊推送已关，所以群被过滤掉了）" if group_off else ""))
             return 0
         ok = 0
         for umo in umos:
@@ -4318,7 +4356,10 @@ class LkMarketNotify(Star):
         "—————— 新上架提醒 ——————\n"
         "新上架 添加 Z10014514    开始监控这个商家\n"
         "新上架 删除 Z10014514    取消监控\n"
-        "新上架 列表              看监控列表"
+        "新上架 列表              看监控名单 + 当前开关状态\n"
+        "新上架 关 / 新上架 开    只开关新上架提醒\n"
+        "蛋推送关 / 蛋推送开      推送总开关（购买 + 新上架全停）\n"
+        "蛋推送群关 / 蛋推送群开  只开关群聊推送（私聊照收）"
     )
 
     MENU_PUSH = (
@@ -4379,6 +4420,10 @@ class LkMarketNotify(Star):
     # ---------------------------------------------------------------- 指令
 
     # ---------------------------------------------------------------- 指令：新上架监控
+    #: 「新上架 删除Z10014514」「新上架删除 Z10014514」这种不加空格/多加空格的写法
+    _WATCH_LOOSE_RE = re.compile(
+        r"^\s*[/#]?\s*新\s*上\s*架\s*(添加|加|删除|删|取消|停止|列表|名单)?\s*([Zz]\d{5,12})?\s*$")
+
     @filter.command("新上架")
     async def cmd_watch(self, event: AstrMessageEvent):
         """新上架 添加 Z10014514 / 新上架 删除 Z10014514 / 新上架 列表"""
@@ -4390,31 +4435,61 @@ class LkMarketNotify(Star):
         target = (args[2].strip().upper() if len(args) > 2 else "")
         hint = self.FORMAT_HINTS["新上架"]
 
+        # 没空格 / 多空格：从整条消息里抠出动作和 Z 号
+        m = self._WATCH_LOOSE_RE.match(str(getattr(event, "message_str", "") or ""))
+        if m:
+            act, zid = m.group(1) or "", m.group(2) or ""
+            if zid and not target:
+                target = zid.upper()
+            if act:
+                sub, sub_low = act, act.lower()      # 动作以整条消息抠出来的为准
+
         # 新上架 列表
-        if sub_low in ("列表", "名单", "list", "查看", "ls") or sub in ("列表", "名单"):
+        if sub_low in ("列表", "名单", "list", "查看", "ls", "状态") or sub in ("列表", "名单"):
             watch = self._watch()
-            if not watch:
-                yield await self._say(event, "监控名单是空的\n加一个：新上架 添加 Z10014514")
-                return
             cfg_ids = set(self._cfg_watch_ids())
             added = set((self.state.get("watch_ops") or {}).keys())
-            lines = [f"新上架监控（{len(watch)} 个）"]
-            for sid in watch:
-                src = "指令" if sid in added else ("配置" if sid in cfg_ids else "旧记录")
-                lines.append(f"· {sid}（{src}）")
-            lines.append("加：新上架 添加 Z10014514 / 删：新上架 删除 Z10014514")
+            lines = [self._push_switch_text(), ""]
+            if not watch:
+                lines.append("监控名单是空的（配置 watch_sellers 也没填）")
+                lines.append("加一个：新上架 添加 Z10014514")
+            else:
+                lines.append(f"新上架监控（{len(watch)} 个）")
+                for sid in watch:
+                    src = "指令" if sid in added else ("配置" if sid in cfg_ids else "旧记录")
+                    lines.append(f"· {sid}（{src}）")
+                lines.append("加：新上架 添加 Z10014514 / 删：新上架 删除 Z10014514")
+            lines.append("停推送：新上架 关（只停新上架）/ 蛋推送关（全停）/ 蛋推送群关（只停群）")
             yield await self._say(event, "\n".join(lines))
             return
 
+        # 推送开关：新上架 关 / 新上架 开
+        if sub_low in ("关", "关闭", "停", "off", "暂停") and not target:
+            self._set_push_switch("listing_push_off", False)
+            yield await self._say(event, "🔴 新上架提醒已关（购买推送不受影响）\n" + self._push_switch_text())
+            return
+        if sub_low in ("开", "开启", "on", "恢复") and not target:
+            self._set_push_switch("listing_push_off", True)
+            yield await self._say(event, "🟢 新上架提醒已开\n" + self._push_switch_text())
+            return
+
+        # 新上架 清空（配置里填的也一起停掉）
+        if sub_low in ("清空", "全删", "clear", "停止全部") and not target:
+            for sid in self._watch():
+                self._set_watch(sid, False)
+            yield await self._say(event, "🗑 监控名单已清空（配置 watch_sellers 里的也停掉了）\n"
+                                          + self._push_switch_text())
+            return
+
         # 允许「新上架 Z10014514」直接当添加
-        if re.fullmatch(r"[Zz]\d{5,12}", sub):
+        if re.fullmatch(r"[Zz]\d{5,12}", sub) and not target:
             target, sub_low = sub.upper(), "添加"
 
         if not target:
             yield await self._say(event, hint)
             return
 
-        if sub_low in ("添加", "加", "add", "监控", "开", "订阅"):
+        if sub_low in ("添加", "加", "add", "监控", "订阅"):
             was = self._set_watch(target, True)
             n = len(self._watch())
             yield await self._say(event,
@@ -4422,7 +4497,7 @@ class LkMarketNotify(Star):
                                    else f"✅ 已开始监控 {target}\n监控名单：{n} 个"))
             return
 
-        if sub_low in ("删除", "删", "del", "remove", "取消", "关", "停止", "退订"):
+        if sub_low in ("删除", "删", "del", "remove", "取消", "停止", "退订"):
             was = self._set_watch(target, False)
             n = len(self._watch())
             yield await self._say(event,
@@ -4433,6 +4508,41 @@ class LkMarketNotify(Star):
             return
 
         yield await self._say(event, hint)
+
+    # ---------------------------------------------------------------- 指令：推送开关
+    @filter.regex(r"^\s*[/#]?\s*蛋\s*推\s*送\s*群?\s*聊?\s*(关|开|状态|停止|恢复|关闭|开启)\s*$")
+    async def on_push_switch(self, event: AstrMessageEvent):
+        """蛋推送关 / 蛋推送开 / 蛋推送群关 / 蛋推送群开 / 蛋推送状态
+
+        不想让它在群里刷的时候，发一条 `蛋推送群关` 就只发私聊了；
+        `蛋推送关` 是总开关（购买推送 + 新上架全停）。
+        群关：蛋推送群关 / 蛋推送 群关 / 蛋推送群聊关 都认。
+        """
+        if not await self._perm_gate(event, "push"):
+            return
+        raw = str(getattr(event, "message_str", "") or "").strip().lstrip("/#")
+        m = re.search(r"蛋\s*推\s*送\s*(群\s*聊?)?\s*(关|开|状态|停止|恢复|关闭|开启)\s*$", raw)
+        if not m:
+            yield await self._say(event, self._push_switch_text())
+            return
+        is_group = bool(m.group(1))
+        act = m.group(2)
+        if act == "状态":
+            yield await self._say(event, self._push_switch_text())
+            return
+        on = act in ("开", "恢复", "开启")
+        if is_group:
+            self._set_push_switch("group_off", on)
+            yield await self._say(event, (
+                "🟢 群聊推送已开（新上架会照常发到群里）" if on
+                else "🔴 群聊推送已关：之后只发私聊，群里不再发新上架提醒") + "\n" + self._push_switch_text())
+            return
+        self._set_push_switch("push_off", on)
+        yield await self._say(event, (
+            "🟢 推送总开关已开，恢复推送" if on
+            else "🔴 推送总开关已关（购买推送 + 新上架提醒全停，日志里还会继续轮询）")
+            + "\n" + self._push_switch_text())
+
 
     def _cmd_parts(self, event) -> list:
         """['/标','Z123','黑','备注'] → ['标','Z123','黑','备注']"""
@@ -5759,7 +5869,8 @@ class LkMarketNotify(Star):
         data = await self._api("/api/purchases")
         api_ok = bool(data and data.get("ok"))
         lines = [
-            "市集推送状态",
+            f"市集推送状态 · 版本 {VERSION}",     # ← 先确认装的到底是哪一版
+            self._push_switch_text(),
             f"接口：{self.api_base}（{'正常' if api_ok else '读取失败'}）",
             f"平台：{self._platform()}",
             f"目标：{len(self._candidate_umos())} 个",
@@ -5769,7 +5880,8 @@ class LkMarketNotify(Star):
         lines += [
             f"间隔：{self.interval:g}s · 轮询 {self.stats['polls']} 次",
             f"已推送 {self.stats['sent']} · 忽略 {self.stats['skipped']} · 失败 {self.stats['errors']}",
-            f"已记录 id：{len(self.state.get('seen') or [])} 个",
+            f"已记录 id：{len(self.state.get('seen') or [])} 个 · "
+            f"已推挂单 {len(self.state.get('pushed_ids') or {})} 个",
         ]
         if data and data.get("stale"):
             lines.append("⚠ 控制台用的是缓存数据（远端接口暂时不可用）")
