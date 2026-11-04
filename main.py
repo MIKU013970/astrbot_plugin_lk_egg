@@ -103,7 +103,7 @@ def _strip_emoji(text: str) -> str:
 
 _PLUGIN_DIR = Path(__file__).resolve().parent
 _PLUGIN_NAME = "astrbot_plugin_lk_egg"
-VERSION = "1.80.0"
+VERSION = "1.80.1"
 
 
 def _data_dir() -> Path:
@@ -166,7 +166,7 @@ def _save_state(state: Dict[str, Any]) -> None:
     "astrbot_plugin_lk_egg",
     "MIKU013970 & DeepSeek",
     "洛克小肥鱼全功能 + 炫彩花种订阅",
-    "1.80.0",
+    "1.80.1",
 )
 class LkMarketNotify(Star):
     def __init__(self, context: Context, config: AstrBotConfig = None):
@@ -400,9 +400,9 @@ class LkMarketNotify(Star):
             out = [_priv(q) for q in admins]
             return out or [_priv(q) for q in self._targets()]
         if mode in ("bind", "绑定", "旧", "legacy", "老"):
-            # 只发**第一个**目标 —— 绑了多个群时，同一件商品不该发好几遍
-            _c = self._candidate_umos()
-            return _c[:1] if _c else []
+            # 绑过的会话都发（每个目标各一次）；
+            # 「同一件商品不会重复」靠 _poll_listings 里的 pushed_ids 保证
+            return self._candidate_umos()
         out: List[str] = []
         for item in re.split(r"[,，\s]+", raw):
             item = item.strip()
