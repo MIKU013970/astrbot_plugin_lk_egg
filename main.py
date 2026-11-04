@@ -103,7 +103,7 @@ def _strip_emoji(text: str) -> str:
 
 _PLUGIN_DIR = Path(__file__).resolve().parent
 _PLUGIN_NAME = "astrbot_plugin_lk_egg"
-VERSION = "1.82.1"
+VERSION = "1.83.0"
 
 
 def _data_dir() -> Path:
@@ -153,11 +153,40 @@ def _load_state() -> Dict[str, Any]:
                 "listings": {}, "marks": {}}
 
 
+#: 这些是「推送记录」，磁盘上的永远更权威 ——
+#: 12 个地方用 _save_state(self.state)，而 self.state 里的记录是启动时的旧值，
+#: 直接写会把 _poll_listings 刚写的覆盖掉，导致同一件商品重复推送。
+_MERGE_KEYS = ("pushed_ids", "flower_seen", "seen")
+
+
 def _save_state(state: Dict[str, Any]) -> None:
+    """保存状态；推送记录先跟磁盘上的合并（磁盘优先，只增不减）。"""
     try:
+        # 合并：磁盘上已有的记录 + 内存里的记录
+        if _STATE_PATH.is_file():
+            try:
+                disk = json.loads(_STATE_PATH.read_text(encoding="utf-8"))
+                for key in _MERGE_KEYS:
+                    old = disk.get(key)
+                    cur = state.get(key)
+                    if isinstance(old, dict):
+                        merged = dict(old)
+                        if isinstance(cur, dict):
+                            merged.update(cur)          # 内存里的补上
+                        state[key] = merged
+                    elif isinstance(old, list) and old:
+                        if isinstance(cur, list):
+                            state[key] = list(dict.fromkeys(list(old) + list(cur)))
+                        else:
+                            state[key] = list(old)
+            except Exception:
+                pass
+
         _STATE_PATH.parent.mkdir(parents=True, exist_ok=True)
-        _STATE_PATH.write_text(json.dumps(state, ensure_ascii=False, indent=1),
-                               encoding="utf-8")
+        tmp = _STATE_PATH.with_suffix(".json.tmp")
+        tmp.write_text(json.dumps(state, ensure_ascii=False, indent=1),
+                       encoding="utf-8")
+        tmp.replace(_STATE_PATH)          # 原子写入，防止写一半被读到
     except Exception as e:
         logger.warning(f"[市集推送] 保存状态失败: {e}")
 
@@ -166,7 +195,7 @@ def _save_state(state: Dict[str, Any]) -> None:
     "astrbot_plugin_lk_egg",
     "MIKU013970 & DeepSeek",
     "洛克小肥鱼全功能 + 炫彩花种订阅",
-    "1.82.1",
+    "1.83.0",
 )
 class LkMarketNotify(Star):
     def __init__(self, context: Context, config: AstrBotConfig = None):

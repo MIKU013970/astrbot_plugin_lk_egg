@@ -1,5 +1,60 @@
 # 更新日志
 
+## v1.83.0
+
+### 真正找到重复推送的根因了
+
+**12 个地方调用 `_save_state(self.state)`，把磁盘上刚写的 `pushed_ids` 覆盖掉。**
+
+完整时序：
+
+```
+1. _poll_listings 推完 3 件 → 写盘 pushed_ids = {A, B, C}
+2. 你发 /蛋监控 / 查ID / 任何会存状态的操作
+   → _save_state(self.state)
+   → self.state["pushed_ids"] 还是**插件启动时**的旧值
+   → 磁盘记录被覆盖回旧的
+3. 下一轮 _poll_listings 读磁盘 → 发现 A/B/C 都不在记录里 → 又推一遍
+```
+
+所以表现就是「推一遍，几分钟后又推一遍」。
+
+### 修法：`_save_state` 保存前先跟磁盘合并
+
+```python
+_MERGE_KEYS = ("pushed_ids", "flower_seen", "seen")
+
+def _save_state(state):
+    # 磁盘上的推送记录 + 内存里的 → 合并（只增不减）
+    if _STATE_PATH.is_file():
+        disk = json.loads(_STATE_PATH.read_text(encoding="utf-8"))
+        for key in _MERGE_KEYS:
+            if isinstance(disk.get(key), dict):
+                merged = dict(disk[key]); merged.update(state.get(key) or {})
+                state[key] = merged
+            elif isinstance(disk.get(key), list):
+                state[key] = list(dict.fromkeys(disk[key] + (state.get(key) or [])))
+    # 原子写（临时文件 + replace），防止写一半被读到
+    tmp = _STATE_PATH.with_suffix(".json.tmp")
+    tmp.write_text(...)
+    tmp.replace(_STATE_PATH)
+```
+
+这样不管从哪调、用什么内存状态，**推送记录都不会丢**。
+
+### 实测
+
+```
+货架 30 件
+把 a4286a59... 从记录移出（模拟刚上架的）
+
+第 1 轮: 推送 1 次 · 发出 1 条
+第 2~7 轮: 每轮都故意触发 _save_state → 全是 0 条
+结论: OK 无重复
+```
+
+## v1.82.1
+
 ## v1.82.1
 
 ### 修：市场真空时误报「数据没拉到」
