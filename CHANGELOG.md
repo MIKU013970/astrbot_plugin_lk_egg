@@ -1,5 +1,50 @@
 # 更新日志
 
+## v1.87.0
+
+### 修：删了监控还在推（真因：合并逻辑把删除覆盖了）
+
+1.85.0 的多位置合并里我写错了一行：
+
+```python
+elif k not in _MERGE_KEYS and not base.get(k):
+    base[k] = v          # ← watch = [] 时 not [] == True
+```
+
+`watch` 删空后是 `[]`，`not []` 是 `True`，于是**被另一个位置里的旧 watch 覆盖回来**。
+表现就是你删了、显示「本来就不在监控里」，结果下一轮又推。
+
+### 修法：非推送字段以「最新文件」为准
+
+```python
+files.sort(key=lambda x: -x[0])      # 按 mtime 降序
+for idx, (mt, fp) in enumerate(files):
+    # ① watch / umos / marks 这些：只取最新那个文件的
+    if idx == 0:
+        for k, v in d.items():
+            if k not in _MERGE_KEYS:
+                base[k] = v
+    # ② pushed_ids / flower_seen / seen：所有位置合并
+    ...
+```
+
+- 你删监控 → 最新文件里 `watch=[]` → 就是空的，谁也盖不回来
+- 推送记录还是多处合并，丢一个位置不影响去重
+
+### 实测（构造不一致场景）
+
+```
+位置2 写入旧 watch: [Z10010877]
+位置1 写入空 watch: []
+
+读到 watch = []        OK 以最新为准
+_watch() = []
+第 1~3 轮: 全 0 条
+→ OK 不推了
+```
+
+## v1.86.0
+
 ## v1.86.0
 
 ### 修：删了监控还在推

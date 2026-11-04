@@ -103,7 +103,7 @@ def _strip_emoji(text: str) -> str:
 
 _PLUGIN_DIR = Path(__file__).resolve().parent
 _PLUGIN_NAME = "astrbot_plugin_lk_egg"
-VERSION = "1.86.0"
+VERSION = "1.87.0"
 
 
 def _cand_dirs() -> List[Path]:
@@ -191,30 +191,55 @@ def _state_files() -> List[Path]:
     return [d / "notified.json" for d in _cand_dirs()]
 
 
+#: 这些是「推送记录」——读的时候所有位置合并，写的时候先跟磁盘合并。
+#: 12 个地方用 _save_state(self.state)，而 self.state 里的记录是启动时的旧值，
+#: 直接写会把刚写的覆盖掉，导致同一件商品重复推送。
+_MERGE_KEYS = ("pushed_ids", "flower_seen", "seen")
+
+
 def _load_state() -> Dict[str, Any]:
-    """读状态：**所有位置的推送记录合并**（哪个还在就用哪个）。"""
+    """读状态。
+
+    - **标量/列表字段（watch、umos…）：以「最后修改的那个文件」为准** ——
+      否则你删了监控，另一个位置里的旧 watch 会把它盖回来
+    - **推送记录（pushed_ids / flower_seen / seen）：所有位置合并**，
+      哪个位置丢了都不影响去重
+    """
     _migrate_old_state()
     base: Dict[str, Any] = {"seen": [], "started": 0, "umos": [], "watch": [],
                             "listings": {}, "marks": {}}
+
+    files = []
+    for fp in _state_files():
+        try:
+            if fp.is_file():
+                files.append((fp.stat().st_mtime, fp))
+        except Exception:
+            continue
+    if not files:
+        base["pushed_ids"] = {}
+        return base
+
+    # 最新的排前面
+    files.sort(key=lambda x: -x[0])
+
     merged_pushed: Dict[str, Any] = {}
     merged_flower: List[Any] = []
     merged_seen: List[Any] = []
-    got = False
-    for fp in _state_files():
+
+    for idx, (mt, fp) in enumerate(files):
         try:
-            if not fp.is_file():
-                continue
             d = json.loads(fp.read_text(encoding="utf-8"))
         except Exception:
             continue
-        got = True
-        # 主字段以第一个读到的为准，后面的补空
-        for k, v in d.items():
-            if k not in _MERGE_KEYS and k not in base:
-                base[k] = v
-            elif k not in _MERGE_KEYS and not base.get(k):
-                base[k] = v
-        # 推送记录全部合并（取时间更晚的）
+        if not isinstance(d, dict):
+            continue
+        # ① 非推送记录字段：只取**最新的那个文件**
+        if idx == 0:
+            for k, v in d.items():
+                if k not in _MERGE_KEYS:
+                    base[k] = v
+        # ② 推送记录：全部合并
         p = d.get("pushed_ids")
         if isinstance(p, dict):
             for k, ts in p.items():
@@ -223,23 +248,17 @@ def _load_state() -> Dict[str, Any]:
                         merged_pushed[k] = ts
                 except (TypeError, ValueError):
                     merged_pushed.setdefault(k, ts)
-        for key, tgt in (("flower_seen", merged_flower), ("seen", merged_seen)):
-            v = d.get(key)
-            if isinstance(v, list):
-                tgt.extend(v)
-    if not got:
-        return base
+        v = d.get("flower_seen")
+        if isinstance(v, list):
+            merged_flower.extend(v)
+        v = d.get("seen")
+        if isinstance(v, list):
+            merged_seen.extend(v)
+
     base["pushed_ids"] = merged_pushed
     base["flower_seen"] = list(dict.fromkeys(merged_flower))
     base["seen"] = list(dict.fromkeys(merged_seen))
     return base
-
-
-#: 这些是「推送记录」，磁盘上的永远更权威 ——
-#: 12 个地方用 _save_state(self.state)，而 self.state 里的记录是启动时的旧值，
-#: 直接写会把 _poll_listings 刚写的覆盖掉，导致同一件商品重复推送。
-_MERGE_KEYS = ("pushed_ids", "flower_seen", "seen")
-
 
 def _save_state(state: Dict[str, Any]) -> None:
     """保存状态；推送记录先跟磁盘上的合并（磁盘优先，只增不减）。"""
@@ -287,7 +306,7 @@ def _save_state(state: Dict[str, Any]) -> None:
     "astrbot_plugin_lk_egg",
     "MIKU013970 & DeepSeek",
     "洛克小肥鱼全功能 + 炫彩花种订阅",
-    "1.86.0",
+    "1.87.0",
 )
 class LkMarketNotify(Star):
     def __init__(self, context: Context, config: AstrBotConfig = None):
