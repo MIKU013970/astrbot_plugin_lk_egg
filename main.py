@@ -103,7 +103,7 @@ def _strip_emoji(text: str) -> str:
 
 _PLUGIN_DIR = Path(__file__).resolve().parent
 _PLUGIN_NAME = "astrbot_plugin_lk_egg"
-VERSION = "1.79.2"
+VERSION = "1.80.0"
 
 
 def _data_dir() -> Path:
@@ -166,7 +166,7 @@ def _save_state(state: Dict[str, Any]) -> None:
     "astrbot_plugin_lk_egg",
     "MIKU013970 & DeepSeek",
     "洛克小肥鱼全功能 + 炫彩花种订阅",
-    "1.79.2",
+    "1.80.0",
 )
 class LkMarketNotify(Star):
     def __init__(self, context: Context, config: AstrBotConfig = None):
@@ -400,7 +400,9 @@ class LkMarketNotify(Star):
             out = [_priv(q) for q in admins]
             return out or [_priv(q) for q in self._targets()]
         if mode in ("bind", "绑定", "旧", "legacy", "老"):
-            return self._candidate_umos()
+            # 只发**第一个**目标 —— 绑了多个群时，同一件商品不该发好几遍
+            _c = self._candidate_umos()
+            return _c[:1] if _c else []
         out: List[str] = []
         for item in re.split(r"[,，\s]+", raw):
             item = item.strip()
@@ -2471,36 +2473,73 @@ class LkMarketNotify(Star):
         return tpl.format(seller=seller, nickname=nickname or seller,
                           items=body, total=total) if tpl else body
 
+    async def _listing_items(self, sid: str) -> List[Dict[str, Any]]:
+        """拉一个商家的实时货架。
+
+        注意：服务端不认 `page` 参数（第 2 页返回的跟第 1 页一样），
+        所以别翻页 —— 翻了只会拿到重复数据。一次最多给 30 条。
+        """
+        data = await self._api(f"/api/merchants/listings?seller={sid}")
+        if not data or not data.get("ok"):
+            return []
+        return [x for x in (data.get("items") or []) if isinstance(x, dict)]
+
+    def _pushed_ids(self) -> Dict[str, float]:
+        """已推送过的商品 id → 时间戳（永久累积，防止重复提醒）。"""
+        d = self.state.get("pushed_ids")
+        if not isinstance(d, dict):
+            d = {}
+            self.state["pushed_ids"] = d
+        return d
+
     async def _poll_listings(self) -> int:
-        """逐个监控商家拉实时货架，发现新挂单就推送。返回推送条数。"""
+        """逐个监控商家拉实时货架，发现新挂单就推送。
+
+        **单件只推一次**：
+          - 已推过的 id 记在 state["pushed_ids"]（id → 时间戳），永久累积
+          - 接口一次只给 30 条，且顺序会变；只比对"当前列表"会导致
+            换一批就重复推，所以必须累积记
+          - 再过 10 分钟窗口防重（同一 id 绝不连推）
+        """
         sent = 0
         watch = self._watch()
         if not watch:
             return 0
-        store = self.state.setdefault("listings", {})
+
+        pushed = self._pushed_ids()
+        now = time.time()
+        # 顺便清理 2 天前的记录，别无限涨
+        for k in [k for k, ts in pushed.items() if now - float(ts or 0) > 172800]:
+            pushed.pop(k, None)
+
         for sid in watch:
-            data = await self._api(f"/api/merchants/listings?seller={sid}")
-            if not data or not data.get("ok"):
+            items = await self._listing_items(sid)
+            if not items:
                 continue
-            items = data.get("items") or []
-            ids = [str(it.get("id")) for it in items if it.get("id")]
-            prev = store.get(sid)
-            if prev is None:
-                # 第一次看见这个商家：只记下来，不推送（避免一开插件刷屏）
-                store[sid] = ids
-                continue
-            fresh = [it for it in items
-                     if str(it.get("id")) not in set(prev)]
+
+            fresh: List[Dict[str, Any]] = []
+            for it in items:
+                lid = str(it.get("id") or "")
+                if not lid:
+                    continue
+                last = float(pushed.get(lid) or 0)
+                if last and now - last < 600:      # 10 分钟内推过 → 跳过
+                    continue
+                if lid not in pushed:
+                    fresh.append(it)
+                pushed[lid] = now                  # 见过的都记下时间
+                    # 注意：这里即使不推也要记时间，避免下轮又当新的
+
             if fresh:
-                text = self._render_listing(sid, data.get("nickname") or "",
-                                            fresh, data.get("listed") or len(items))
+                text = self._render_listing(sid, "", fresh, len(items))
                 if await self._send(text, kind="listing"):
                     sent += 1
                     self.stats["sent"] += 1
                     logger.info(f"[市集推送] {sid} 新上架 {len(fresh)} 件")
-            store[sid] = ids
+
         _save_state(self.state)
         return sent
+
 
     # ---------------------------------------------------------------- 黑白名单
     def _marks(self) -> Dict[str, Any]:
