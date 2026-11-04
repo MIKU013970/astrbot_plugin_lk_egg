@@ -1,5 +1,29 @@
 # 更新日志
 
+## v1.92.1
+
+### 修：状态文件带 UTF-8 BOM 时，已推记录会被读丢 → 每轮都重推
+
+```python
+# 旧：BOM 会让 json.loads 直接抛异常 → _load_state() 退回空状态
+d = json.loads(fp.read_text(encoding="utf-8"))
+# 新：utf-8-sig 能吃 BOM 也能吃没 BOM 的
+d = json.loads(fp.read_text(encoding="utf-8-sig"))
+```
+
+`notified.json` 一旦被编辑器/复制粘贴带上 BOM，`pushed_ids` 就整份读不出来，
+去重等于失效 —— **每一轮都把货架上的东西当新上架推一遍**，而且重启之后依旧如此。
+这就是「推过的又推、删了还推」的另一种成因，跟监控名单无关。
+
+实测：正常推一轮 → 给状态文件加 BOM → 重启 → 读到了 2 条已推 id，第二轮推 0 条；
+存盘也不会再写出 BOM。
+
+### 附带的排查工具
+
+`检查推送来源.py`（在一键安装包里）：扫 AstrBot 目录，打印装了哪几个相关插件、
+版本、每个插件的 `watch_sellers` / `listing_template` / `buy_notify_target` /
+`flower_enabled` / `enabled` 实际值、状态文件里已推多少条，**并对带 BOM 的状态文件报警**。
+
 ## v1.92.0
 
 ### 「我把新上架提示删了，它还在推」——因为你删的是模板，不是开关

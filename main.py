@@ -103,7 +103,7 @@ def _strip_emoji(text: str) -> str:
 
 _PLUGIN_DIR = Path(__file__).resolve().parent
 _PLUGIN_NAME = "astrbot_plugin_lk_egg"
-VERSION = "1.92.0"
+VERSION = "1.92.1"
 
 
 def _cand_dirs() -> List[Path]:
@@ -257,7 +257,7 @@ def _load_state() -> Dict[str, Any]:
 
     for idx, (mt, fp) in enumerate(files):
         try:
-            d = json.loads(fp.read_text(encoding="utf-8"))
+            d = json.loads(fp.read_text(encoding="utf-8-sig"))
         except Exception:
             continue
         if not isinstance(d, dict):
@@ -306,7 +306,7 @@ def _save_state(state: Dict[str, Any]) -> None:
     try:
         if _STATE_PATH.is_file():
             try:
-                disk = json.loads(_STATE_PATH.read_text(encoding="utf-8"))
+                disk = json.loads(_STATE_PATH.read_text(encoding="utf-8-sig"))
                 for key in _MERGE_DICT_KEYS:
                     state[key] = _merge_ts(disk.get(key), state.get(key))
                 for key in _MERGE_LIST_KEYS:
@@ -334,7 +334,7 @@ def _hard_save_state(state: Dict[str, Any]) -> None:
     "astrbot_plugin_lk_egg",
     "MIKU013970 & DeepSeek",
     "洛克小肥鱼全功能 + 炫彩花种订阅",
-    "1.92.0",
+    "1.92.1",
 )
 class LkMarketNotify(Star):
     def __init__(self, context: Context, config: AstrBotConfig = None):
