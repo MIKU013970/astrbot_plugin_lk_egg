@@ -103,7 +103,7 @@ def _strip_emoji(text: str) -> str:
 
 _PLUGIN_DIR = Path(__file__).resolve().parent
 _PLUGIN_NAME = "astrbot_plugin_lk_egg"
-VERSION = "1.96.0"
+VERSION = "1.97.0"
 
 
 def _cand_dirs() -> List[Path]:
@@ -335,7 +335,7 @@ def _hard_save_state(state: Dict[str, Any]) -> None:
     "astrbot_plugin_lk_egg",
     "MIKU013970 & DeepSeek",
     "洛克小肥鱼全功能 + 炫彩花种订阅",
-    "1.96.0",
+    "1.97.0",
 )
 class LkMarketNotify(Star):
     def __init__(self, context: Context, config: AstrBotConfig = None):
@@ -1770,19 +1770,27 @@ class LkMarketNotify(Star):
                 if "异色" in en:
                     shiny_egg = c.icon_path("egg", en, form0)
                     break
+            # 图鉴记录里没有「异色××的蛋」这种形态时（新赛季那批就是这样），
+            # 直接按「异色 + 蛋名」去图标库里找 —— 不然异色蛋永远不显示
+            if not shiny_egg:
+                shiny_egg = (c.icon_path("egg", f"异色{egg}", form0)
+                             or c.icon_path("egg", f"异色{pet}的蛋", form0))
             if shiny_egg:
                 out.append(shiny_egg)
         # 同一张图不重复显示：通行证精灵的「普通蛋」和「异色蛋」官方就是同一张图，
         # 归一化到 item 数字 id 再比（蛋150701 / 异色蛋150701 视为同一张）
         def _icon_key(p):
             stem = Path(p).stem
+            # ⚠ 必须带上目录：新赛季的图标命名是 nrc659 / nrc659（pet 和 shiny 同名），
+            # 只按文件名判断会把异色图当成重复图丢掉 —— 这就是「异色一阶段不显示」的原因
+            folder = Path(p).parent.name
             mm = re.search(r"(\d{4,})", stem)
             base = mm.group(1) if mm else stem
-            if stem.startswith("shiny"):
+            if folder == "shiny" or stem.startswith("shiny"):
                 return "shiny-" + base
-            if stem.startswith("pet"):
+            if folder == "pet" or stem.startswith("pet"):
                 return "pet-" + base
-            return base
+            return folder + "-" + base
 
         _seen = set()
         uniq = []
