@@ -103,7 +103,7 @@ def _strip_emoji(text: str) -> str:
 
 _PLUGIN_DIR = Path(__file__).resolve().parent
 _PLUGIN_NAME = "astrbot_plugin_lk_egg"
-VERSION = "1.94.4"
+VERSION = "1.95.0"
 
 
 def _cand_dirs() -> List[Path]:
@@ -200,7 +200,8 @@ def _state_files() -> List[Path]:
 #:   pushed_sig    已推过的「蛋内容指纹」（同款蛋重新上架换新 id 也认得）
 #:   watch_ops     新上架 添加 的时间（> watch_deleted 才算在监控里）
 #:   watch_deleted 新上架 删除 的时间（压过配置里的 watch_sellers）
-_MERGE_DICT_KEYS = ("pushed_ids", "pushed_sig", "watch_ops", "watch_deleted")
+_MERGE_DICT_KEYS = ("pushed_ids", "pushed_sig", "watch_ops", "watch_deleted",
+                    "flower_seen_ids", "flower_sig")
 _MERGE_LIST_KEYS = ("flower_seen", "seen")
 _MERGE_KEYS = _MERGE_DICT_KEYS + _MERGE_LIST_KEYS
 
@@ -334,7 +335,7 @@ def _hard_save_state(state: Dict[str, Any]) -> None:
     "astrbot_plugin_lk_egg",
     "MIKU013970 & DeepSeek",
     "洛克小肥鱼全功能 + 炫彩花种订阅",
-    "1.94.4",
+    "1.95.0",
 )
 class LkMarketNotify(Star):
     def __init__(self, context: Context, config: AstrBotConfig = None):
@@ -759,33 +760,81 @@ class LkMarketNotify(Star):
         return pushed
 
     # ---------------------------------------------------------------- 花种订阅轮询
+    #: 花种已推记录保留时长（秒）。花种挂单会下架重上（新 id、内容一样），
+    #: 只按 id 记就会重复推 —— 所以还要按内容指纹兜一层。
+    FLOWER_KEEP = 30 * 86400
+
+    @classmethod
+    def _flower_sig(cls, species: str, b: Dict[str, Any]) -> str:
+        raw = "|".join(str(x) for x in (
+            species, b.get("appearance"), b.get("color_name"), b.get("c1"),
+            b.get("c2"), b.get("particle_name"), b.get("price"),
+            b.get("seller_id"), b.get("seller"), b.get("remark"),
+            b.get("min_people"), b.get("max_people")))
+        return hashlib.md5(raw.encode("utf-8")).hexdigest()[:16]
+
     async def _flower_poll_once(self) -> int:
-        """扫一遍花种市场，把匹配订阅的新挂单推出去。返回推送条数。"""
-        if not bool(self._cfg("flower_enabled", True)):
+        """扫一遍花种市场，把匹配订阅的新挂单推出去。返回推送条数。
+
+        去重跟「新上架」那套一致：
+          · flower_seen_ids：挂单 id → 时间（30 天，还在架上的每轮续命）
+          · flower_sig：内容指纹 → 时间（卖家下架重上、换了新 id 也认得出）
+          · 先落盘再推送
+        """
+        if not self._cfg("flower_enabled", True):
             return 0
         subs = self._flower_subs()
         if not subs:
             return 0
         if self._market_paused():
             return 0
-        seen = set(self.state.get("flower_seen") or [])
+        if self._kind_off("flower"):
+            return 0
+
+        now = time.time()
+        # 上一轮被限流（429）→ 这一轮干脆别碰接口，免得把「花种 xxx」查询也一起坑了
+        lim = float(self.state.get("flower_limited_at") or 0)
+        if lim and now - lim < 120:
+            return 0
+        keep = self.FLOWER_KEEP
+        seen_ids = dict(self.state.get("flower_seen_ids") or {})
+        seen_sig = dict(self.state.get("flower_sig") or {})
+        # 老版本只有一个列表，迁移过来（时间按现在算，避免一上来全重推）
+        legacy = self.state.get("flower_seen")
+        if isinstance(legacy, list) and legacy and not seen_ids:
+            for oid in legacy:
+                if oid:
+                    seen_ids[str(oid)] = now
+        for k in [k for k, ts in seen_ids.items() if now - float(ts or 0) > keep]:
+            seen_ids.pop(k, None)
+        for k in [k for k, ts in seen_sig.items() if now - float(ts or 0) > keep]:
+            seen_sig.pop(k, None)
+
         catalog = await self._flower_catalog()
         if not catalog:            # 失败 或 市场空，都不推
             return 0
         pushed = 0
-        new_seen = list(seen)
         for it in catalog:
             pid = it.get("petId")
             if not pid:
                 continue
             species = str(it.get("name") or "")
             offers = await self._flower_offers(pid)
+            if float(self.state.get("flower_limited_at") or 0) >= now - 5:
+                logger.warning("[花种] 取挂单被限流，本轮中止（已记的已推记录保留）")
+                break
             for o in offers:
                 b = self._flower_brief(o)
-                oid = b.get("id")
-                if not oid or oid in seen:
+                oid = str(b.get("id") or "")
+                if not oid:
                     continue
-                new_seen.append(oid)
+                sig = self._flower_sig(species, b)
+                if oid in seen_ids or sig in seen_sig:
+                    seen_ids[oid] = now      # 还在架上：续命
+                    seen_sig[sig] = now
+                    continue
+                seen_ids[oid] = now
+                seen_sig[sig] = now
                 # 匹配订阅
                 hit = []
                 for s in subs:
@@ -804,11 +853,16 @@ class LkMarketNotify(Star):
                             hit.append(f"精灵·{val}")
                 if not hit:
                     continue
+                # 先落盘再推送
+                self.state["flower_seen_ids"] = seen_ids
+                self.state["flower_sig"] = seen_sig
+                _save_state(self.state)
                 text = self._render_flower_alert(species, b, hit)
                 if await self._send(text, kind="flower"):
                     pushed += 1
-        # 记录已见（只留最近 5000 条，防止无限涨）
-        self.state["flower_seen"] = new_seen[-5000:]
+        self.state["flower_seen_ids"] = seen_ids
+        self.state["flower_sig"] = seen_sig
+        self.state["flower_seen"] = []          # 老字段不再使用
         _save_state(self.state)
         return pushed
 
@@ -4086,6 +4140,30 @@ class LkMarketNotify(Star):
         if rec:
             return await self._flower_by_species(event, rec, q)
 
+        # ④.5 图鉴里没有、但市场里真有这个品种（比如「黑猫巫师」这种只在花种市场出现的）
+        #      不补这一步就会出现「推了却查不到」：推送读的是 catalog，查询读的是图鉴。
+        try:
+            cat = await self._flower_catalog() or []
+        except Exception:
+            cat = []
+        names = [str(x.get("name") or "").strip() for x in cat if x.get("name")]
+        cand = ""
+        if q in names:
+            cand = q
+        elif names:
+            sub = [n for n in names if q in n or n in q]
+            if sub:
+                cand = max(sub, key=lambda n: self._flower_sim(q, n))
+            else:
+                best = max(names, key=lambda n: self._flower_sim(q, n))
+                if self._flower_sim(q, best) >= 0.6:
+                    cand = best
+        if cand:
+            logger.info(f"[花种] {q!r} 图鉴里没有，按市场品种 {cand!r} 查")
+            return await self._flower_by_species(
+                event, {"精灵": cand, "蛋名": f"{cand}的蛋", "进化链": cand,
+                        "variants": []}, q)
+
         # ⑤ 都没命中 → 让筛选逻辑给「市场里有什么」的提示
         return await self._flower_by_trait(event, q)
 
@@ -4260,15 +4338,29 @@ class LkMarketNotify(Star):
         "refunded": "已退款",
     }
 
-    async def _flower_catalog(self) -> Optional[List[Dict[str, Any]]]:
+    #: 花种目录缓存：(时间戳, 列表)。花种接口有频率限制（429 RATE_LIMITED），
+    #: 轮询一次要扫 40+ 个品种，不缓存就会把自己限流 —— 一被限流，
+    #: 「花种 xxx」查询也会跟着查不到东西。
+    _FLOWER_CAT_CACHE: tuple = (0.0, None)
+    FLOWER_CAT_TTL = 90
+
+    async def _flower_catalog(self, force: bool = False) -> Optional[List[Dict[str, Any]]]:
         """花种品种列表：每个品种带挂单数和最低价。
 
         **必须翻页**：服务端把 pageSize 强制成 12（传 50/100 都没用），
         只拉第 1 页会漏掉后半部分（比如蝎子王在第 2 页）。
+
+        带 90 秒缓存 + 429 退避：命中限流时优先用上次的缓存，
+        实在没有才返回 None（调用方据此区分「接口坏了」和「市场真空」）。
         """
+        now = time.time()
+        ts, cached = self._FLOWER_CAT_CACHE
+        if not force and cached is not None and now - ts < self.FLOWER_CAT_TTL:
+            return cached
         out: List[Dict[str, Any]] = []
         page = 1
         failed = False
+        limited = False
         while page <= 30:
             try:
                 data = await self._api(
@@ -4283,8 +4375,14 @@ class LkMarketNotify(Star):
                 failed = True
                 break
             if not data.get("ok", True):
-                logger.warning(f"[花种] 目录接口报错: "
-                               f"{str(data.get('error'))[:80]}")
+                err = str(data.get("error") or "")[:80]
+                code = str(data.get("code") or "")
+                if "RATE_LIMITED" in code or "频繁" in err or data.get("http") == 429:
+                    limited = True
+                    logger.warning(f"[花种] 被限流了（{code or '429'}），本轮先跳过；"
+                                   f"90 秒内复用上次目录")
+                else:
+                    logger.warning(f"[花种] 目录接口报错: {err}")
                 failed = True
                 break
             items = [x for x in (data.get("items") or []) if isinstance(x, dict)]
@@ -4296,8 +4394,12 @@ class LkMarketNotify(Star):
             if page >= pages or not items:
                 break
             page += 1
+        if limited:
+            self.state["flower_limited_at"] = int(now)
+            return list(cached) if cached else None
         if failed and not out:
-            return None            # 接口失败
+            return list(cached) if cached else None
+        self._FLOWER_CAT_CACHE = (now, out)
         return out                 # 可能是空列表（市场真没货）
 
     async def _flower_offers(self, pet_id: Any) -> List[Dict[str, Any]]:
@@ -4313,6 +4415,13 @@ class LkMarketNotify(Star):
                 logger.warning(f"[花种] 取挂单失败: {type(e).__name__}: {e}")
                 break
             if not isinstance(data, dict):
+                break
+            if not data.get("ok", True):
+                err = str(data.get("error") or "")[:60]
+                code = str(data.get("code") or "")
+                if "RATE_LIMITED" in code or "频繁" in err or data.get("http") == 429:
+                    logger.warning(f"[花种] 取挂单被限流（{code or '429'}）")
+                    self.state["flower_limited_at"] = int(time.time())
                 break
             items = [x for x in (data.get("items") or []) if isinstance(x, dict)]
             out.extend(items)
