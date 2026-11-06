@@ -103,7 +103,7 @@ def _strip_emoji(text: str) -> str:
 
 _PLUGIN_DIR = Path(__file__).resolve().parent
 _PLUGIN_NAME = "astrbot_plugin_lk_egg"
-VERSION = "1.97.2"
+VERSION = "1.98.0"
 
 
 def _cand_dirs() -> List[Path]:
@@ -335,7 +335,7 @@ def _hard_save_state(state: Dict[str, Any]) -> None:
     "astrbot_plugin_lk_egg",
     "MIKU013970 & DeepSeek",
     "洛克小肥鱼全功能 + 炫彩花种订阅",
-    "1.97.2",
+    "1.98.0",
 )
 class LkMarketNotify(Star):
     def __init__(self, context: Context, config: AstrBotConfig = None):
@@ -1056,7 +1056,114 @@ class LkMarketNotify(Star):
         for nm, target in alias.items():
             if (q in nm or nm in q) and target in sp:
                 return sp[target]
+
+        # ---- 下面两档是给「打缩写 / 记不全名字」用的 ----
+        # ① 拼音首字母：fcsm → 翡翠水母、dle → 豆粒鹅
+        hit = self._match_by_initials(q)
+        if hit:
+            return hit
+        # ② 汉字按顺序出现：翡翠母 / 水母 → 翡翠水母
+        hit = self._match_by_subsequence(q)
+        if hit:
+            return hit
         return None
+
+    # ---------------------------------------------------------------- 拼音/缩写匹配
+    #: 汉字 → 拼音首字母（表由 build_pinyin_initials.py 生成，纯标准库，不依赖拼音包）
+    _PY_INIT: Dict[str, str] = {}
+    _PY_TRIED = False
+
+    @classmethod
+    def _py_table(cls) -> Dict[str, str]:
+        if cls._PY_TRIED:
+            return cls._PY_INIT
+        cls._PY_TRIED = True
+        try:
+            fp = _PLUGIN_DIR / "pinyin_initials.json"
+            cls._PY_INIT = json.loads(fp.read_text(encoding="utf-8-sig"))
+        except Exception as e:
+            logger.warning(f"[拼音] 首字母表加载失败: {type(e).__name__}: {e}")
+            cls._PY_INIT = {}
+        return cls._PY_INIT
+
+    @classmethod
+    def _initials(cls, text: str) -> str:
+        """汉字串 → 拼音首字母串（非汉字原样转大写）。"""
+        t = cls._py_table()
+        out = []
+        for c in str(text or ""):
+            if "\u4e00" <= c <= "\u9fff":
+                out.append(t.get(c, ""))
+            elif c.isalnum():
+                out.append(c.upper())
+        return "".join(out)
+
+    def _all_names(self) -> List[tuple]:
+        """候选池：(名字, 记录) —— 精灵名 / 形态名 / 蛋名 / 别名。"""
+        sp = self.ranges.get("species") or {}
+        alias = self.ranges.get("alias") or {}
+        out: List[tuple] = []
+        for name, rec in sp.items():
+            out.append((name, rec))
+            for v in rec.get("variants") or []:
+                for k in ("形态", "形态简称", "蛋名"):
+                    x = str(v.get(k) or "").strip()
+                    if x:
+                        out.append((x, rec))
+        for nm, target in alias.items():
+            if target in sp:
+                out.append((str(nm), sp[target]))
+        return out
+
+    def _match_by_initials(self, q: str) -> Optional[Dict[str, Any]]:
+        """纯字母查询按拼音首字母匹配（fcsm → 翡翠水母）。
+
+        完全相等 100 分 > 前缀 80 > 子序列 60，同分优先名字短的。
+        """
+        qq = re.sub(r"[^0-9A-Za-z]", "", str(q or "")).upper()
+        if not (2 <= len(qq) <= 10):
+            return None
+        best = None
+        best_score = -1
+        for name, rec in self._all_names():
+            ini = self._initials(name)
+            if not ini:
+                continue
+            if ini == qq:
+                score = 100
+            elif ini.startswith(qq):
+                score = 80
+            else:
+                it = iter(ini)
+                if all(ch in it for ch in qq):
+                    score = 60 - max(0, len(ini) - len(qq)) // 3
+                else:
+                    continue
+            score -= len(name) // 4          # 同等匹配下优先短的
+            if score > best_score:
+                best_score = score
+                best = rec
+        return best
+
+    def _match_by_subsequence(self, q: str) -> Optional[Dict[str, Any]]:
+        """汉字记不全时按「字符按顺序出现」匹配：翡翠母 / 水母 → 翡翠水母。"""
+        s = re.sub(r"[^\u4e00-\u9fffA-Za-z0-9]", "", str(q or ""))
+        if len(s) < 2:
+            return None
+        best = None
+        best_key = None
+        for name, rec in self._all_names():
+            nm = re.sub(r"[^\u4e00-\u9fffA-Za-z0-9]", "", name)
+            if len(nm) < len(s):
+                continue
+            it = iter(nm)
+            if not all(ch in it for ch in s):
+                continue
+            key = (len(nm), nm)
+            if best_key is None or key < best_key:
+                best_key = key
+                best = rec
+        return best
 
     # ---------------------------------------------------------------- 查蛋行情
     async def _market_quote_raw(self, name: str) -> Dict[str, Any]:
@@ -4637,7 +4744,7 @@ class LkMarketNotify(Star):
         return "\n".join(parts)
 
     FORMAT_HINTS = {
-        "查询": "格式：查询 火花（查蛋 也一样）\n进化链上任意名字都行：查询 火神 / 查询 焰火\n查蛋组：查询 拟人组 / 查询 拟人 / 查询 海洋\n查最近成交：查询 火花 最近",
+        "查询": "格式：查询 火花（查蛋 也一样）\n进化链上任意名字都行：查询 火神 / 查询 焰火\n记不全也行：查询 翡翠母 / 查询 水母\n打拼音首字母也行：查询 fcsm（翡翠水母）/ 查询 dle（豆粒鹅）\n查蛋组：查询 拟人组 / 查询 拟人 / 查询 海洋\n查最近成交：查询 火花 最近",
         "查蛋": "格式：查蛋 火花\n和「查询」完全一样，斜杠可加可不加",
         "查ID": "格式：查ID Z10014514\n也可以用平台昵称：查ID 咕咕",
         "查询ID": "格式：查询ID Z10014514（和 查ID 一样）",
