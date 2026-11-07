@@ -137,7 +137,7 @@ def _strip_emoji(text: str) -> str:
 
 _PLUGIN_DIR = Path(__file__).resolve().parent
 _PLUGIN_NAME = "astrbot_plugin_lk_egg"
-VERSION = "2.1.13"
+VERSION = "2.1.14"
 
 
 def _cand_dirs() -> List[Path]:
@@ -369,7 +369,7 @@ def _hard_save_state(state: Dict[str, Any]) -> None:
     "astrbot_plugin_lk_egg",
     "MIKU013970 & DeepSeek",
     "洛克小肥鱼全功能 + 炫彩花种订阅",
-    "2.1.13",
+    "2.1.14",
 )
 class LkMarketNotify(Star):
     def __init__(self, context: Context, config: AstrBotConfig = None):
@@ -4524,12 +4524,12 @@ class LkMarketNotify(Star):
 
     def _shiny_report(self, season: str = "") -> str:
         """异色名单的文字版（出图失败时兜底），和网格图同一份数据（官方异色记录本）。"""
-        rows_res = self._book_rows("S0")
-        if season == "S0":
-            rows_enc = []
-        elif season:
-            rows_enc = self._book_rows(season)
+        if season and season != "S0":
+            rows_res, rows_enc = [], self._book_rows(season)
+        elif season == "S0":
+            rows_res, rows_enc = self._book_rows("S0"), []
         else:
+            rows_res = self._book_rows("S0")
             rows_enc = [r for r in self._book_rows("") if r.get("season") != "S0"]
         if not rows_res and not rows_enc:
             return (f"{season} 没有登记到异色精灵" if season
@@ -5355,7 +5355,8 @@ class LkMarketNotify(Star):
     async def _emit_panels(self, event: Any, *, header: str, text: str,
                            cards_res: List[Dict[str, Any]],
                            cards_enc: List[Dict[str, Any]],
-                           caption_lead: str, page: int = 0):
+                           caption_lead: str, page: int = 0,
+                           total_forms: int = 0):
         """两栏网格图出口（左常驻 / 右奇遇）。页面上不写栏目标题和底部说明。"""
         if not cards_res and not cards_enc:
             return await self._say(event, text)
@@ -5365,6 +5366,8 @@ class LkMarketNotify(Star):
             return await self._say(event, text)
 
         caption = f"{caption_lead}｜共 {total} 只"
+        if total_forms and total_forms > total:
+            caption += f"（{total_forms} 个形态）"
         if cards_res and cards_enc:
             caption += f"（常驻 {len(cards_res)} · 奇遇 {len(cards_enc)}）"
         if pages > 1:
@@ -5491,7 +5494,9 @@ class LkMarketNotify(Star):
         return await self._emit_panels(
             event, header=f"异色精灵 · {label}", text=text,
             cards_res=cards_res, cards_enc=cards_enc,
-            caption_lead=f"异色精灵 · {label}", page=page)
+            caption_lead=f"异色精灵 · {label}", page=page,
+            total_forms=len(self._book_rows(season)) if season else
+            len([r for r in self._book_rows("") if r.get("season") != "S0"]))
 
     #: 中文数字 → 赛季号
     CN_NUM = {"一": 1, "二": 2, "三": 3, "四": 4, "五": 5}
@@ -6985,11 +6990,18 @@ class LkMarketNotify(Star):
                     if cur is None:
                         out[nm] = r
                         continue
-                    # 同名多条（同名的不同形态/不同赛季）：优先「有异色」的，其次 pet_id 大的
-                    if bool(r.get("has_shiny")) and not bool(cur.get("has_shiny")):
-                        out[nm] = r
-                    elif (bool(r.get("has_shiny")) == bool(cur.get("has_shiny"))
-                          and int(r.get("pet_id") or 0) > int(cur.get("pet_id") or 0)):
+                    # 同名多条：优先「有异色」→ 再优先「正式赛季(≥1)」→ 再优先有蛋组 → 最后 pet_id 大
+                    # （补录的常驻记录 pet_id 是 1300017x，比正式记录大，不能只按 id 比）
+                    def _rank(x):
+                        try:
+                            s = int(x.get("season") or 0)
+                        except (TypeError, ValueError):
+                            s = 0
+                        return (1 if x.get("has_shiny") else 0,
+                                1 if s >= 1 else 0,
+                                1 if (x.get("groups") or []) else 0,
+                                int(x.get("pet_id") or 0))
+                    if _rank(r) > _rank(cur):
                         out[nm] = r
         except Exception as e:
             logger.warning(f"[蛋组] pets.json 读取失败: {type(e).__name__}: {e}")
