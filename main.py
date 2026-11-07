@@ -137,7 +137,7 @@ def _strip_emoji(text: str) -> str:
 
 _PLUGIN_DIR = Path(__file__).resolve().parent
 _PLUGIN_NAME = "astrbot_plugin_lk_egg"
-VERSION = "2.1.5"
+VERSION = "2.1.6"
 
 
 def _cand_dirs() -> List[Path]:
@@ -369,7 +369,7 @@ def _hard_save_state(state: Dict[str, Any]) -> None:
     "astrbot_plugin_lk_egg",
     "MIKU013970 & DeepSeek",
     "洛克小肥鱼全功能 + 炫彩花种订阅",
-    "2.1.5",
+    "2.1.6",
 )
 class LkMarketNotify(Star):
     def __init__(self, context: Context, config: AstrBotConfig = None):
@@ -5029,6 +5029,9 @@ class LkMarketNotify(Star):
             # 卡片上了系别色，小字不能再是浅灰（看不清）：拿底色压暗当字色，对比度稳过 4.5
             sub_fg = (self._mix_hex(card_bg, 0.26, "#14110E")
                       if (card_bg and tint >= 0.30) else "")
+            # 组别标签的字再压深一档（原来偏淡，看不清）
+            tag_fg = (self._mix_hex(card_bg, 0.06, "#0A0806")
+                      if card_bg else "")
 
             # 标签：精灵组别（蛋组）+ 同乘；异色 / 异色蛋 不再占标签位
             tags: List[Dict[str, str]] = []
@@ -5036,9 +5039,7 @@ class LkMarketNotify(Star):
                   if x and x not in ("未发现", "待定", "未分组")]
             for gp in gs[:2]:
                 tags.append({"text": str(gp), "kind": "group",
-                              "fg": sub_fg or tone, "bg": "#FFFFFF"})
-            if se:
-                tags.append(g.tag("异色蛋", "shinyegg"))
+                              "fg": tag_fg or sub_fg or tone, "bg": "#FFFFFF"})
             ride = grp.get("ride")
             if ride_mode == "both" and ride is not None:
                 tags.append(g.tag("可同乘" if ride else "不可同乘",

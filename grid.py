@@ -659,13 +659,13 @@ def render_grid(
             # 环绕徽标：45°/135°/225°/315° 四个方位（最多 4 个）
             sats = list(c.get("sats") or [])[:4]
             if sats:
-                rc = avatar_d / 2.0 + SAT / 2.0 - 2
                 sx, sy = cx, ay + avatar_d / 2.0
-                spots = [(-1, -1), (1, -1), (1, 1), (-1, 1)]
+                # 徽标贴在精灵图**下半部**（和右下角区间数同一片区域），不再浮在图的上沿
+                offs = [(-0.24, 0.06), (0.24, 0.06), (-0.24, 0.30), (0.24, 0.30)]
                 for k, s in enumerate(sats):
-                    ux, uy = spots[k]
-                    px = sx + ux * rc * 0.74
-                    py = sy + uy * rc * 0.74
+                    ux, uy = offs[min(k, 3)]
+                    px = sx + ux * avatar_d
+                    py = sy + uy * avatar_d
                     rr = SAT / 2.0
                     sat_ring = _to_rgb((s or {}).get("ring") or "") or ring
                     draw.ellipse([px - rr, py - rr, px + rr, py + rr],

@@ -126,10 +126,11 @@
     font-size: 11px; font-weight: 700;
   }
   .sat img { width: 72%; height: 72%; object-fit: contain; }
-  .sat.tl { left: -9px;  top: -9px; }
-  .sat.tr { right: -9px; top: -9px; }
-  .sat.bl { left: -9px;  bottom: -9px; }
-  .sat.br { right: -9px; bottom: -9px; }
+  /* 徽标在精灵图下半部（和右下角区间数同一片区域） */
+  .sat.s1 { left: 8px;  top: 38px; }
+  .sat.s2 { left: 56px; top: 38px; }
+  .sat.s3 { left: 8px;  top: 62px; }
+  .sat.s4 { left: 56px; top: 62px; }
 
   .name {
     margin-top: 12px;
@@ -192,7 +193,7 @@
               {% if c.elem %}<span class="elem" style="background: {{ c.elem_bg or c.elem_color }};">{{ c.elem }}</span>{% endif %}
               {% if c.bins %}<span class="bins" style="--bins-bg: {{ c.bins_bg }};">区间 {{ c.bins }}</span>{% endif %}
               {% for s in c.sats %}
-              <div class="sat {{ ['tl','tr','br','bl'][loop.index0] }}" style="--ring: {{ s.ring or c.ring }};">
+              <div class="sat s{{ loop.index }}" style="--ring: {{ s.ring or c.ring }};">
                 {% if s.img %}<img src="{{ s.img }}" alt="">{% elif s.text %}<span style="color: {{ s.color }};">{{ s.text }}</span>{% endif %}
               </div>
               {% endfor %}
