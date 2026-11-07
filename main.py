@@ -137,7 +137,7 @@ def _strip_emoji(text: str) -> str:
 
 _PLUGIN_DIR = Path(__file__).resolve().parent
 _PLUGIN_NAME = "astrbot_plugin_lk_egg"
-VERSION = "2.1.14"
+VERSION = "2.1.15"
 
 
 def _cand_dirs() -> List[Path]:
@@ -369,7 +369,7 @@ def _hard_save_state(state: Dict[str, Any]) -> None:
     "astrbot_plugin_lk_egg",
     "MIKU013970 & DeepSeek",
     "洛克小肥鱼全功能 + 炫彩花种订阅",
-    "2.1.14",
+    "2.1.15",
 )
 class LkMarketNotify(Star):
     def __init__(self, context: Context, config: AstrBotConfig = None):
@@ -5495,8 +5495,8 @@ class LkMarketNotify(Star):
             event, header=f"异色精灵 · {label}", text=text,
             cards_res=cards_res, cards_enc=cards_enc,
             caption_lead=f"异色精灵 · {label}", page=page,
-            total_forms=len(self._book_rows(season)) if season else
-            len([r for r in self._book_rows("") if r.get("season") != "S0"]))
+            total_forms=(len(self._book_rows(season)) if season
+                         else len(self._book_rows(""))))
 
     #: 中文数字 → 赛季号
     CN_NUM = {"一": 1, "二": 2, "三": 3, "四": 4, "五": 5}
