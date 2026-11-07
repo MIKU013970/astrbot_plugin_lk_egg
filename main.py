@@ -103,7 +103,7 @@ def _strip_emoji(text: str) -> str:
 
 _PLUGIN_DIR = Path(__file__).resolve().parent
 _PLUGIN_NAME = "astrbot_plugin_lk_egg"
-VERSION = "1.99.2"
+VERSION = "2.0.0"
 
 
 def _cand_dirs() -> List[Path]:
@@ -335,7 +335,7 @@ def _hard_save_state(state: Dict[str, Any]) -> None:
     "astrbot_plugin_lk_egg",
     "MIKU013970 & DeepSeek",
     "洛克小肥鱼全功能 + 炫彩花种订阅",
-    "1.99.2",
+    "2.0.0",
 )
 class LkMarketNotify(Star):
     def __init__(self, context: Context, config: AstrBotConfig = None):
@@ -4302,8 +4302,27 @@ class LkMarketNotify(Star):
         t = self._season_table()
         return str((t.get("season") or {}).get(name) or "")
 
+    #: 赛季花名册：{"S4": {名字: {pet_id, has_shiny, groups, no}}}（build_season_roster.py 生成）
+    _ROSTER: Optional[Dict[str, Any]] = None
+
+    @classmethod
+    def _roster_table(cls) -> Dict[str, Any]:
+        if cls._ROSTER is not None:
+            return cls._ROSTER
+        try:
+            fp = _PLUGIN_DIR / "season_roster.json"
+            cls._ROSTER = json.loads(fp.read_text(encoding="utf-8-sig"))
+        except Exception as e:
+            logger.warning(f"[赛季] season_roster.json 加载失败: {type(e).__name__}: {e}")
+            cls._ROSTER = {}
+        return cls._ROSTER
+
     def _shiny_report(self, season: str = "") -> str:
-        """按赛季 + 蛋组分组，列出有异色图 / 异色蛋的精灵。"""
+        """按赛季 + 蛋组分组，列出有异色的精灵。
+
+        名单以**官方花名册**(season_roster.json) 为准 —— 图鉴只收了可孵蛋的 206 种，
+        光按图鉴列会把 S4 这种只收了几只的赛季漏掉一大半。
+        """
         have_shiny, have_shiny_egg = set(), set()
         try:
             idx = json.loads(
@@ -4315,29 +4334,61 @@ class LkMarketNotify(Star):
         except Exception as e:
             logger.warning(f"[异色] 图标库读取失败: {type(e).__name__}: {e}")
 
-        rows: Dict[str, Dict[str, List[str]]] = {}
+        roster = self._roster_table()
+        # 图鉴里的蛋组 / 正式名字（花名册没有蛋组的用它兜底）
+        r_group = {}
         for rec in (self.ranges.get("species") or {}).values():
             nm = str(rec.get("精灵") or "")
-            if not nm or nm.endswith("的蛋"):
-                continue
-            sid = self._season_of(nm) or "S?"
+            if nm:
+                r_group[nm] = str(rec.get("蛋组") or "")
+
+        rows: Dict[str, Dict[str, List[str]]] = {}
+        for sid, members in (roster or {}).items():
             if season and sid != season:
                 continue
-            egg = str(rec.get("蛋名") or "")
-            marks = []
-            if nm in have_shiny:
-                marks.append("异色")
-            if egg and egg in have_shiny_egg:
-                marks.append("异色蛋")
-            if not marks:
-                continue
-            group = str(rec.get("蛋组") or "未分组") or "未分组"
-            rows.setdefault(sid, {}).setdefault(group, []).append(
-                nm + "·" + "+".join(marks))
+            for nm, info in (members or {}).items():
+                if not isinstance(info, dict) or not info.get("has_shiny"):
+                    continue
+                marks = []
+                if nm in have_shiny:
+                    marks.append("异色")
+                # have_shiny_egg 存的是「蛋名」（异色小剪影的蛋 → 小剪影的蛋）
+                if f"{nm}的蛋" in have_shiny_egg or nm in have_shiny_egg:
+                    marks.append("异色蛋")
+                if not marks:
+                    continue
+                rg = r_group.get(nm) or ""
+                if rg in ("未发现", "待定", "未分组"):
+                    rg = ""
+                group = (rg
+                         or " / ".join([g for g in (info.get("groups") or []) if g])
+                         or "未分组")
+                rows.setdefault(sid, {}).setdefault(group, []).append(
+                    nm + "·" + "+".join(marks))
+
+        # 花名册缺失时退回按图鉴算
+        if not rows:
+            for rec in (self.ranges.get("species") or {}).values():
+                nm = str(rec.get("精灵") or "")
+                if not nm or nm.endswith("的蛋"):
+                    continue
+                sid = self._season_of(nm) or "S?"
+                if season and sid != season:
+                    continue
+                egg = str(rec.get("蛋名") or "")
+                marks = []
+                if nm in have_shiny:
+                    marks.append("异色")
+                if egg and egg in have_shiny_egg:
+                    marks.append("异色蛋")
+                if marks:
+                    rows.setdefault(sid, {}).setdefault(
+                        r_group.get(nm) or "未分组",
+                        []).append(nm + "·" + "+".join(marks))
 
         if not rows:
             return (f"{season} 没有登记到异色精灵" if season
-                    else "没有登记到异色精灵（icons/index.json 里没有异色图）")
+                    else "没有登记到异色精灵（season_roster.json 里没有 has_shiny）")
 
         lines = [f"✨ 异色精灵 · {season or '全部赛季'}（按蛋组分组）"]
         total = 0
@@ -4359,7 +4410,7 @@ class LkMarketNotify(Star):
                     lines.append("  " + "、".join(items[:half]))
                     lines.append("  " + "、".join(items[half:]))
         lines.append("")
-        lines.append(f"合计 {total} 只 · 数据：wiki 异色图 + seasons.json")
+        lines.append(f"合计 {total} 只 · 名单：官方赛季花名册（含异色）· 图标：wiki")
         lines.append("· 标记含义：异色=有异色精灵图，异色蛋=有异色蛋图")
         lines.append("用法：异色 / 异色 s5 / s3 异色")
         return "\n".join(lines)
