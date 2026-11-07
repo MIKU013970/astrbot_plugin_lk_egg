@@ -48,7 +48,7 @@ CARD_RADIUS = 20
 BOX_RADIUS = 18
 
 #: 环绕徽标直径
-SAT = 34
+SAT = 36
 
 # ---------------------------------------------------------------- 配色
 
@@ -659,8 +659,9 @@ def render_grid(
                     px = sx + ux * rc * 0.74
                     py = sy + uy * rc * 0.74
                     rr = SAT / 2.0
+                    sat_ring = _to_rgb((s or {}).get("ring") or "") or ring
                     draw.ellipse([px - rr, py - rr, px + rr, py + rr],
-                                 fill=(255, 255, 255, 255), outline=ring, width=2)
+                                 fill=(255, 255, 255, 255), outline=sat_ring, width=2)
                     s_icon = str((s or {}).get("icon") or "")
                     s_text = str((s or {}).get("text") or "")
                     s_color = _to_rgb((s or {}).get("color") or "") or th["正文"]
@@ -811,6 +812,7 @@ def html_data(
                     "img": data_uri(str((s or {}).get("icon") or "")),
                     "text": str((s or {}).get("text") or ""),
                     "color": str((s or {}).get("color") or "#4A4642"),
+                    "ring": str((s or {}).get("ring") or ""),
                 })
             tags = []
             for t in (c.get("tags") or []):

@@ -106,7 +106,7 @@
   /* 环绕头像的四角小徽标 */
   .sat {
     position: absolute;
-    width: 34px; height: 34px;
+    width: 36px; height: 36px;
     border-radius: 50%;
     background: #fff;
     display: flex; align-items: center; justify-content: center;
@@ -179,7 +179,7 @@
               {% if c.img %}<img src="{{ c.img }}" alt="{{ c.name }}">{% else %}<span class="q">?</span>{% endif %}
               {% if c.elem %}<span class="elem" style="background: {{ c.elem_dark or c.elem_color }};">{{ c.elem }}</span>{% endif %}
               {% for s in c.sats %}
-              <div class="sat {{ ['tl','tr','bl','br'][loop.index0] }}" style="--ring: {{ c.ring }};">
+              <div class="sat {{ ['tl','tr','bl','br'][loop.index0] }}" style="--ring: {{ s.ring or c.ring }};">
                 {% if s.img %}<img src="{{ s.img }}" alt="">{% elif s.text %}<span style="color: {{ s.color }};">{{ s.text }}</span>{% endif %}
               </div>
               {% endfor %}
