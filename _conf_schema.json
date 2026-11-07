@@ -206,6 +206,18 @@
     "default": 0.8,
     "hint": "卡片底色 = 系别色 × 这个比例（混白）。1=满色最艳，0=纯白卡；默认 0.8 是淡淡一层系别色，字还清楚"
   },
+  "grid_cache": {
+    "description": "网格图缓存（内存 + 磁盘）",
+    "type": "bool",
+    "default": true,
+    "hint": "同一张图重复发直接命中缓存，不再渲染。桌面缓存在 data/grid_cache/，重启后也能命中；配置（配色/宽度等）一改，缓存自动失效"
+  },
+  "grid_prewarm": {
+    "description": "启动时预生成网格图",
+    "type": "bool",
+    "default": true,
+    "hint": "开服后台把所有蛋组、各赛季异色图先渲好（约 1 分钟，不占回复线程）。之后「查询 海洋组」「异色 s5」秒出。关掉就是第一次查的时候现画"
+  },
   "grid_theme": {
     "description": "网格图配色（覆盖 card_theme）",
     "type": "text",

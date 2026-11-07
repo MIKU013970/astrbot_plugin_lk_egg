@@ -21,6 +21,7 @@ from __future__ import annotations
 
 import asyncio
 import base64
+from collections import OrderedDict
 import hashlib
 import math
 import os
@@ -29,8 +30,9 @@ import json
 import shutil
 import urllib.parse
 import time
+import uuid
 from pathlib import Path
-from typing import Any, Dict, List, Optional
+from typing import Any, Dict, List, Optional, Tuple
 
 import aiohttp
 
@@ -970,6 +972,13 @@ class LkMarketNotify(Star):
         except Exception as e:                      # 极端情况：没有事件循环
             logger.warning(f"[出图] 预生成启动失败: {type(e).__name__}: {e}")
             self._warm_task = None
+        # 网格图预生成：蛋组 / 各赛季异色这些内容基本不变，先渲好放缓存，
+        # 用户发指令时直接命中（不用等 HTML 截图或 Pillow 现画）
+        try:
+            self._grid_warm_task = asyncio.create_task(self._prewarm_grids())
+        except Exception as e:
+            logger.warning(f"[网格图] 预生成启动失败: {type(e).__name__}: {e}")
+            self._grid_warm_task = None
         if not bool(self._cfg("enabled", True)):
             logger.info("[市集推送] 配置 enabled=false，插件不启动")
             return
@@ -991,6 +1000,14 @@ class LkMarketNotify(Star):
             except (asyncio.CancelledError, BaseException):
                 pass
             self._warm_task = None
+        _gt = getattr(self, "_grid_warm_task", None)
+        if _gt:
+            _gt.cancel()
+            try:
+                await _gt
+            except (asyncio.CancelledError, BaseException):
+                pass
+            self._grid_warm_task = None
         if _ct:
             _ct.cancel()
             try:
@@ -1792,7 +1809,12 @@ class LkMarketNotify(Star):
                         f.unlink(missing_ok=True)
             except Exception:
                 pass
-        fp = d / f"card-{int(time.time() * 1000)}-{os.getpid() % 999:03d}.png"
+        # 文件名必须唯一：以前用「毫秒 + pid」，同一毫秒连出多张（网格图分页）
+        # 会互相覆盖，第二页把第一页顶掉 —— 现在加序号 + 随机尾巴
+        global _TEMP_PNG_SEQ
+        _TEMP_PNG_SEQ = (globals().get("_TEMP_PNG_SEQ") or 0) + 1
+        fp = d / (f"card-{int(time.time() * 1000)}-{os.getpid() % 999:03d}"
+                  f"-{_TEMP_PNG_SEQ}-{uuid.uuid4().hex[:6]}.png")
         fp.write_bytes(png)
         return str(fp)
 
@@ -5098,13 +5120,131 @@ class LkMarketNotify(Star):
                 return None
         return await self._as_png(res)
 
+    # ---------------------------------------------------------------- 网格图缓存
+    #: 内存 LRU（张数）。热点图（蛋组 / 异色）反复发，命中就 0 ms
+    _GRID_MEM: "OrderedDict[str, bytes]" = OrderedDict()
+    _GRID_MEM_MAX = 64
+    #: 磁盘缓存留在 data/grid_cache/，重启后也能直接命中（不用再渲一遍）
+    _GRID_DISK_MAX = 192
+
+    #: 卡片缓存：蛋组 / 异色的 cards 只算一次（图标路径检查很费磁盘 IO）
+    _GRID_CARDS: "OrderedDict[str, Tuple[List[Dict[str, Any]], List[Dict[str, Any]]]]" = \
+        OrderedDict()
+    _GRID_CARDS_MAX = 48
+
+    def _grid_sig(self) -> str:
+        """影响卡片外观的配置 + 数据文件修改时间。任意一项变了，卡片缓存就失效。"""
+        cfg = [
+            str(self._cfg("grid_avatar", "stage1")),
+            str(self._cfg("grid_show_ride", "yes")),
+            str(self._cfg("grid_elem_tint", 0.62)),
+            str(self._cfg("card_theme", "")),
+            str(self._cfg("grid_theme", "")),
+            str(self._cfg("grid_special_pets", "")),
+        ]
+        stamps = []
+        for n in ("elements.json", "pets.json", "chains.json", "shiny_book.json",
+                  "season_roster.json", "ranges.json"):
+            try:
+                stamps.append(Path(_PLUGIN_DIR / n).stat().st_mtime)
+            except Exception:
+                stamps.append(0)
+        raw = json.dumps([cfg, stamps], ensure_ascii=False, default=str)
+        return hashlib.sha1(raw.encode("utf-8")).hexdigest()
+
+    def _grid_cards_cache_get(self, key: str):
+        cls = type(self)
+        hit = cls._GRID_CARDS.get(key)
+        if hit is not None:
+            cls._GRID_CARDS.move_to_end(key)
+        return hit
+
+    def _grid_cards_cache_put(self, key: str, val) -> None:
+        cls = type(self)
+        cls._GRID_CARDS[key] = val
+        cls._GRID_CARDS.move_to_end(key)
+        while len(cls._GRID_CARDS) > cls._GRID_CARDS_MAX:
+            cls._GRID_CARDS.popitem(last=False)
+
+    def _group_cards_pair(self, group: str):
+        """蛋组 → （常驻卡, 奇遇卡）。带缓存，第二次起 0 ms。"""
+        key = f"g|{group}|{self._grid_sig()}"
+        hit = self._grid_cards_cache_get(key)
+        if hit is not None:
+            return hit
+        rows = self._group_rows(group)
+        r_res, r_enc = self._split_resident(rows)
+        val = (self._shiny_grid_cards(sorted(r_res, key=self._grid_sort_key)),
+               self._shiny_grid_cards(sorted(r_enc, key=self._grid_sort_key)))
+        self._grid_cards_cache_put(key, val)
+        return val
+
+    def _grid_key(self, kw: Dict[str, Any]) -> str:
+        """缓存键：内容 + 版式 + 引擎。配置一改，键就变，不会拿到旧图。"""
+        payload = {k: kw.get(k) for k in (
+            "header", "subtitle", "footer", "page", "total_pages", "total",
+            "width", "cols", "font_size", "font_path", "theme")}
+        payload["engine"] = self._grid_engine()
+        payload["panels"] = kw.get("panels") or [{"cards": kw.get("cards") or []}]
+        raw = json.dumps(payload, ensure_ascii=False, sort_keys=True, default=str)
+        return hashlib.sha1(raw.encode("utf-8")).hexdigest()
+
+    def _grid_cache_path(self, key: str) -> Optional[Path]:
+        try:
+            return _data_dir() / "grid_cache" / f"{key}.png"
+        except Exception:
+            return None
+
+    def _grid_cache_get(self, key: str) -> Optional[bytes]:
+        cls = type(self)
+        hit = cls._GRID_MEM.get(key)
+        if hit is not None:
+            cls._GRID_MEM.move_to_end(key)
+            return hit
+        fp = self._grid_cache_path(key)
+        try:
+            if fp is not None and fp.is_file():
+                data = fp.read_bytes()
+                if data[:8] == b"\x89PNG\r\n\x1a\n":
+                    self._grid_cache_put_mem(key, data)
+                    return data
+        except Exception:
+            pass
+        return None
+
+    @classmethod
+    def _grid_cache_put_mem(cls, key: str, data: bytes) -> None:
+        cls._GRID_MEM[key] = data
+        cls._GRID_MEM.move_to_end(key)
+        while len(cls._GRID_MEM) > cls._GRID_MEM_MAX:
+            cls._GRID_MEM.popitem(last=False)
+
+    def _grid_cache_put(self, key: str, data: bytes) -> None:
+        self._grid_cache_put_mem(key, data)
+        if not bool(self._cfg("grid_cache", True)):
+            return
+        fp = self._grid_cache_path(key)
+        try:
+            if fp is None:
+                return
+            fp.parent.mkdir(parents=True, exist_ok=True)
+            fp.write_bytes(data)
+            files = sorted(fp.parent.glob("*.png"), key=lambda x: x.stat().st_mtime)
+            for old in files[:-(type(self)._GRID_DISK_MAX)]:
+                try:
+                    old.unlink(missing_ok=True)
+                except Exception:
+                    pass
+        except Exception:
+            pass
+
     async def _grid_png(self, *, header: str,
                         cards: Optional[List[Dict[str, Any]]] = None,
                         panels: Optional[List[Dict[str, Any]]] = None,
                         subtitle: str = "", footer: str = "",
                         page: int = 1, total_pages: int = 1,
-                        total: int = 0) -> Optional[bytes]:
-        """两条引擎一个出口：先试 HTML（CSS Grid，效果最好），不行就用 Pillow 复刻。
+                        total: int = 0, use_cache: bool = True) -> Optional[bytes]:
+        """两条引擎一个出口：先查缓存，再试 HTML（CSS Grid），最后 Pillow 复刻。
 
         cards  —— 单栏
         panels —— 两栏（左常驻 / 右奇遇），`[{"title","color","cards"}, …]`
@@ -5127,24 +5267,223 @@ class LkMarketNotify(Star):
             "font_path": str(self._cfg("card_font_path", "") or ""),
             "theme": self._grid_theme_text(),
         }
+        key = ""
+        if use_cache and bool(self._cfg("grid_cache", True)):
+            key = self._grid_key(kw)
+            hit = self._grid_cache_get(key)
+            if hit:
+                return hit
+
         engine = self._grid_engine()
+        png = None
         if engine in ("auto", "html"):
             try:
                 png = await self._html_grid_png(kw)
             except Exception as e:
                 logger.warning(f"[网格图] HTML 引擎异常: {type(e).__name__}: {e}")
                 png = None
-            if png:
-                return png
-            if engine == "html":
+            if not png and engine == "html":
                 logger.warning("[网格图] 指定 HTML 引擎但没渲染出来，改用 Pillow 复刻版")
-        if not g.available():
-            return None
+        if not png:
+            if not g.available():
+                return None
+            try:
+                png = await asyncio.to_thread(lambda: g.render_grid(**kw))
+            except Exception as e:
+                logger.warning(f"[网格图] Pillow 渲染失败: {type(e).__name__}: {e}")
+                return None
+        if png and key:
+            self._grid_cache_put(key, png)
+        return png
+
+    # ---------------------------------------------------------------- 分页 / 预生成
+    def _build_page_panels(self, cards_res: List[Dict[str, Any]],
+                           cards_enc: List[Dict[str, Any]], *,
+                           per: int, res_title: str, enc_title: str
+                           ) -> List[List[Dict[str, Any]]]:
+        """把「常驻 / 奇遇」排成每页的 panels。
+
+        第 1 页左常驻 + 右奇遇；剩下的从第 2 页起单栏 4 列接着排。
+        """
+        cap2 = max(2, per // 2)                  # 两栏时每栏最多 10 只
+        pages: List[List[Dict[str, Any]]] = []
+        if cards_res and cards_enc:
+            pages.append([
+                {"title": f"{res_title} · {len(cards_res)} 只", "color": "#4B6A88",
+                 "cards": cards_res[:cap2]},
+                {"title": f"{enc_title} · {len(cards_enc)} 只", "color": "#C25828",
+                 "cards": cards_enc[:cap2]},
+            ])
+            tail = cards_res[cap2:] + cards_enc[cap2:]
+            for i in range(0, len(tail), per):
+                pages.append([{"title": f"{enc_title}（续）· {len(tail)} 只",
+                               "color": "#C25828", "cards": tail[i:i + per]}])
+        else:
+            seq = cards_enc or cards_res
+            title = (f"{enc_title} · {len(seq)} 只" if cards_enc
+                     else f"{res_title} · {len(seq)} 只")
+            color = "#C25828" if cards_enc else "#4B6A88"
+            for i in range(0, max(1, len(seq)), per):
+                pages.append([{"title": title, "color": color, "cards": seq[i:i + per]}])
+        return pages or [[{"title": "", "cards": []}]]
+
+    async def _paginate_pngs(self, *, header: str,
+                             cards_res: List[Dict[str, Any]],
+                             cards_enc: List[Dict[str, Any]],
+                             res_title: str, enc_title: str,
+                             footer: str, flip: str,
+                             page: int = 0,
+                             max_pages: Optional[int] = None,
+                             all_pages: bool = False
+                             ) -> Tuple[List[bytes], int, List[int], int]:
+        """排页 + 渲染，返回 (png 列表, 总页数, 实际渲的页码, 总只数)。"""
+        per = self._int_cfg("grid_per_page", 20, 4, 40)
+        total = len(cards_res) + len(cards_enc)
+        pages_panels = self._build_page_panels(
+            cards_res, cards_enc, per=per, res_title=res_title, enc_title=enc_title)
+        pages = max(1, len(pages_panels))
+        cap = self._int_cfg("grid_max_pages", 3, 0, 12) if max_pages is None else max_pages
+        if page and page > 0:
+            want = [min(page, pages)]
+        elif all_pages:
+            want = list(range(1, pages + 1))
+        else:
+            want = list(range(1, (pages if cap <= 0 else min(pages, cap)) + 1))
+
+        pngs: List[bytes] = []
+        for p in want:
+            foot = footer + (f" · 翻页：{flip}" if pages > 1 else "")
+            png = await self._grid_png(
+                header=header, panels=pages_panels[p - 1],
+                subtitle=(f"第 {p} / {pages} 页 · 共 {total} 只"
+                          f"（常驻 {len(cards_res)} + 奇遇 {len(cards_enc)}）"),
+                footer=foot, page=p, total_pages=pages, total=total)
+            if png:
+                pngs.append(png)
+        return pngs, pages, want, total
+
+    async def _emit_panels(self, event: Any, *, header: str, text: str,
+                           cards_res: List[Dict[str, Any]],
+                           cards_enc: List[Dict[str, Any]],
+                           res_title: str, enc_title: str, flip: str,
+                           footer: str, caption_lead: str,
+                           page: int = 0):
+        """网格图统一出口：有常驻有奇遇 → 左常驻 / 右奇遇两栏；只有一边 → 单栏 4 列。"""
+        if not cards_res and not cards_enc:
+            return await self._say(event, text)
+        pngs, pages, want, total = await self._paginate_pngs(
+            header=header, cards_res=cards_res, cards_enc=cards_enc,
+            res_title=res_title, enc_title=enc_title,
+            footer=footer, flip=flip, page=page)
+        if not pngs:
+            return await self._say(event, text)
+
+        caption = (f"{caption_lead}｜共 {total} 只"
+                   f"（常驻 {len(cards_res)} · 奇遇 {len(cards_enc)}）")
+        if pages > 1:
+            caption += f"｜第 {want[0]}-{want[-1]} / {pages} 页"
+            if len(want) < pages:
+                caption += f"（发「{flip.replace('页码', str(want[-1] + 1))}」看下一页）"
+        r = self._result_images(event, pngs, caption)
+        if r is not None:
+            return r
+        return event.plain_result(text)
+
+    def _shiny_cards_pair(self, season: str = "") -> Tuple[List[Dict[str, Any]],
+                                                           List[Dict[str, Any]]]:
+        """异色：常驻 / 奇遇 的卡片（名单以官方异色记录本为准）。带缓存。"""
+        key = f"s|{season}|{self._grid_sig()}"
+        hit = self._grid_cards_cache_get(key)
+        if hit is not None:
+            return hit
+        rows_res = self._book_rows("S0")
+        if season == "S0":
+            rows_enc: List[Dict[str, Any]] = []
+        elif season:
+            rows_enc = self._book_rows(season)
+        else:
+            rows_enc = [r for r in self._book_rows("")
+                        if str(r.get("season")) != "S0"]
+        cards_res = self._shiny_grid_cards(sorted(rows_res, key=self._grid_sort_key))
+        cards_enc = self._shiny_grid_cards(sorted(rows_enc, key=self._grid_sort_key))
+        self._grid_cards_cache_put(key, (cards_res, cards_enc))
+        return cards_res, cards_enc
+
+    def _shiny_panel_args(self, season: str = ""):
+        label = self._season_label(season)
+        return {
+            "header": f"异色精灵 · {label}",
+            "res_title": "常驻（S0）",
+            "enc_title": f"奇遇（{season}）" if season else "奇遇（S1~S5）",
+            "flip": f"异色 {season} 页码" if season else "异色全部 页码",
+            "footer": ("左=常驻（S0）· 右=奇遇 · 头像左下角=系别（底色同系别色）"
+                       " · 标签=精灵组别 + 同乘"),
+            "caption_lead": f"异色精灵 · {label}",
+        }
+
+    async def _prewarm_grids(self) -> None:
+        """启动预生成：把所有蛋组、各赛季异色图先渲好（这些内容基本不变）。
+
+        跑在后台任务里，用户发指令时直接命中缓存（内存 → 磁盘）。
+        """
+        if not bool(self._cfg("grid_prewarm", True)):
+            return
+        if not (self._grid_enabled() and self._image_reply_on() and _grid() is not None):
+            logger.info("[网格图] 预生成跳过（网格图关着或没 Pillow）")
+            return
+        t0 = time.time()
+        done = 0
+        failed = 0
+
+        # ① 所有蛋组（查询 xxx组 用的就是这些）
         try:
-            return await asyncio.to_thread(lambda: g.render_grid(**kw))
+            groups = sorted(self._all_groups())
         except Exception as e:
-            logger.warning(f"[网格图] Pillow 渲染失败: {type(e).__name__}: {e}")
-            return None
+            groups = []
+            logger.warning(f"[网格图] 蛋组列表读取失败: {type(e).__name__}: {e}")
+        for grp in groups:
+            try:
+                rows = self._group_rows(grp)
+                c_res, c_enc = self._group_cards_pair(grp)
+                pngs, _pages, _want, _total = await self._paginate_pngs(
+                    header=f"蛋组 · {grp} · {len(c_res) + len(c_enc)} 只",
+                    cards_res=c_res, cards_enc=c_enc,
+                    res_title="常驻（S0）", enc_title="奇遇（S1~S5）",
+                    flip=f"{grp} 页码",
+                    footer=("左=常驻 · 右=奇遇 · 头像左下角=系别（底色同系别色）"
+                            " · 标签=精灵组别 + 同乘"),
+                    all_pages=True)
+                done += len(pngs)
+            except Exception as e:
+                failed += 1
+                logger.warning(f"[网格图] 预生成蛋组「{grp}」失败: {type(e).__name__}: {e}")
+            await asyncio.sleep(0)
+
+        # ② 异色：常驻 + S1~S5 + 全部
+        for season in ("S0", "S1", "S2", "S3", "S4", "S5", ""):
+            try:
+                c_res, c_enc = self._shiny_cards_pair(season)
+                a = self._shiny_panel_args(season)
+                pngs, _pages, _want, _total = await self._paginate_pngs(
+                    header=a["header"], cards_res=c_res, cards_enc=c_enc,
+                    res_title=a["res_title"], enc_title=a["enc_title"],
+                    footer=a["footer"], flip=a["flip"], all_pages=True)
+                done += len(pngs)
+            except Exception as e:
+                failed += 1
+                logger.warning(f"[网格图] 预生成异色「{season or '全部'}」失败: "
+                               f"{type(e).__name__}: {e}")
+            await asyncio.sleep(0)
+
+        cost = time.time() - t0
+        logger.info(f"[网格图] 预生成完成：{done} 张 / {len(groups) + 7} 组 · "
+                    f"用时 {cost:.1f}s · 失败 {failed}")
+
+    def _split_resident(self, rows: List[Dict[str, Any]]):
+        """按赛季把行拆成（常驻, 奇遇）。"""
+        res = [r for r in rows if str(r.get("season") or "S0") == "S0"]
+        enc = [r for r in rows if str(r.get("season") or "S0") != "S0"]
+        return res, enc
 
     def _shiny_args(self, raw: str):
         """「异色 s5 2」→ (赛季, 页码, 是否强制文字)。"""
@@ -5164,82 +5503,6 @@ class LkMarketNotify(Star):
         pm = re.search(r"(?:第\s*)?(\d{1,3})\s*页?", rest)
         page = int(pm.group(1)) if pm else 0
         return season, page, want_text
-
-    async def _emit_panels(self, event: Any, *, header: str, text: str,
-                           cards_res: List[Dict[str, Any]],
-                           cards_enc: List[Dict[str, Any]],
-                           res_title: str, enc_title: str, flip: str,
-                           footer: str, caption_lead: str,
-                           page: int = 0):
-        """网格图统一出口：有常驻有奇遇 → 左常驻 / 右奇遇两栏；只有一边 → 单栏 4 列。
-
-        两栏时第 1 页放「常驻全量 + 奇遇前一半」，剩下的奇遇从第 2 页起单栏接着排，
-        免得常驻只有七八只却占着后面每一页的左半张。
-        """
-        if not cards_res and not cards_enc:
-            return await self._say(event, text)
-        per = self._int_cfg("grid_per_page", 20, 4, 40)
-        cap2 = max(2, per // 2)                  # 两栏时每栏最多 10 只
-        total = len(cards_res) + len(cards_enc)
-
-        # 每一页的 panels 先排好，再统一渲染
-        page_panels: List[List[Dict[str, Any]]] = []
-        if cards_res and cards_enc:
-            page_panels.append([
-                {"title": f"{res_title} · {len(cards_res)} 只", "color": "#4B6A88",
-                 "cards": cards_res[:cap2]},
-                {"title": f"{enc_title} · {len(cards_enc)} 只", "color": "#C25828",
-                 "cards": cards_enc[:cap2]},
-            ])
-            tail = cards_res[cap2:] + cards_enc[cap2:]
-            for i in range(0, len(tail), per):
-                page_panels.append([{"title": f"{enc_title}（续）· {len(tail)} 只",
-                                     "color": "#C25828", "cards": tail[i:i + per]}])
-        else:
-            seq = cards_enc or cards_res
-            title = (f"{enc_title} · {len(seq)} 只" if cards_enc
-                     else f"{res_title} · {len(seq)} 只")
-            color = "#C25828" if cards_enc else "#4B6A88"
-            for i in range(0, max(1, len(seq)), per):
-                page_panels.append([{"title": title, "color": color,
-                                     "cards": seq[i:i + per]}])
-
-        pages = max(1, len(page_panels))
-        cap = self._int_cfg("grid_max_pages", 3, 0, 12)
-        if page and page > 0:
-            want = [min(page, pages)]
-        else:
-            want = list(range(1, (pages if cap <= 0 else min(pages, cap)) + 1))
-
-        pngs: List[bytes] = []
-        for p in want:
-            foot = footer + (f" · 翻页：{flip}" if pages > 1 else "")
-            png = await self._grid_png(
-                header=header, panels=page_panels[p - 1],
-                subtitle=(f"第 {p} / {pages} 页 · 共 {total} 只"
-                          f"（常驻 {len(cards_res)} + 奇遇 {len(cards_enc)}）"),
-                footer=foot, page=p, total_pages=pages, total=total)
-            if png:
-                pngs.append(png)
-        if not pngs:
-            return await self._say(event, text)
-
-        caption = (f"{caption_lead}｜共 {total} 只"
-                   f"（常驻 {len(cards_res)} · 奇遇 {len(cards_enc)}）")
-        if pages > 1:
-            caption += f"｜第 {want[0]}-{want[-1]} / {pages} 页"
-            if len(want) < pages:
-                caption += f"（发「{flip.replace('页码', str(want[-1] + 1))}」看下一页）"
-        r = self._result_images(event, pngs, caption)
-        if r is not None:
-            return r
-        return event.plain_result(text)
-
-    def _split_resident(self, rows: List[Dict[str, Any]]):
-        """按赛季把行拆成（常驻, 奇遇）。"""
-        res = [r for r in rows if str(r.get("season") or "S0") == "S0"]
-        enc = [r for r in rows if str(r.get("season") or "S0") != "S0"]
-        return res, enc
 
     async def _shiny_result(self, event: Any, season: str = "", page: int = 0):
         """异色名单：左常驻 / 右奇遇的网格图，出不了就发原来的文字版。"""
@@ -6806,11 +7069,9 @@ class LkMarketNotify(Star):
         rows = self._group_rows(group)
         if not rows:
             return await self._say(event, text)
-        rows_res, rows_enc = self._split_resident(rows)
-        cards_res = self._shiny_grid_cards(sorted(rows_res, key=self._grid_sort_key))
-        cards_enc = self._shiny_grid_cards(sorted(rows_enc, key=self._grid_sort_key))
+        cards_res, cards_enc = self._group_cards_pair(group)
         return await self._emit_panels(
-            event, header=f"蛋组 · {group} · {len(rows)} 只", text=text,
+            event, header=f"蛋组 · {group} · {len(cards_res) + len(cards_enc)} 只", text=text,
             cards_res=cards_res, cards_enc=cards_enc,
             res_title="常驻（S0）", enc_title="奇遇（S1~S5）",
             flip=f"{group} 页码",
