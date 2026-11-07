@@ -103,7 +103,7 @@ def _strip_emoji(text: str) -> str:
 
 _PLUGIN_DIR = Path(__file__).resolve().parent
 _PLUGIN_NAME = "astrbot_plugin_lk_egg"
-VERSION = "1.98.0"
+VERSION = "1.99.0"
 
 
 def _cand_dirs() -> List[Path]:
@@ -335,7 +335,7 @@ def _hard_save_state(state: Dict[str, Any]) -> None:
     "astrbot_plugin_lk_egg",
     "MIKU013970 & DeepSeek",
     "洛克小肥鱼全功能 + 炫彩花种订阅",
-    "1.98.0",
+    "1.99.0",
 )
 class LkMarketNotify(Star):
     def __init__(self, context: Context, config: AstrBotConfig = None):
@@ -4281,6 +4281,113 @@ class LkMarketNotify(Star):
 
         # ⑤ 都没命中 → 让筛选逻辑给「市场里有什么」的提示
         return await self._flower_by_trait(event, q)
+
+    # ---------------------------------------------------------------- 指令：异色（按赛季 + 蛋组）
+    #: 赛季表：{"season": {精灵: "S5"}, "detail": {...}}（build_seasons.py 生成）
+    _SEASONS: Optional[Dict[str, Any]] = None
+
+    @classmethod
+    def _season_table(cls) -> Dict[str, Any]:
+        if cls._SEASONS is not None:
+            return cls._SEASONS
+        try:
+            fp = _PLUGIN_DIR / "seasons.json"
+            cls._SEASONS = json.loads(fp.read_text(encoding="utf-8-sig"))
+        except Exception as e:
+            logger.warning(f"[赛季] seasons.json 加载失败: {type(e).__name__}: {e}")
+            cls._SEASONS = {"season": {}, "detail": {}}
+        return cls._SEASONS
+
+    def _season_of(self, name: str) -> str:
+        t = self._season_table()
+        return str((t.get("season") or {}).get(name) or "")
+
+    def _shiny_report(self, season: str = "") -> str:
+        """按赛季 + 蛋组分组，列出有异色图 / 异色蛋的精灵。"""
+        have_shiny, have_shiny_egg = set(), set()
+        try:
+            idx = json.loads(
+                (_PLUGIN_DIR / "icons" / "index.json").read_text(encoding="utf-8-sig"))
+            have_shiny = set((idx.get("pet_shiny") or {}).keys())
+            for k in (idx.get("egg") or {}):
+                if str(k).startswith("异色"):
+                    have_shiny_egg.add(str(k)[2:])       # 异色小剪影的蛋 → 小剪影的蛋
+        except Exception as e:
+            logger.warning(f"[异色] 图标库读取失败: {type(e).__name__}: {e}")
+
+        rows: Dict[str, Dict[str, List[str]]] = {}
+        for rec in (self.ranges.get("species") or {}).values():
+            nm = str(rec.get("精灵") or "")
+            if not nm or nm.endswith("的蛋"):
+                continue
+            sid = self._season_of(nm) or "S?"
+            if season and sid != season:
+                continue
+            egg = str(rec.get("蛋名") or "")
+            marks = []
+            if nm in have_shiny:
+                marks.append("异色")
+            if egg and egg in have_shiny_egg:
+                marks.append("异色蛋")
+            if not marks:
+                continue
+            group = str(rec.get("蛋组") or "未分组") or "未分组"
+            rows.setdefault(sid, {}).setdefault(group, []).append(
+                nm + "·" + "+".join(marks))
+
+        if not rows:
+            return (f"{season} 没有登记到异色精灵" if season
+                    else "没有登记到异色精灵（icons/index.json 里没有异色图）")
+
+        lines = [f"✨ 异色精灵 · {season or '全部赛季'}（按蛋组分组）"]
+        total = 0
+        for sid in sorted(rows):
+            grp = rows[sid]
+            n = sum(len(v) for v in grp.values())
+            total += n
+            lines.append("")
+            lines.append(f"—————— {sid} · {n} 只 ——————")
+            for g in sorted(grp, key=lambda x: -len(grp[x])):
+                items = grp[g]
+                lines.append(f"【{g}】{len(items)} 只")
+                buf = "、".join(items)
+                if len(buf) <= 110:
+                    lines.append("  " + buf)
+                else:
+                    half = (len(items) + 1) // 2
+                    lines.append("  " + "、".join(items[:half]))
+                    lines.append("  " + "、".join(items[half:]))
+        lines.append("")
+        lines.append(f"合计 {total} 只 · 数据：wiki 异色图 + seasons.json")
+        lines.append("· 标记含义：异色=有异色精灵图，异色蛋=有异色蛋图")
+        lines.append("用法：异色 / 异色 s5 / s3 异色")
+        return "\n".join(lines)
+
+    #: 中文数字 → 赛季号
+    CN_NUM = {"一": 1, "二": 2, "三": 3, "四": 4, "五": 5}
+
+    @filter.regex(r"^\s*[/#]?\s*(?:(?:查询|查)\s*)?(?:异色|闪光)\s*(?:[sS]\s*([1-5])|第?\s*([1-5一二三四五])\s*赛季?)?\s*$")
+    async def on_shiny_by_season(self, event: AstrMessageEvent):
+        """异色 / 异色 s5 / 异色 第五赛季 —— 按赛季 + 蛋组看异色精灵"""
+        raw = str(getattr(event, "message_str", "") or "").lstrip("/#").strip()
+        m = re.search(r"(?:[sS]\s*([1-5])|[第\s]*([1-5一二三四五])\s*赛季?)", raw)
+        season = ""
+        if m:
+            g = m.group(1) or m.group(2)
+            n = self.CN_NUM.get(g) or (int(g) if str(g).isdigit() else 0)
+            season = f"S{n}" if n else ""
+        if not await self._perm_gate(event, "market"):
+            return
+        yield await self._say(event, self._shiny_report(season))
+
+    @filter.regex(r"^\s*[/#]?\s*[sS]\s*([1-5])\s*(?:异色|闪光)\s*$")
+    async def on_shiny_by_season2(self, event: AstrMessageEvent):
+        """s5 异色（赛季写前面）"""
+        raw = str(getattr(event, "message_str", "") or "").lstrip("/#").strip()
+        m = re.search(r"[sS]\s*([1-5])", raw)
+        if not await self._perm_gate(event, "market"):
+            return
+        yield await self._say(event, self._shiny_report("S" + m.group(1) if m else ""))
 
     @filter.command("花种")
     async def cmd_flower(self, event: AstrMessageEvent):

@@ -1,0 +1,1608 @@
+{
+ "season": {
+  "迪莫": "S0",
+  "晶石蜗": "S0",
+  "梦游": "S0",
+  "罗隐": "S0",
+  "西瓜虫": "S5",
+  "蛋包蛋": "S5",
+  "豆粒鹅": "S5",
+  "鲸羽": "S5",
+  "里奥": "S0",
+  "红绒十字": "S1",
+  "小帕尔": "S1",
+  "绒绒": "S1",
+  "犀角鸟": "S1",
+  "钨丝贝贝": "S2",
+  "凡雀": "S0",
+  "小雪人": "S2",
+  "爆焰仔": "S2",
+  "学院呱呱": "S0",
+  "加灵": "S3",
+  "咬咬小子": "S3",
+  "足尖元件": "S3",
+  "长江豚": "S0",
+  "小灵面": "S0",
+  "旋叶虫": "S0",
+  "布瓜蝌": "S0",
+  "星尘虫": "S0",
+  "菇菇丁": "S0",
+  "蒲公英": "S0",
+  "逗逗": "S4",
+  "豆丁鱼": "S3",
+  "十字蝌蚪": "S3",
+  "叮叮卯": "S4",
+  "幽星光": "S0",
+  "画精灵": "S0",
+  "毛头小蛛": "S0",
+  "蜜果骸": "S3",
+  "地鼠": "S3",
+  "水蓝蓝": "S0",
+  "芽眼魔": "S4",
+  "小鹬": "S3",
+  "恶魔叮": "S2",
+  "闪电环": "S0",
+  "幽铃的蛋": "S5",
+  "粉粉星": "S1",
+  "伊贝儿": "S3",
+  "矮脚爬爬": "S0",
+  "矿晶虫": "S0",
+  "喵喵": "S0",
+  "波波螺": "S0",
+  "点点": "S0",
+  "优优": "S0",
+  "卡波": "S3",
+  "小草虫": "S3",
+  "花怨鳗": "S5",
+  "刺轮砣": "S4",
+  "加油海葵": "S5",
+  "友爱天天": "S0",
+  "咔咔羽毛": "S0",
+  "哭哭菇": "S0",
+  "小鼠獭": "S0",
+  "烈钻鸟": "S0",
+  "绿翼鸟": "S0",
+  "不咕钟": "S0",
+  "公平鸽": "S2",
+  "古钟蛇": "S0",
+  "嗜光嗡嗡": "S1",
+  "宝藏小狐": "S0",
+  "小黑猫": "S4",
+  "新月鹭的蛋": "S5",
+  "春团": "S0",
+  "果冻": "S0",
+  "乖乖鹄": "S0",
+  "书魔虫": "S0",
+  "号儿鱼": "S0",
+  "呆小路": "S0",
+  "圆眼蜘蛛": "S0",
+  "拉特": "S1",
+  "未完虫的蛋": "S5",
+  "毛毛": "S0",
+  "火花": "S0",
+  "烟花团": "S2",
+  "章脑丸的蛋": "S5",
+  "蹦蹦种子": "S0",
+  "一窝蜂": "S0",
+  "小浣蛋的蛋": "S5",
+  "小电企鹅": "S0",
+  "布灵的蛋": "S5",
+  "斑斑": "S3",
+  "瑰眼仔": "S4",
+  "量风碗的蛋": "S5",
+  "乌达": "S0",
+  "墨鱿士": "S0",
+  "多西": "S0",
+  "奇丽草": "S1",
+  "小丑豆豆": "S2",
+  "水滴蛇": "S0",
+  "海盔虫": "S3",
+  "绿草精灵": "S0",
+  "菊花梨": "S2",
+  "雪绒鸟": "S0",
+  "热团团的蛋": "S5",
+  "脆筒甜甜": "S0",
+  "草头鸭": "S0",
+  "雪娃娃": "S0",
+  "丢丢": "S0",
+  "小灵菇": "S4",
+  "松仔": "S0",
+  "格兰种子": "S1",
+  "灵狐": "S2",
+  "莫比乌乌": "S0",
+  "布鲁斯": "S0",
+  "忽幽狸": "S0",
+  "螺旋帕帕": "S0",
+  "雪灵兽": "S0",
+  "栗鼠": "S3",
+  "蝴蝶陶陶": "S3",
+  "兽花蕾": "S0",
+  "小甲虫": "S0",
+  "小箱怪": "S0",
+  "甜田螺": "S0",
+  "电咩咩": "S0",
+  "绿耳松鼠": "S0",
+  "呼呼猪": "S1",
+  "奔波鼠": "S0",
+  "鸭吉吉": "S0",
+  "可立鸡": "S3",
+  "牵线木偶": "S2",
+  "小夜": "S2",
+  "觅觅蝠": "S4",
+  "小鼓象": "S2",
+  "海枝枝": "S0",
+  "空空颅": "S1",
+  "咕咕帽": "S2",
+  "板板壳": "S0",
+  "治愈兔": "S1",
+  "机械方方": "S1",
+  "吸泥鸥": "S5",
+  "雪豆丁": "S0",
+  "粉星仔": "S1",
+  "火豆丁": "S0",
+  "小勇狮": "S0",
+  "双灯鱼": "S1",
+  "锥尾羊": "S0",
+  "伏地兽": "S0",
+  "火尾瓦特": "S0",
+  "霹雳宝宝": "S0",
+  "棋棋": "S0",
+  "苞米仔": "S3",
+  "小怂猫": "S0",
+  "风铃鲨": "S0",
+  "护主犬": "S0",
+  "多多": "S5",
+  "柴渣虫": "S5",
+  "裘洛": "S5",
+  "诅咒狼灵的蛋": "S5",
+  "白发懒人": "S5",
+  "碎晶蝎": "S5",
+  "厉毒小萝": "S5",
+  "小狮鹫": "S5",
+  "守夜烛": "S5",
+  "翡翠水母": "S5",
+  "伊雷龙": "S5",
+  "猴麦仔": "S5",
+  "玳龟的蛋": "S5",
+  "权杖-Ⅱ": "S5",
+  "电动长颈鹿": "S5",
+  "胆小鳗鱼": "S5",
+  "幽影树": "S5",
+  "缇塔": "S5",
+  "小星光": "S5",
+  "可爱猿": "S5",
+  "贝瑟": "S5",
+  "嘟嘟煲": "S5",
+  "森豆丁": "S5",
+  "炫光迪迪": "S5",
+  "小翼龙": "S5",
+  "阿米亚特": "S5",
+  "石肤蜥": "S5",
+  "云梦豚的蛋": "S5",
+  "里拉鳐": "S5",
+  "布是石": "S5",
+  "大头骨龙": "S5",
+  "仪使者": "S5",
+  "小独角兽": "S5",
+  "火红尾": "S5",
+  "锤头鹳": "S5",
+  "石石": "S5",
+  "稻草人": "S5",
+  "月牙雪熊": "S5",
+  "海豹战士": "S5",
+  "恶魔狼": "S5",
+  "星云旅者": "S5",
+  "记忆石": "S5",
+  "立方人": "S5",
+  "噼啪鸟": "S5",
+  "圣剑侍从": "S5",
+  "深蓝鲸": "S5",
+  "星星眼的蛋": "S5",
+  "大耳帽兜": "S5",
+  "小冥龙": "S5",
+  "地银链": "S5",
+  "沉金兽": "S5",
+  "乐乐鲨": "S5",
+  "滴溜豚": "S5",
+  "小剪影": "S5",
+  "蟹蟹椰": "S5"
+ },
+ "detail": {
+  "迪莫": {
+   "season": "S0",
+   "groups": [
+    "未发现"
+   ],
+   "has_shiny": false
+  },
+  "晶石蜗": {
+   "season": "S0",
+   "groups": [
+    "软体组",
+    "岩石组"
+   ],
+   "has_shiny": false
+  },
+  "梦游": {
+   "season": "S0",
+   "groups": [
+    "魔力组",
+    "妖精组"
+   ],
+   "has_shiny": false
+  },
+  "罗隐": {
+   "season": "S0",
+   "groups": [
+    "岩石组",
+    "巨灵组"
+   ],
+   "has_shiny": false
+  },
+  "西瓜虫": {
+   "season": "S5",
+   "groups": [
+    "昆虫组",
+    "植物组"
+   ],
+   "has_shiny": true
+  },
+  "蛋包蛋": {
+   "season": "S5",
+   "groups": [
+    "动物组",
+    "天空组"
+   ],
+   "has_shiny": true
+  },
+  "豆粒鹅": {
+   "season": "S5",
+   "groups": [
+    "动物组",
+    "天空组"
+   ],
+   "has_shiny": true
+  },
+  "鲸羽": {
+   "season": "S5",
+   "groups": [
+    "海洋组",
+    "妖精组"
+   ],
+   "has_shiny": true
+  },
+  "里奥": {
+   "season": "S0",
+   "groups": [
+    "未发现"
+   ],
+   "has_shiny": false
+  },
+  "红绒十字": {
+   "season": "S1",
+   "groups": [
+    "动物组",
+    "妖精组"
+   ],
+   "has_shiny": true
+  },
+  "小帕尔": {
+   "season": "S1",
+   "groups": [
+    "未发现"
+   ],
+   "has_shiny": true
+  },
+  "绒绒": {
+   "season": "S1",
+   "groups": [
+    "未发现"
+   ],
+   "has_shiny": true
+  },
+  "犀角鸟": {
+   "season": "S1",
+   "groups": [
+    "未发现"
+   ],
+   "has_shiny": true
+  },
+  "钨丝贝贝": {
+   "season": "S2",
+   "groups": [
+    "未发现"
+   ],
+   "has_shiny": true
+  },
+  "凡雀": {
+   "season": "S0",
+   "groups": [
+    "未发现"
+   ],
+   "has_shiny": false
+  },
+  "小雪人": {
+   "season": "S2",
+   "groups": [
+    "未发现"
+   ],
+   "has_shiny": true
+  },
+  "爆焰仔": {
+   "season": "S2",
+   "groups": [
+    "未发现"
+   ],
+   "has_shiny": true
+  },
+  "学院呱呱": {
+   "season": "S0",
+   "groups": [
+    "未发现"
+   ],
+   "has_shiny": false
+  },
+  "加灵": {
+   "season": "S3",
+   "groups": [
+    "未发现"
+   ],
+   "has_shiny": false
+  },
+  "咬咬小子": {
+   "season": "S3",
+   "groups": [
+    "未发现"
+   ],
+   "has_shiny": true
+  },
+  "足尖元件": {
+   "season": "S3",
+   "groups": [
+    "未发现"
+   ],
+   "has_shiny": true
+  },
+  "长江豚": {
+   "season": "S0",
+   "groups": [
+    "海洋组"
+   ],
+   "has_shiny": true
+  },
+  "小灵面": {
+   "season": "S0",
+   "groups": [
+    "魔力组"
+   ],
+   "has_shiny": false
+  },
+  "旋叶虫": {
+   "season": "S0",
+   "groups": [
+    "昆虫组",
+    "植物组"
+   ],
+   "has_shiny": false
+  },
+  "布瓜蝌": {
+   "season": "S0",
+   "groups": [
+    "两栖组"
+   ],
+   "has_shiny": false
+  },
+  "星尘虫": {
+   "season": "S0",
+   "groups": [
+    "昆虫组"
+   ],
+   "has_shiny": false
+  },
+  "菇菇丁": {
+   "season": "S0",
+   "groups": [
+    "植物组"
+   ],
+   "has_shiny": false
+  },
+  "蒲公英": {
+   "season": "S0",
+   "groups": [
+    "植物组",
+    "天空组"
+   ],
+   "has_shiny": false
+  },
+  "逗逗": {
+   "season": "S4",
+   "groups": [
+    "动物组",
+    "巨灵组"
+   ],
+   "has_shiny": true
+  },
+  "豆丁鱼": {
+   "season": "S3",
+   "groups": [
+    "海洋组",
+    "巨龙组"
+   ],
+   "has_shiny": true
+  },
+  "十字蝌蚪": {
+   "season": "S3",
+   "groups": [
+    "两栖组",
+    "拟人组"
+   ],
+   "has_shiny": true
+  },
+  "叮叮卯": {
+   "season": "S4",
+   "groups": [
+    "昆虫组",
+    "机械组"
+   ],
+   "has_shiny": true
+  },
+  "幽星光": {
+   "season": "S0",
+   "groups": [
+    "妖精组",
+    "巨灵组"
+   ],
+   "has_shiny": false
+  },
+  "画精灵": {
+   "season": "S0",
+   "groups": [
+    "妖精组",
+    "巨灵组"
+   ],
+   "has_shiny": false
+  },
+  "毛头小蛛": {
+   "season": "S0",
+   "groups": [
+    "昆虫组",
+    "妖精组"
+   ],
+   "has_shiny": false
+  },
+  "蜜果骸": {
+   "season": "S3",
+   "groups": [
+    "妖精组",
+    "植物组"
+   ],
+   "has_shiny": true
+  },
+  "地鼠": {
+   "season": "S3",
+   "groups": [
+    "动物组"
+   ],
+   "has_shiny": true
+  },
+  "水蓝蓝": {
+   "season": "S0",
+   "groups": [
+    "魔力组"
+   ],
+   "has_shiny": false
+  },
+  "芽眼魔": {
+   "season": "S4",
+   "groups": [
+    "巨灵组",
+    "妖精组"
+   ],
+   "has_shiny": true
+  },
+  "小鹬": {
+   "season": "S3",
+   "groups": [
+    "天空组"
+   ],
+   "has_shiny": true
+  },
+  "恶魔叮": {
+   "season": "S2",
+   "groups": [
+    "妖精组"
+   ],
+   "has_shiny": true
+  },
+  "闪电环": {
+   "season": "S0",
+   "groups": [
+    "魔力组"
+   ],
+   "has_shiny": false
+  },
+  "幽铃的蛋": {
+   "season": "S5",
+   "groups": [],
+   "has_shiny": false
+  },
+  "粉粉星": {
+   "season": "S1",
+   "groups": [
+    "妖精组",
+    "软体组"
+   ],
+   "has_shiny": true
+  },
+  "伊贝儿": {
+   "season": "S3",
+   "groups": [
+    "植物组",
+    "软体组"
+   ],
+   "has_shiny": true
+  },
+  "矮脚爬爬": {
+   "season": "S0",
+   "groups": [
+    "昆虫组",
+    "巨灵组"
+   ],
+   "has_shiny": false
+  },
+  "矿晶虫": {
+   "season": "S0",
+   "groups": [
+    "软体组",
+    "岩石组"
+   ],
+   "has_shiny": false
+  },
+  "喵喵": {
+   "season": "S0",
+   "groups": [
+    "动物组",
+    "拟人组"
+   ],
+   "has_shiny": false
+  },
+  "波波螺": {
+   "season": "S0",
+   "groups": [
+    "两栖组",
+    "岩石组"
+   ],
+   "has_shiny": false
+  },
+  "点点": {
+   "season": "S0",
+   "groups": [
+    "动物组",
+    "妖精组"
+   ],
+   "has_shiny": false
+  },
+  "优优": {
+   "season": "S0",
+   "groups": [
+    "动物组"
+   ],
+   "has_shiny": false
+  },
+  "卡波": {
+   "season": "S3",
+   "groups": [
+    "妖精组"
+   ],
+   "has_shiny": true
+  },
+  "小草虫": {
+   "season": "S3",
+   "groups": [
+    "昆虫组",
+    "拟人组"
+   ],
+   "has_shiny": true
+  },
+  "花怨鳗": {
+   "season": "S5",
+   "groups": [
+    "海洋组",
+    "两栖组"
+   ],
+   "has_shiny": true
+  },
+  "刺轮砣": {
+   "season": "S4",
+   "groups": [
+    "海洋组"
+   ],
+   "has_shiny": true
+  },
+  "加油海葵": {
+   "season": "S5",
+   "groups": [],
+   "has_shiny": false
+  },
+  "友爱天天": {
+   "season": "S0",
+   "groups": [
+    "天空组",
+    "妖精组"
+   ],
+   "has_shiny": false
+  },
+  "咔咔羽毛": {
+   "season": "S0",
+   "groups": [
+    "天空组"
+   ],
+   "has_shiny": false
+  },
+  "哭哭菇": {
+   "season": "S0",
+   "groups": [
+    "植物组"
+   ],
+   "has_shiny": false
+  },
+  "小鼠獭": {
+   "season": "S0",
+   "groups": [
+    "动物组",
+    "两栖组"
+   ],
+   "has_shiny": false
+  },
+  "烈钻鸟": {
+   "season": "S0",
+   "groups": [
+    "天空组",
+    "动物组"
+   ],
+   "has_shiny": false
+  },
+  "绿翼鸟": {
+   "season": "S0",
+   "groups": [
+    "天空组",
+    "妖精组"
+   ],
+   "has_shiny": false
+  },
+  "不咕钟": {
+   "season": "S0",
+   "groups": [
+    "天空组",
+    "机械组"
+   ],
+   "has_shiny": false
+  },
+  "公平鸽": {
+   "season": "S2",
+   "groups": [
+    "天空组"
+   ],
+   "has_shiny": true
+  },
+  "古钟蛇": {
+   "season": "S0",
+   "groups": [
+    "动物组",
+    "两栖组"
+   ],
+   "has_shiny": false
+  },
+  "嗜光嗡嗡": {
+   "season": "S1",
+   "groups": [
+    "昆虫组"
+   ],
+   "has_shiny": true
+  },
+  "宝藏小狐": {
+   "season": "S0",
+   "groups": [
+    "动物组"
+   ],
+   "has_shiny": false
+  },
+  "小黑猫": {
+   "season": "S4",
+   "groups": [
+    "动物组",
+    "妖精组"
+   ],
+   "has_shiny": true
+  },
+  "新月鹭的蛋": {
+   "season": "S5",
+   "groups": [],
+   "has_shiny": false
+  },
+  "春团": {
+   "season": "S0",
+   "groups": [
+    "动物组",
+    "妖精组"
+   ],
+   "has_shiny": false
+  },
+  "果冻": {
+   "season": "S0",
+   "groups": [
+    "海洋组",
+    "魔力组"
+   ],
+   "has_shiny": false
+  },
+  "乖乖鹄": {
+   "season": "S0",
+   "groups": [
+    "天空组",
+    "两栖组"
+   ],
+   "has_shiny": false
+  },
+  "书魔虫": {
+   "season": "S0",
+   "groups": [
+    "妖精组",
+    "巨灵组"
+   ],
+   "has_shiny": false
+  },
+  "号儿鱼": {
+   "season": "S0",
+   "groups": [
+    "海洋组",
+    "妖精组"
+   ],
+   "has_shiny": false
+  },
+  "呆小路": {
+   "season": "S0",
+   "groups": [
+    "动物组",
+    "拟人组"
+   ],
+   "has_shiny": false
+  },
+  "圆眼蜘蛛": {
+   "season": "S0",
+   "groups": [
+    "昆虫组"
+   ],
+   "has_shiny": false
+  },
+  "拉特": {
+   "season": "S1",
+   "groups": [
+    "妖精组"
+   ],
+   "has_shiny": true
+  },
+  "未完虫的蛋": {
+   "season": "S5",
+   "groups": [],
+   "has_shiny": false
+  },
+  "毛毛": {
+   "season": "S0",
+   "groups": [
+    "昆虫组",
+    "软体组"
+   ],
+   "has_shiny": false
+  },
+  "火花": {
+   "season": "S0",
+   "groups": [
+    "魔力组",
+    "巨灵组"
+   ],
+   "has_shiny": false
+  },
+  "烟花团": {
+   "season": "S2",
+   "groups": [
+    "机械组",
+    "魔力组"
+   ],
+   "has_shiny": true
+  },
+  "章脑丸的蛋": {
+   "season": "S5",
+   "groups": [],
+   "has_shiny": false
+  },
+  "蹦蹦种子": {
+   "season": "S0",
+   "groups": [
+    "植物组"
+   ],
+   "has_shiny": false
+  },
+  "一窝蜂": {
+   "season": "S0",
+   "groups": [
+    "昆虫组",
+    "天空组"
+   ],
+   "has_shiny": false
+  },
+  "小浣蛋的蛋": {
+   "season": "S5",
+   "groups": [],
+   "has_shiny": false
+  },
+  "小电企鹅": {
+   "season": "S0",
+   "groups": [
+    "天空组"
+   ],
+   "has_shiny": false
+  },
+  "布灵的蛋": {
+   "season": "S5",
+   "groups": [],
+   "has_shiny": false
+  },
+  "斑斑": {
+   "season": "S3",
+   "groups": [
+    "天空组"
+   ],
+   "has_shiny": true
+  },
+  "瑰眼仔": {
+   "season": "S4",
+   "groups": [
+    "巨灵组",
+    "昆虫组"
+   ],
+   "has_shiny": true
+  },
+  "量风碗的蛋": {
+   "season": "S5",
+   "groups": [],
+   "has_shiny": false
+  },
+  "乌达": {
+   "season": "S0",
+   "groups": [
+    "巨灵组"
+   ],
+   "has_shiny": false
+  },
+  "墨鱿士": {
+   "season": "S0",
+   "groups": [
+    "海洋组",
+    "软体组"
+   ],
+   "has_shiny": false
+  },
+  "多西": {
+   "season": "S0",
+   "groups": [
+    "机械组",
+    "巨灵组"
+   ],
+   "has_shiny": false
+  },
+  "奇丽草": {
+   "season": "S1",
+   "groups": [
+    "植物组"
+   ],
+   "has_shiny": true
+  },
+  "小丑豆豆": {
+   "season": "S2",
+   "groups": [
+    "妖精组",
+    "拟人组"
+   ],
+   "has_shiny": true
+  },
+  "水滴蛇": {
+   "season": "S0",
+   "groups": [
+    "两栖组",
+    "妖精组"
+   ],
+   "has_shiny": false
+  },
+  "海盔虫": {
+   "season": "S3",
+   "groups": [
+    "海洋组",
+    "巨灵组"
+   ],
+   "has_shiny": true
+  },
+  "绿草精灵": {
+   "season": "S0",
+   "groups": [
+    "妖精组",
+    "拟人组"
+   ],
+   "has_shiny": false
+  },
+  "菊花梨": {
+   "season": "S2",
+   "groups": [
+    "植物组"
+   ],
+   "has_shiny": true
+  },
+  "雪绒鸟": {
+   "season": "S0",
+   "groups": [
+    "天空组"
+   ],
+   "has_shiny": false
+  },
+  "热团团的蛋": {
+   "season": "S5",
+   "groups": [],
+   "has_shiny": false
+  },
+  "脆筒甜甜": {
+   "season": "S0",
+   "groups": [
+    "软体组",
+    "魔力组"
+   ],
+   "has_shiny": false
+  },
+  "草头鸭": {
+   "season": "S0",
+   "groups": [
+    "两栖组",
+    "天空组"
+   ],
+   "has_shiny": false
+  },
+  "雪娃娃": {
+   "season": "S0",
+   "groups": [
+    "妖精组"
+   ],
+   "has_shiny": false
+  },
+  "丢丢": {
+   "season": "S0",
+   "groups": [
+    "两栖组"
+   ],
+   "has_shiny": false
+  },
+  "小灵菇": {
+   "season": "S4",
+   "groups": [
+    "植物组",
+    "魔力组"
+   ],
+   "has_shiny": true
+  },
+  "松仔": {
+   "season": "S0",
+   "groups": [
+    "动物组"
+   ],
+   "has_shiny": false
+  },
+  "格兰种子": {
+   "season": "S1",
+   "groups": [
+    "植物组",
+    "妖精组"
+   ],
+   "has_shiny": true
+  },
+  "灵狐": {
+   "season": "S2",
+   "groups": [
+    "动物组"
+   ],
+   "has_shiny": true
+  },
+  "莫比乌乌": {
+   "season": "S0",
+   "groups": [
+    "妖精组",
+    "巨龙组"
+   ],
+   "has_shiny": false
+  },
+  "布鲁斯": {
+   "season": "S0",
+   "groups": [
+    "软体组",
+    "海洋组"
+   ],
+   "has_shiny": false
+  },
+  "忽幽狸": {
+   "season": "S0",
+   "groups": [
+    "动物组",
+    "拟人组"
+   ],
+   "has_shiny": false
+  },
+  "螺旋帕帕": {
+   "season": "S0",
+   "groups": [
+    "机械组",
+    "天空组"
+   ],
+   "has_shiny": false
+  },
+  "雪灵兽": {
+   "season": "S0",
+   "groups": [
+    "动物组"
+   ],
+   "has_shiny": false
+  },
+  "栗鼠": {
+   "season": "S3",
+   "groups": [
+    "动物组"
+   ],
+   "has_shiny": true
+  },
+  "蝴蝶陶陶": {
+   "season": "S3",
+   "groups": [
+    "动物组",
+    "拟人组"
+   ],
+   "has_shiny": true
+  },
+  "兽花蕾": {
+   "season": "S0",
+   "groups": [
+    "植物组"
+   ],
+   "has_shiny": false
+  },
+  "小甲虫": {
+   "season": "S0",
+   "groups": [
+    "昆虫组",
+    "天空组"
+   ],
+   "has_shiny": false
+  },
+  "小箱怪": {
+   "season": "S0",
+   "groups": [
+    "机械组",
+    "妖精组"
+   ],
+   "has_shiny": false
+  },
+  "甜田螺": {
+   "season": "S0",
+   "groups": [
+    "妖精组",
+    "软体组"
+   ],
+   "has_shiny": false
+  },
+  "电咩咩": {
+   "season": "S0",
+   "groups": [
+    "动物组"
+   ],
+   "has_shiny": false
+  },
+  "绿耳松鼠": {
+   "season": "S0",
+   "groups": [
+    "动物组"
+   ],
+   "has_shiny": false
+  },
+  "呼呼猪": {
+   "season": "S1",
+   "groups": [
+    "动物组"
+   ],
+   "has_shiny": true
+  },
+  "奔波鼠": {
+   "season": "S0",
+   "groups": [
+    "动物组",
+    "拟人组"
+   ],
+   "has_shiny": false
+  },
+  "鸭吉吉": {
+   "season": "S0",
+   "groups": [
+    "天空组"
+   ],
+   "has_shiny": false
+  },
+  "可立鸡": {
+   "season": "S3",
+   "groups": [
+    "天空组",
+    "拟人组"
+   ],
+   "has_shiny": true
+  },
+  "牵线木偶": {
+   "season": "S2",
+   "groups": [
+    "妖精组",
+    "拟人组"
+   ],
+   "has_shiny": true
+  },
+  "小夜": {
+   "season": "S2",
+   "groups": [
+    "拟人组",
+    "妖精组"
+   ],
+   "has_shiny": true
+  },
+  "觅觅蝠": {
+   "season": "S4",
+   "groups": [
+    "巨灵组",
+    "天空组"
+   ],
+   "has_shiny": true
+  },
+  "小鼓象": {
+   "season": "S2",
+   "groups": [
+    "动物组",
+    "机械组"
+   ],
+   "has_shiny": true
+  },
+  "海枝枝": {
+   "season": "S0",
+   "groups": [
+    "海洋组",
+    "植物组"
+   ],
+   "has_shiny": false
+  },
+  "空空颅": {
+   "season": "S1",
+   "groups": [
+    "魔力组",
+    "巨灵组"
+   ],
+   "has_shiny": true
+  },
+  "咕咕帽": {
+   "season": "S2",
+   "groups": [
+    "妖精组"
+   ],
+   "has_shiny": true
+  },
+  "板板壳": {
+   "season": "S0",
+   "groups": [
+    "两栖组"
+   ],
+   "has_shiny": false
+  },
+  "治愈兔": {
+   "season": "S1",
+   "groups": [
+    "动物组",
+    "妖精组"
+   ],
+   "has_shiny": true
+  },
+  "机械方方": {
+   "season": "S1",
+   "groups": [
+    "机械组",
+    "拟人组"
+   ],
+   "has_shiny": true
+  },
+  "吸泥鸥": {
+   "season": "S5",
+   "groups": [
+    "天空组",
+    "两栖组"
+   ],
+   "has_shiny": true
+  },
+  "雪豆丁": {
+   "season": "S0",
+   "groups": [
+    "拟人组",
+    "巨灵组"
+   ],
+   "has_shiny": false
+  },
+  "粉星仔": {
+   "season": "S1",
+   "groups": [
+    "妖精组",
+    "天空组"
+   ],
+   "has_shiny": true
+  },
+  "火豆丁": {
+   "season": "S0",
+   "groups": [
+    "巨灵组",
+    "拟人组"
+   ],
+   "has_shiny": false
+  },
+  "小勇狮": {
+   "season": "S0",
+   "groups": [
+    "动物组"
+   ],
+   "has_shiny": false
+  },
+  "双灯鱼": {
+   "season": "S1",
+   "groups": [
+    "海洋组"
+   ],
+   "has_shiny": true
+  },
+  "锥尾羊": {
+   "season": "S0",
+   "groups": [
+    "动物组"
+   ],
+   "has_shiny": false
+  },
+  "伏地兽": {
+   "season": "S0",
+   "groups": [
+    "动物组"
+   ],
+   "has_shiny": false
+  },
+  "火尾瓦特": {
+   "season": "S0",
+   "groups": [
+    "巨灵组"
+   ],
+   "has_shiny": false
+  },
+  "霹雳宝宝": {
+   "season": "S0",
+   "groups": [
+    "巨灵组",
+    "拟人组"
+   ],
+   "has_shiny": false
+  },
+  "棋棋": {
+   "season": "S0",
+   "groups": [
+    "妖精组"
+   ],
+   "has_shiny": false
+  },
+  "苞米仔": {
+   "season": "S3",
+   "groups": [
+    "植物组",
+    "拟人组"
+   ],
+   "has_shiny": true
+  },
+  "小怂猫": {
+   "season": "S0",
+   "groups": [
+    "动物组",
+    "拟人组"
+   ],
+   "has_shiny": false
+  },
+  "风铃鲨": {
+   "season": "S0",
+   "groups": [
+    "海洋组",
+    "天空组"
+   ],
+   "has_shiny": false
+  },
+  "护主犬": {
+   "season": "S0",
+   "groups": [
+    "动物组"
+   ],
+   "has_shiny": false
+  },
+  "多多": {
+   "season": "S5",
+   "groups": [],
+   "has_shiny": false
+  },
+  "柴渣虫": {
+   "season": "S5",
+   "groups": [],
+   "has_shiny": false
+  },
+  "裘洛": {
+   "season": "S5",
+   "groups": [],
+   "has_shiny": false
+  },
+  "诅咒狼灵的蛋": {
+   "season": "S5",
+   "groups": [],
+   "has_shiny": false
+  },
+  "白发懒人": {
+   "season": "S5",
+   "groups": [],
+   "has_shiny": false
+  },
+  "碎晶蝎": {
+   "season": "S5",
+   "groups": [],
+   "has_shiny": false
+  },
+  "厉毒小萝": {
+   "season": "S5",
+   "groups": [],
+   "has_shiny": false
+  },
+  "小狮鹫": {
+   "season": "S5",
+   "groups": [],
+   "has_shiny": false
+  },
+  "守夜烛": {
+   "season": "S5",
+   "groups": [],
+   "has_shiny": false
+  },
+  "翡翠水母": {
+   "season": "S5",
+   "groups": [],
+   "has_shiny": false
+  },
+  "伊雷龙": {
+   "season": "S5",
+   "groups": [],
+   "has_shiny": false
+  },
+  "猴麦仔": {
+   "season": "S5",
+   "groups": [],
+   "has_shiny": false
+  },
+  "玳龟的蛋": {
+   "season": "S5",
+   "groups": [],
+   "has_shiny": false
+  },
+  "权杖-Ⅱ": {
+   "season": "S5",
+   "groups": [],
+   "has_shiny": false
+  },
+  "电动长颈鹿": {
+   "season": "S5",
+   "groups": [],
+   "has_shiny": false
+  },
+  "胆小鳗鱼": {
+   "season": "S5",
+   "groups": [],
+   "has_shiny": false
+  },
+  "幽影树": {
+   "season": "S5",
+   "groups": [],
+   "has_shiny": false
+  },
+  "缇塔": {
+   "season": "S5",
+   "groups": [],
+   "has_shiny": false
+  },
+  "小星光": {
+   "season": "S5",
+   "groups": [],
+   "has_shiny": false
+  },
+  "可爱猿": {
+   "season": "S5",
+   "groups": [],
+   "has_shiny": false
+  },
+  "贝瑟": {
+   "season": "S5",
+   "groups": [],
+   "has_shiny": false
+  },
+  "嘟嘟煲": {
+   "season": "S5",
+   "groups": [],
+   "has_shiny": false
+  },
+  "森豆丁": {
+   "season": "S5",
+   "groups": [],
+   "has_shiny": false
+  },
+  "炫光迪迪": {
+   "season": "S5",
+   "groups": [],
+   "has_shiny": false
+  },
+  "小翼龙": {
+   "season": "S5",
+   "groups": [],
+   "has_shiny": false
+  },
+  "阿米亚特": {
+   "season": "S5",
+   "groups": [],
+   "has_shiny": false
+  },
+  "石肤蜥": {
+   "season": "S5",
+   "groups": [],
+   "has_shiny": false
+  },
+  "云梦豚的蛋": {
+   "season": "S5",
+   "groups": [],
+   "has_shiny": false
+  },
+  "里拉鳐": {
+   "season": "S5",
+   "groups": [],
+   "has_shiny": false
+  },
+  "布是石": {
+   "season": "S5",
+   "groups": [],
+   "has_shiny": false
+  },
+  "大头骨龙": {
+   "season": "S5",
+   "groups": [],
+   "has_shiny": false
+  },
+  "仪使者": {
+   "season": "S5",
+   "groups": [],
+   "has_shiny": false
+  },
+  "小独角兽": {
+   "season": "S5",
+   "groups": [],
+   "has_shiny": false
+  },
+  "火红尾": {
+   "season": "S5",
+   "groups": [],
+   "has_shiny": false
+  },
+  "锤头鹳": {
+   "season": "S5",
+   "groups": [],
+   "has_shiny": false
+  },
+  "石石": {
+   "season": "S5",
+   "groups": [],
+   "has_shiny": false
+  },
+  "稻草人": {
+   "season": "S5",
+   "groups": [],
+   "has_shiny": false
+  },
+  "月牙雪熊": {
+   "season": "S5",
+   "groups": [],
+   "has_shiny": false
+  },
+  "海豹战士": {
+   "season": "S5",
+   "groups": [],
+   "has_shiny": false
+  },
+  "恶魔狼": {
+   "season": "S5",
+   "groups": [],
+   "has_shiny": false
+  },
+  "星云旅者": {
+   "season": "S5",
+   "groups": [],
+   "has_shiny": false
+  },
+  "记忆石": {
+   "season": "S5",
+   "groups": [],
+   "has_shiny": false
+  },
+  "立方人": {
+   "season": "S5",
+   "groups": [],
+   "has_shiny": false
+  },
+  "噼啪鸟": {
+   "season": "S5",
+   "groups": [],
+   "has_shiny": false
+  },
+  "圣剑侍从": {
+   "season": "S5",
+   "groups": [],
+   "has_shiny": false
+  },
+  "深蓝鲸": {
+   "season": "S5",
+   "groups": [],
+   "has_shiny": false
+  },
+  "星星眼的蛋": {
+   "season": "S5",
+   "groups": [],
+   "has_shiny": false
+  },
+  "大耳帽兜": {
+   "season": "S5",
+   "groups": [],
+   "has_shiny": false
+  },
+  "小冥龙": {
+   "season": "S5",
+   "groups": [],
+   "has_shiny": false
+  },
+  "地银链": {
+   "season": "S5",
+   "groups": [],
+   "has_shiny": false
+  },
+  "沉金兽": {
+   "season": "S5",
+   "groups": [],
+   "has_shiny": false
+  },
+  "乐乐鲨": {
+   "season": "S5",
+   "groups": [],
+   "has_shiny": false
+  },
+  "滴溜豚": {
+   "season": "S5",
+   "groups": [],
+   "has_shiny": false
+  },
+  "小剪影": {
+   "season": "S5",
+   "groups": [],
+   "has_shiny": false
+  },
+  "蟹蟹椰": {
+   "season": "S5",
+   "groups": [],
+   "has_shiny": false
+  }
+ }
+}
