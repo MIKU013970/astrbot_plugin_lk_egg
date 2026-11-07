@@ -137,7 +137,7 @@ def _strip_emoji(text: str) -> str:
 
 _PLUGIN_DIR = Path(__file__).resolve().parent
 _PLUGIN_NAME = "astrbot_plugin_lk_egg"
-VERSION = "2.1.9"
+VERSION = "2.1.10"
 
 
 def _cand_dirs() -> List[Path]:
@@ -369,7 +369,7 @@ def _hard_save_state(state: Dict[str, Any]) -> None:
     "astrbot_plugin_lk_egg",
     "MIKU013970 & DeepSeek",
     "洛克小肥鱼全功能 + 炫彩花种订阅",
-    "2.1.9",
+    "2.1.10",
 )
 class LkMarketNotify(Star):
     def __init__(self, context: Context, config: AstrBotConfig = None):
@@ -5019,8 +5019,9 @@ class LkMarketNotify(Star):
                   or c.icon_path("egg", f"{nm}的异色蛋"))
             if se and (not egg_icon or Path(se).name != Path(egg_icon).name):
                 sats.append({"icon": se, "text": "异色蛋"})
-            if st1_sat is not None:
-                sats.append(st1_sat)          # 第 3 枚起才轮到立绘缩略图
+            # 徽标槽位**只放蛋**：一阶段立绘缩略图不再进槽位（头像本身已经区分了普通/异色立绘，
+            # 放进来只会出现「蛋 + 立绘」这种不成对的组合，例如云梦豚）
+            _ = st1_sat
 
             # 系别（左下角章 + 卡片底色）
             types = self._elem_types(nm)
