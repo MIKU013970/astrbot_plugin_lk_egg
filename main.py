@@ -138,7 +138,7 @@ def _strip_emoji(text: str) -> str:
 
 _PLUGIN_DIR = Path(__file__).resolve().parent
 _PLUGIN_NAME = "astrbot_plugin_lk_egg"
-VERSION = "2.1.19"
+VERSION = "2.1.20"
 
 
 def _cand_dirs() -> List[Path]:
@@ -370,7 +370,7 @@ def _hard_save_state(state: Dict[str, Any]) -> None:
     "astrbot_plugin_lk_egg",
     "MIKU013970 & DeepSeek",
     "洛克小肥鱼全功能 + 炫彩花种订阅",
-    "2.1.19",
+    "2.1.20",
 )
 class LkMarketNotify(Star):
     def __init__(self, context: Context, config: AstrBotConfig = None):
@@ -1112,6 +1112,8 @@ class LkMarketNotify(Star):
             "蛋组": " / ".join(groups), "公母": "未知", "进化链": link,
             "形态数": 1, "同乘": bool(info.get("ride")),
             "身高区间": "", "体重区间": "",
+            "height": str(info.get("height") or ""),
+            "weight": str(info.get("weight") or ""),
             "variants": [variant],
         }
 
@@ -7348,6 +7350,14 @@ class LkMarketNotify(Star):
         rows: List[tuple] = [("蛋组", _eg),
                              ("公母", _gd),
                              ("进化链", rec.get("进化链") or "")]
+        # 成体身高/体重（roco.world 补的，和蛋的区间不是一回事，单独标清楚）
+        _info = self._pets_table().get(str(rec.get("精灵") or "")) or {}
+        _h = str(rec.get("height") or _info.get("height") or "").strip()
+        _w = str(rec.get("weight") or _info.get("weight") or "").strip()
+        if _h:
+            rows.append(("成体身高", f"{_h} m"))
+        if _w:
+            rows.append(("成体重", f"{_w} kg"))
         if len(variants) <= 1:
             v = variants[0] if variants else {}
             rows += [("身高区间", v.get("身高区间") or ""),
