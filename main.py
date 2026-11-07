@@ -20,7 +20,9 @@
 from __future__ import annotations
 
 import asyncio
+import base64
 import hashlib
+import math
 import os
 import re
 import json
@@ -76,6 +78,36 @@ def _card():
     return _CARD_MOD
 
 
+# ---------------------------------------------------------------- 网格图模块
+_GRID_MOD = None
+_GRID_TRIED = False
+
+
+def _grid():
+    """加载同目录的 grid.py（4 列网格图渲染器）。
+
+    和 card.py 一样按 __file__ 找，不依赖相对导入。
+    grid.py 是 templates/grid.html 的 Pillow 复刻，两条引擎吃同一份数据。
+    """
+    global _GRID_MOD, _GRID_TRIED
+    if _GRID_TRIED:
+        return _GRID_MOD
+    _GRID_TRIED = True
+    import importlib.util
+    fp = Path(__file__).with_name("grid.py")
+    if not fp.is_file():
+        return None
+    try:
+        spec = importlib.util.spec_from_file_location("lk_egg_grid", str(fp))
+        m = importlib.util.module_from_spec(spec)
+        spec.loader.exec_module(m)
+        _GRID_MOD = m
+    except Exception as e:
+        logger.warning(f"[网格图] grid.py 加载失败，退回普通卡片: {type(e).__name__}: {e}")
+        _GRID_MOD = None
+    return _GRID_MOD
+
+
 #: emoji / 特殊符号：字体（微软雅黑）没有这些字形，画出来是小方块
 _EMOJI_RE = re.compile(
     "["
@@ -103,7 +135,7 @@ def _strip_emoji(text: str) -> str:
 
 _PLUGIN_DIR = Path(__file__).resolve().parent
 _PLUGIN_NAME = "astrbot_plugin_lk_egg"
-VERSION = "2.0.2"
+VERSION = "2.1.0"
 
 
 def _cand_dirs() -> List[Path]:
@@ -335,7 +367,7 @@ def _hard_save_state(state: Dict[str, Any]) -> None:
     "astrbot_plugin_lk_egg",
     "MIKU013970 & DeepSeek",
     "洛克小肥鱼全功能 + 炫彩花种订阅",
-    "2.0.2",
+    "2.1.0",
 )
 class LkMarketNotify(Star):
     def __init__(self, context: Context, config: AstrBotConfig = None):
@@ -1808,6 +1840,26 @@ class LkMarketNotify(Star):
         except Exception as e:
             logger.warning(f"[出图] 组装图片结果失败: {type(e).__name__}: {e}")
         return None
+
+    def _result_images(self, event: Any, pngs: List[bytes], caption: str = ""):
+        """一次发多张图（网格图分页时用）。能链式就链式，不行只发第一张。"""
+        pics = [p for p in (pngs or []) if p]
+        if not pics:
+            return None
+        if len(pics) == 1:
+            return self._result_image(event, pics[0], caption)
+        try:
+            from astrbot.api.message_components import Image as _Image, Plain
+            paths = [self._temp_png(p) for p in pics]
+            parts: List[Any] = [_Image.fromFileSystem(p) for p in paths]
+            if caption:
+                parts.append(Plain(caption))
+            ch = getattr(event, "chain_result", None)
+            if callable(ch):
+                return ch(parts)
+        except Exception as e:
+            logger.warning(f"[出图] 多图链式发送失败: {type(e).__name__}: {e}")
+        return self._result_image(event, pics[0], caption)
 
     async def _reply(self, event: Any, text: str, png: Optional[bytes],
                      t0: Optional[float] = None):
@@ -4319,11 +4371,113 @@ class LkMarketNotify(Star):
             cls._ROSTER = {}
         return cls._ROSTER
 
-    def _shiny_report(self, season: str = "") -> str:
-        """按赛季 + 蛋组分组，列出有异色的精灵。
+    #: 官方异色记录本：{"seasons":[{id,name,pets,eggs}], "pets":[{name,season,stage,types,number}]}
+    _SHINY_BOOK: Optional[Dict[str, Any]] = None
+
+    @classmethod
+    def _shiny_book(cls) -> Dict[str, Any]:
+        if cls._SHINY_BOOK is not None:
+            return cls._SHINY_BOOK
+        out: Dict[str, Any] = {"seasons": [], "pets": []}
+        try:
+            fp = _PLUGIN_DIR / "shiny_book.json"
+            if fp.is_file():
+                d = json.loads(fp.read_text(encoding="utf-8-sig"))
+                out["seasons"] = d.get("seasons") or []
+                out["pets"] = d.get("pets") or []
+        except Exception as e:
+            logger.warning(f"[异色记录本] shiny_book.json 读取失败: {type(e).__name__}: {e}")
+        cls._SHINY_BOOK = out
+        return out
+
+    def _book_seasons(self) -> List[Dict[str, Any]]:
+        """[{"id":"none","name":"常驻","pets":19}, {"id":"S1","name":"暗夜拾光",…}]"""
+        return [s for s in (self._shiny_book().get("seasons") or []) if isinstance(s, dict)]
+
+    def _book_season_name(self, sid: str) -> str:
+        """S5 → 圣龙宝藏；none → 常驻"""
+        for s in self._book_seasons():
+            if str(s.get("id")) == str(sid):
+                return str(s.get("name") or "")
+        return ""
+
+    _BOOK_BY_NAME: Optional[Dict[str, Dict[str, Any]]] = None
+
+    def _book_by_name(self) -> Dict[str, Dict[str, Any]]:
+        """异色记录本：名字 → 条目（查常驻/奇遇用）。"""
+        cls = type(self)
+        if cls._BOOK_BY_NAME is not None:
+            return cls._BOOK_BY_NAME
+        out: Dict[str, Dict[str, Any]] = {}
+        for r in (self._shiny_book().get("pets") or []):
+            nm = str((r or {}).get("name") or "")
+            if nm and nm not in out:
+                out[nm] = r
+        cls._BOOK_BY_NAME = out
+        return out
+
+    #: 特殊精灵果实（活动 / 特殊途径的果实，不算在赛季常驻里）。配置 grid_special_pets 可覆盖
+    SPECIAL_PETS: tuple = ("云梦豚", "长江豚", "火红尾", "雅丹鬃")
+
+    def _special_pets(self) -> set:
+        raw = str(self._cfg("grid_special_pets", "") or "")
+        names = [x.strip() for x in re.split(r"[,，、/\s]+", raw) if x.strip()]
+        return set(names) if names else set(self.SPECIAL_PETS)
+
+    def _book_rows(self, season: str = "") -> List[Dict[str, Any]]:
+        """官方异色记录本 → 网格图的行。
+
+        `season`："" = 全部；"S0"/"none" = 常驻；"S1"…"S5" = 该赛季奇遇。
+        蛋组 / 同乘 / 蛋名 从官方全量表（pets.json）和 ranges.json 补。
+        """
+        pets = self._pets_table()
+        sp = self.ranges.get("species") or {}
+        cmap = self._chain_map()
+        special = self._special_pets()
+        want = str(season or "").strip().upper()
+        if want in ("S0", "NONE", "常驻"):
+            want = "S0"
+        out: List[Dict[str, Any]] = []
+        for r in (self._shiny_book().get("pets") or []):
+            if not isinstance(r, dict):
+                continue
+            nm = str(r.get("name") or "").strip()
+            if not nm:
+                continue
+            sid = str(r.get("season") or "none")
+            sid = "S0" if sid == "none" else sid
+            if want and sid != want:
+                continue
+            # 特殊精灵果实（云梦豚 / 火红尾 那批）不算在赛季常驻里
+            if nm in special or (cmap.get(nm) in special):
+                continue
+            info = pets.get(nm) or {}
+            rec = sp.get(nm) or {}
+            groups = [g for g in (info.get("groups") or []) if g]
+            ride = info.get("ride")
+            if ride is None and rec.get("同乘") is not None:
+                ride = bool(rec.get("同乘"))
+            out.append({
+                "season": sid,
+                "name": nm,
+                "group": " / ".join(groups) or "未分组",
+                "groups": groups,
+                "marks": ["异色", "异色蛋"],
+                "leader": int(r.get("stage") or info.get("stage") or 0) >= 4,
+                "ride": ride,
+                "no": str(r.get("number") or info.get("no") or ""),
+                "stage": int(r.get("stage") or info.get("stage") or 0),
+                "egg": str(rec.get("蛋名") or f"{nm}的蛋"),
+            })
+        return out
+
+    def _shiny_roster_rows(self, season: str = "") -> List[Dict[str, Any]]:
+        """异色名单的**原始行**（一只一条）—— 文字报告和网格图共用同一份数据。
 
         名单以**官方花名册**(season_roster.json) 为准 —— 图鉴只收了可孵蛋的 206 种，
         光按图鉴列会把 S4 这种只收了几只的赛季漏掉一大半。
+
+        返回 `{"season","name","group","groups","marks","leader","no","egg"}`。
         """
         have_shiny, have_shiny_egg = set(), set()
         try:
@@ -4337,14 +4491,11 @@ class LkMarketNotify(Star):
             logger.warning(f"[异色] 图标库读取失败: {type(e).__name__}: {e}")
 
         roster = self._roster_table()
+        sp = self.ranges.get("species") or {}
         # 图鉴里的蛋组 / 正式名字（花名册没有蛋组的用它兜底）
-        r_group = {}
-        for rec in (self.ranges.get("species") or {}).values():
-            nm = str(rec.get("精灵") or "")
-            if nm:
-                r_group[nm] = str(rec.get("蛋组") or "")
+        r_group = {str(nm): str(rec.get("蛋组") or "") for nm, rec in sp.items()}
 
-        rows: Dict[str, Dict[str, List[str]]] = {}
+        out: List[Dict[str, Any]] = []
         for sid, members in (roster or {}).items():
             if season and sid != season:
                 continue
@@ -4362,18 +4513,22 @@ class LkMarketNotify(Star):
                 rg = r_group.get(nm) or ""
                 if rg in ("未发现", "待定", "未分组"):
                     rg = ""
-                group = (rg
-                         or " / ".join([g for g in (info.get("groups") or []) if g])
-                         or "未分组")
-                # 首领化形态（stage>=4，比如 满月砣 = 月亮砣的首领化）单独标出来
-                nm_disp = nm + ("（首领化）" if info.get("leader") else "")
-                rows.setdefault(sid, {}).setdefault(group, []).append(
-                    nm_disp + "·" + "+".join(marks))
+                groups = [g for g in (info.get("groups") or []) if g]
+                out.append({
+                    "season": sid,
+                    "name": nm,
+                    "group": rg or " / ".join(groups) or "未分组",
+                    "groups": groups,
+                    "marks": marks,
+                    "leader": bool(info.get("leader")),
+                    "no": str(info.get("no") or ""),
+                    "stage": int(info.get("stage") or 0),
+                    "egg": str((sp.get(nm) or {}).get("蛋名") or f"{nm}的蛋"),
+                })
 
         # 花名册缺失时退回按图鉴算
-        if not rows:
-            for rec in (self.ranges.get("species") or {}).values():
-                nm = str(rec.get("精灵") or "")
+        if not out:
+            for nm, rec in sp.items():
                 if not nm or nm.endswith("的蛋"):
                     continue
                 sid = self._season_of(nm) or "S?"
@@ -4386,25 +4541,45 @@ class LkMarketNotify(Star):
                 if egg and egg in have_shiny_egg:
                     marks.append("异色蛋")
                 if marks:
-                    rows.setdefault(sid, {}).setdefault(
-                        r_group.get(nm) or "未分组",
-                        []).append(nm + "·" + "+".join(marks))
+                    groups = [g for g in str(rec.get("蛋组") or "").split(" / ") if g]
+                    out.append({
+                        "season": sid, "name": nm,
+                        "group": r_group.get(nm) or "未分组",
+                        "groups": groups, "marks": marks, "leader": False,
+                        "no": str(rec.get("图鉴编号") or ""), "stage": 0,
+                        "egg": egg,
+                    })
+        return out
 
-        if not rows:
+    def _shiny_report(self, season: str = "") -> str:
+        """异色名单的文字版（出图失败时兜底），和网格图同一份数据（官方异色记录本）。"""
+        rows_res = self._book_rows("S0")
+        if season == "S0":
+            rows_enc = []
+        elif season:
+            rows_enc = self._book_rows(season)
+        else:
+            rows_enc = [r for r in self._book_rows("") if r.get("season") != "S0"]
+        if not rows_res and not rows_enc:
             return (f"{season} 没有登记到异色精灵" if season
-                    else "没有登记到异色精灵（season_roster.json 里没有 has_shiny）")
+                    else "没有登记到异色精灵（shiny_book.json 里没数据）")
 
-        lines = [f"✨ 异色精灵 · {season or '全部赛季'}（按蛋组分组）"]
-        total = 0
-        for sid in sorted(rows):
-            grp = rows[sid]
-            n = sum(len(v) for v in grp.values())
-            total += n
+        label = self._season_label(season)
+        lines = [f"✨ 异色精灵 · {label} · 常驻 {len(rows_res)} + 奇遇 {len(rows_enc)}"]
+
+        def dump(title: str, rows: List[Dict[str, Any]]) -> None:
+            if not rows:
+                return
+            grouped: Dict[str, List[str]] = {}
+            for r in rows:
+                disp = str(r.get("name") or "")
+                if r.get("leader"):
+                    disp += "（首领化）"
+                grouped.setdefault(str(r.get("group") or "未分组"), []).append(disp)
             lines.append("")
-            label = "常驻（无赛季）" if sid == "S0" else sid
-            lines.append(f"—————— {label} · {n} 只 ——————")
-            for g in sorted(grp, key=lambda x: -len(grp[x])):
-                items = grp[g]
+            lines.append(f"—————— {title} · {len(rows)} 只 ——————")
+            for g in sorted(grouped, key=lambda x: (-len(grouped[x]), x)):
+                items = grouped[g]
                 lines.append(f"【{g}】{len(items)} 只")
                 buf = "、".join(items)
                 if len(buf) <= 110:
@@ -4413,37 +4588,715 @@ class LkMarketNotify(Star):
                     half = (len(items) + 1) // 2
                     lines.append("  " + "、".join(items[:half]))
                     lines.append("  " + "、".join(items[half:]))
+
+        dump("常驻（S0）", rows_res)
+        dump(f"奇遇（{season or 'S1~S5'}）", rows_enc)
         lines.append("")
-        lines.append(f"合计 {total} 只 · 名单：官方赛季花名册（含异色）· 图标：wiki")
-        lines.append("· 标记含义：异色=有异色精灵图，异色蛋=有异色蛋图")
-        lines.append("用法：异色 / 异色 s5 / s3 异色")
+        lines.append("名单：官方异色记录本 · 图标：wiki")
+        lines.append("用法：异色 / 异色 s5 / s3 异色 / 异色 s5 2（翻页） / 异色 s5 文字")
         return "\n".join(lines)
 
-    #: 中文数字 → 赛季号
-    CN_NUM = {"一": 1, "二": 2, "三": 3, "四": 4, "五": 5}
+    # ---------------------------------------------------------------- 网格图
+    #: 赛季名（网格图大字旁边的副标题）。配置 grid_season_titles 可以逐行补
+    SEASON_TITLE = {"S0": "常驻", "S5": "圣龙宝藏"}
 
-    @filter.regex(r"^\s*[/#]?\s*(?:(?:查询|查)\s*)?(?:异色|闪光)\s*(?:[sS]\s*([1-5])|第?\s*([1-5一二三四五])\s*赛季?)?\s*$")
-    async def on_shiny_by_season(self, event: AstrMessageEvent):
-        """异色 / 异色 s5 / 异色 第五赛季 —— 按赛季 + 蛋组看异色精灵"""
-        raw = str(getattr(event, "message_str", "") or "").lstrip("/#").strip()
-        m = re.search(r"(?:[sS]\s*([1-5])|[第\s]*([1-5一二三四五])\s*赛季?)", raw)
+    def _season_titles(self) -> Dict[str, str]:
+        out = dict(self.SEASON_TITLE)
+        for line in str(self._cfg("grid_season_titles", "") or "").splitlines():
+            line = line.strip()
+            if not line:
+                continue
+            for sep in ("=", "＝", ":", "："):
+                if sep in line:
+                    k, _, v = line.partition(sep)
+                    k, v = k.strip().upper(), v.strip()
+                    if k and v:
+                        out[k] = v
+                    break
+        return out
+
+    def _season_label(self, season: str) -> str:
+        """S5 → 'S5 · 圣龙宝藏'（赛季名优先取官方异色记录本）。"""
+        s = str(season or "").strip().upper()
+        if not s:
+            return "全部赛季"
+        if s == "S0":
+            return "常驻（S0）"
+        t = self._book_season_name(s) or self._season_titles().get(s) or ""
+        return f"{s} · {t}" if t else s
+
+    def _int_cfg(self, key: str, default: int, lo: int, hi: int) -> int:
+        try:
+            v = int(float(self._cfg(key, default)))
+        except (TypeError, ValueError):
+            v = default
+        return max(lo, min(hi, v))
+
+    def _grid_enabled(self) -> bool:
+        v = self._cfg("grid_enabled", True)
+        if isinstance(v, str):
+            return v.strip().lower() not in ("", "0", "false", "no", "off")
+        return bool(v)
+
+    def _grid_engine(self) -> str:
+        """auto（先 HTML 再 Pillow）| html | pillow"""
+        s = str(self._cfg("grid_engine", "auto") or "auto").strip().lower()
+        return s if s in ("auto", "html", "pillow") else "auto"
+
+    def _grid_theme_text(self) -> str:
+        return "\n".join(x for x in (
+            str(self._cfg("card_theme", "") or ""),
+            str(self._cfg("grid_theme", "") or "")) if x)
+
+    def _grid_sort_key(self, r: Dict[str, Any]):
+        """同赛季内按蛋组聚在一起，组内按图鉴号 —— 图上颜色成片，好看也好找。"""
+        try:
+            n = int(re.sub(r"\D", "", str(r.get("no") or "")) or 0)
+        except (TypeError, ValueError):
+            n = 0
+        return (str(r.get("season") or ""), str(r.get("group") or ""), n,
+                str(r.get("name") or ""))
+
+    #: 名字 / 形态名 → 进化链首段（一阶段名）。来自图鉴的「进化链」字段
+    _CHAIN_MAP: Optional[Dict[str, str]] = None
+
+    @classmethod
+    def _chain_map_clear(cls) -> None:
+        cls._CHAIN_MAP = None
+
+    def _chain_map(self) -> Dict[str, str]:
+        """名字 / 形态名 → 进化链首段（=`一阶段` 那只的名字）。
+
+        图鉴里 `进化链` 的写法是 `地银链 → 地底银鳞 → 地绡银龙`，
+        二阶段 / 三阶段（地底银鳞、地绡银龙）本身不单独收进图鉴，只有链上出现，
+        所以整条链都要能从这串字里认出来。括号里的形态名去掉括号再登记一次。
+        """
+        cls = type(self)
+        if cls._CHAIN_MAP is not None:
+            return cls._CHAIN_MAP
+        out: Dict[str, str] = {}
+        for nm, rec in (self.ranges.get("species") or {}).items():
+            chain = str(rec.get("进化链") or "").strip()
+            if not chain:
+                continue
+            parts = [x.strip() for x in re.split(r"[→>]|/|、", chain) if x.strip()]
+            if not parts:
+                continue
+            head = re.sub(r"[（(].*?[)）]", "", parts[0]).strip() or nm
+            base = re.sub(r"[（(].*?[)）]", "", nm).strip() or nm
+            out.setdefault(base, head)
+            out.setdefault(nm, head)
+            for tk in parts:
+                t = re.sub(r"[（(].*?[)）]", "", tk).strip()
+                if t:
+                    out.setdefault(t, head)
+        # chains.json：wiki 精灵页「进化」块里抓的链（覆盖 ranges.json 没有的新精灵，
+        # 比如 缇塔 → 声波缇塔、地银链 → 地底银鳞 → 地绡银龙）
+        try:
+            fp = _PLUGIN_DIR / "chains.json"
+            if fp.is_file():
+                d = json.loads(fp.read_text(encoding="utf-8-sig"))
+                for nm, head in (d.get("members") or {}).items():
+                    if nm and head:
+                        # wiki 的进化块最全，直接覆盖（ranges 里有「长江豚→长江豚」这种自环）
+                        out[str(nm)] = str(head)
+        except Exception as e:
+            logger.warning(f"[进化链] chains.json 读取失败: {type(e).__name__}: {e}")
+        cls._CHAIN_MAP = out
+        return out
+
+    def _shiny_grid_groups(self, rows: List[Dict[str, Any]]) -> List[Dict[str, Any]]:
+        """把「同一只精灵的多个形态 / 多个进化阶段」并成一条。
+
+        花名册是一行一个名字，所以同一只精灵会被拆成好几行：
+          · 同一个图鉴号的形态   伊兰亚龙 / 伊兰龙 都是 204；月亮砣 / 满月砣 都是 238
+          · 一条进化链的各个阶段 地银链 → 地底银鳞 → 地绡银龙（471/472/473）
+        这两种都算同一只，并成一张卡：**只显示第一阶段**那一只。
+
+        代表名取「一阶段」：进化链首段 > stage 最小 > 图鉴里有记录 > 花名册原顺序。
+        """
+        items = [r for r in (rows or []) if str(r.get("name") or "").strip()]
+        if not items:
+            return []
+        cmap = self._chain_map()
+        sp = self.ranges.get("species") or {}
+        # 用「行下标」做并查集：不同赛季可以同名不同只（缇塔 S0 是 464 号、S5 是 229 号），
+        # 按名字做键会把它们错并成一只
+        parent: Dict[int, int] = {i: i for i in range(len(items))}
+
+        def find(x: int) -> int:
+            root = x
+            while parent.get(root, root) != root:
+                root = parent[root]
+            while parent.get(x, x) != x:      # 路径压缩
+                nxt = parent[x]
+                parent[x] = root
+                x = nxt
+            return root
+
+        def union(a: int, b: int) -> None:
+            ra, rb = find(a), find(b)
+            if ra != rb:
+                parent[rb] = ra
+
+        # ① 同一赛季 + 同一个图鉴号 = 同一只的形态
+        by_dex: Dict[tuple, List[int]] = {}
+        for i, r in enumerate(items):
+            no = str(r.get("no") or "").strip()
+            if no:
+                by_dex.setdefault((str(r.get("season") or ""), no), []).append(i)
+        for idxs in by_dex.values():
+            for i in idxs[1:]:
+                union(idxs[0], i)
+        # ② 同一赛季 + 同一条进化链 = 同一只的不同阶段
+        by_chain: Dict[tuple, List[int]] = {}
+        for i, r in enumerate(items):
+            head = cmap.get(str(r.get("name")))
+            if head:
+                by_chain.setdefault((str(r.get("season") or ""), head), []).append(i)
+        for idxs in by_chain.values():
+            for i in idxs[1:]:
+                union(idxs[0], i)
+
+        order = {i: i for i in range(len(items))}
+        buckets: Dict[int, List[Dict[str, Any]]] = {}
+        for i, r in enumerate(items):
+            buckets.setdefault(find(i), []).append(r)
+
+        out: List[Dict[str, Any]] = []
+        for members in buckets.values():
+            def rank(r: Dict[str, Any]):
+                nm = str(r.get("name") or "")
+                head = cmap.get(nm)
+                base = re.sub(r"[（(].*?[)）]", "", nm).strip() or nm
+                return (0 if (head and head == base) else 1,      # 链首（一阶段）
+                        int(r.get("stage") or 9),                 # 阶段越小越靠前
+                        0 if nm in sp else 1,                     # 图鉴里有记录优先
+                        order.get(nm, 0))                         # 花名册原顺序
+            rep = sorted(members, key=rank)[0]
+            nm = str(rep.get("name") or "")
+            marks: List[str] = []
+            for r in members:
+                for k in (r.get("marks") or []):
+                    if k not in marks:
+                        marks.append(k)
+            rec = sp.get(nm) or {}
+            # 蛋名 / 同乘 只认一阶段那只（二三阶段不下蛋）
+            egg = str(rec.get("蛋名") or "")
+            ride = rec.get("同乘")
+            if not egg or ride is None:
+                for r in members:
+                    rc = sp.get(str(r.get("name") or "")) or {}
+                    if not egg and rc.get("蛋名"):
+                        egg = str(rc["蛋名"])
+                    if ride is None and rc.get("同乘") is not None:
+                        ride = rc.get("同乘")
+            if not egg:
+                egg = f"{nm}的蛋"
+            groups: List[str] = []
+            for r in members:
+                for x in (r.get("groups") or []):
+                    if x and x not in groups:
+                        groups.append(x)
+            no = str(rep.get("no") or "")
+            if not no:
+                for r in members:
+                    if str(r.get("no") or ""):
+                        no = str(r["no"])
+                        break
+            out.append({
+                "name": nm,
+                "no": no,
+                "groups": groups,
+                "group": str(rep.get("group") or ""),
+                "marks": marks,
+                "leader": any(bool(r.get("leader")) for r in members),
+                "ride": ride,
+                "egg": egg,
+                "members": [str(r.get("name") or "") for r in members],
+                "season": str(rep.get("season") or ""),
+            })
+        return out
+
+    def _grid_avatar_mode(self) -> str:
+        """头像用哪个图：stage1（一阶段，默认）| shiny（异色立绘）"""
+        s = str(self._cfg("grid_avatar", "stage1") or "stage1").strip().lower()
+        return s if s in ("stage1", "shiny") else "stage1"
+
+    def _grid_ride_mode(self) -> str:
+        """同乘怎么标：yes（只标可同乘，默认）| both（可/不可都标）| off（不标）"""
+        s = str(self._cfg("grid_show_ride", "yes") or "yes").strip().lower()
+        return s if s in ("both", "yes", "off") else "yes"
+
+    #: 系别表：{"colors": {系: {tone, accent}}, "pets": {名字: [系…]}}（tools/pull_wiki_elements.py 生成）
+    _ELEMENTS: Optional[Dict[str, Any]] = None
+
+    @classmethod
+    def _elements_table(cls) -> Dict[str, Any]:
+        if cls._ELEMENTS is not None:
+            return cls._ELEMENTS
+        out: Dict[str, Any] = {"colors": {}, "pets": {}, "chain": {}}
+        try:
+            fp = _PLUGIN_DIR / "elements.json"
+            if fp.is_file():
+                d = json.loads(fp.read_text(encoding="utf-8-sig"))
+                for k in ("colors", "pets", "chain"):
+                    out[k] = d.get(k) or {}
+        except Exception as e:
+            logger.warning(f"[系别] elements.json 读取失败: {type(e).__name__}: {e}")
+        cls._ELEMENTS = out
+        return out
+
+    def _elem_types(self, name: str) -> List[str]:
+        """精灵名 → 系别列表（没有就退到一阶段那只 / 进化链兜底）。"""
+        t = self._elements_table()
+        pets = t.get("pets") or {}
+        nm = str(name or "").strip()
+        if not nm:
+            return []
+        got = pets.get(nm)
+        if got:
+            return list(got)
+        head = self._chain_map().get(nm)
+        for alt in (head, (self._elements_table().get("chain") or {}).get(nm)):
+            if not alt:
+                continue
+            if isinstance(alt, str) and pets.get(alt):
+                return list(pets[alt])
+            if isinstance(alt, list) and alt:
+                return list(alt)
+        return []
+
+    @staticmethod
+    def _elem_label(types: List[str]) -> str:
+        """['龙系','翼系'] → '龙/翼'；['火系'] → '火系'。"""
+        names = [str(x).replace("系", "").strip() for x in (types or [])[:2] if x]
+        names = [x for x in names if x]
+        if not names:
+            return ""
+        return names[0] + "系" if len(names) == 1 else "/".join(names)
+
+    @staticmethod
+    def _elem_key(cols: Dict[str, Any], t: str) -> Dict[str, Any]:
+        """系别配色表的键两种写法都认：官方接口给「龙」，wiki CSS 给「龙系」。"""
+        s = str(t or "").strip()
+        if not s:
+            return {}
+        return (cols.get(s) or cols.get(s + "系")
+                or cols.get(s[:-1] if s.endswith("系") else s) or {})
+
+    def _elem_color(self, types: List[str]) -> str:
+        """系别主色（wiki 官方 CSS 里的 --sd-class-accent）。"""
+        cols = self._elements_table().get("colors") or {}
+        for t in (types or []):
+            c = self._elem_key(cols, t)
+            if c.get("accent"):
+                return str(c["accent"])
+        return ""
+
+    def _elem_tone(self, types: List[str]) -> str:
+        cols = self._elements_table().get("colors") or {}
+        for t in (types or []):
+            c = self._elem_key(cols, t)
+            if c.get("tone"):
+                return str(c["tone"])
+        return ""
+
+    def _grid_elem_tint(self) -> float:
+        """系别色占卡片底色的比例：1=满色，0=纯白。默认 0.80（淡淡一层系别色）。"""
+        try:
+            v = float(self._cfg("grid_elem_tint", 0.62))
+        except (TypeError, ValueError):
+            v = 0.62
+        return max(0.0, min(1.0, v))
+
+    @staticmethod
+    def _mix_hex(hex_color: str, ratio: float, base: str = "#FFFFFF") -> str:
+        """把 hex_color 按 ratio 混进 base（ratio 越大越接近 hex_color）。"""
+        def rgb(s: str):
+            s = str(s or "").strip().lstrip("#")
+            if len(s) != 6:
+                return None
+            try:
+                return tuple(int(s[i:i + 2], 16) for i in (0, 2, 4))
+            except ValueError:
+                return None
+        a, b = rgb(hex_color), rgb(base)
+        if not a or not b:
+            return ""
+        t = max(0.0, min(1.0, float(ratio)))
+        return "#%02X%02X%02X" % tuple(int(round(a[i] * t + b[i] * (1 - t))) for i in range(3))
+
+    def _shiny_grid_cards(self, rows: List[Dict[str, Any]]) -> List[Dict[str, Any]]:
+        """名单行 → 网格图卡片。
+
+        **一只精灵一张卡**（形态 / 进化阶段已经在 `_shiny_grid_groups` 并掉了）：
+
+            头像   = 一阶段精灵图，外圈 = 系别色，**左下角盖系别章**（龙/翼）
+            底色   = 系别色调淡（龙系 → 淡红）
+            环绕   = 精灵蛋、异色蛋
+            标签   = 精灵组别（蛋组）+ 同乘
+        """
+        c, g = _card(), _grid()
+        if c is None or g is None:
+            return []
+        avatar_mode = self._grid_avatar_mode()
+        ride_mode = self._grid_ride_mode()
+        out: List[Dict[str, Any]] = []
+        for grp in self._shiny_grid_groups(rows):
+            nm = str(grp.get("name") or "").strip()
+            if not nm:
+                continue
+            marks = list(grp.get("marks") or [])
+            members = [x for x in (grp.get("members") or []) if x]
+            st1 = self._stage1_path(nm)
+            shiny = c.icon_path("shiny", nm)
+            if avatar_mode == "shiny" and shiny:
+                main = shiny
+            else:
+                main = st1 or c.icon_path("pet", nm) or shiny
+            sats: List[Dict[str, Any]] = []
+            if avatar_mode == "shiny" and st1 and main and Path(st1).name != Path(main).name:
+                sats.append({"icon": st1})       # 用异色立绘当头像时，一阶段图退到徽标
+            egg_name = str(grp.get("egg") or f"{nm}的蛋")
+            egg_icon = c.icon_path("egg", egg_name)
+            if egg_icon and Path(egg_icon).stem == "magic_egg":
+                egg_icon = None                  # 通用占位白蛋不画进徽标
+            if egg_icon:
+                sats.append({"icon": egg_icon, "text": "蛋"})
+            if "异色蛋" in marks:
+                se = (c.icon_path("egg", f"异色{egg_name}")
+                      or c.icon_path("egg", f"异色{nm}的蛋"))
+                if se and (not egg_icon or Path(se).name != Path(egg_icon).name):
+                    sats.append({"icon": se, "text": "异"})
+
+            # 系别（左下角章 + 卡片底色）
+            types = self._elem_types(nm)
+            elem_txt = self._elem_label(types)
+            elem_color = self._elem_color(types)
+            tone = self._elem_tone(types) or "#4B5563"
+            tint = self._grid_elem_tint()
+            card_bg = self._mix_hex(elem_color, tint) if elem_color else ""
+            card_line = self._mix_hex(elem_color, min(1.0, tint + 0.20)) if elem_color else ""
+            # 卡片上了系别色，小字不能再是浅灰（看不清）：拿底色压暗当字色，对比度稳过 4.5
+            sub_fg = (self._mix_hex(card_bg, 0.26, "#14110E")
+                      if (card_bg and tint >= 0.30) else "")
+
+            # 标签：精灵组别（蛋组）+ 同乘；异色 / 异色蛋 不再占标签位
+            tags: List[Dict[str, str]] = []
+            gs = [x for x in (grp.get("groups") or [])
+                  if x and x not in ("未发现", "待定", "未分组")]
+            for gp in gs[:2]:
+                tags.append({"text": str(gp), "kind": "group",
+                              "fg": sub_fg or tone, "bg": "#FFFFFF"})
+            ride = grp.get("ride")
+            if ride_mode == "both" and ride is not None:
+                tags.append(g.tag("可同乘" if ride else "不可同乘",
+                                  "ride" if ride else "noride"))
+            elif ride_mode == "yes" and ride:
+                tags.append(g.tag("可同乘", "ride"))
+            if not tags:
+                tags.append(g.tag(str(grp.get("group") or "未分组"), "group"))
+
+            sub_parts: List[str] = []
+            if grp.get("no"):
+                sub_parts.append(f"图鉴 {grp['no']}")
+            if len(members) > 1:
+                # 合并进来的形态 / 阶段名字直接写出来（缇塔/声波缇塔），别让人以为漏了
+                shown = [m for m in members[:3] if m]
+                extra = len(members) - len(shown)
+                if shown:
+                    sub_parts.append("/".join(shown) + (f"+{extra}" if extra > 0 else ""))
+            if grp.get("leader"):
+                sub_parts.append("首领化")
+            out.append(g.card(
+                name=nm,
+                sub=" · ".join(sub_parts),
+                icon=main,
+                ring=g.ring_color(grp.get("group") or (gs[0] if gs else "")),
+                tags=tags,
+                sats=sats[:4],
+                elem=elem_txt,
+                elem_color=elem_color,
+                bg=card_bg,
+                border=card_line,
+                sub_fg=sub_fg,
+            ))
+        return out
+
+    async def _as_png(self, res: Any) -> Optional[bytes]:
+        """html_render 的返回值统一成 PNG 字节（bytes/本地路径/file:///http/data:）。"""
+        if isinstance(res, (bytes, bytearray)):
+            return bytes(res) or None
+        s = str(res or "").strip()
+        if not s:
+            return None
+        if s.startswith("data:"):
+            try:
+                return base64.b64decode(s.split(",", 1)[1])
+            except Exception:
+                return None
+        if s.startswith("file://"):
+            try:
+                s = urllib.parse.unquote(s[7:])
+                if re.match(r"^/[A-Za-z]:", s):     # file:///C:/x → C:/x
+                    s = s[1:]
+            except Exception:
+                return None
+        if s.startswith(("http://", "https://")):
+            try:
+                sess = await self._session_get()
+                async with sess.get(
+                        s, timeout=aiohttp.ClientTimeout(total=20)) as r:
+                    if r.status != 200:
+                        return None
+                    return await r.read()
+            except Exception as e:
+                logger.warning(f"[网格图] 截图下载失败: {type(e).__name__}: {e}")
+                return None
+        try:
+            p = Path(s)
+            if p.is_file():
+                return p.read_bytes()
+        except Exception:
+            pass
+        return None
+
+    async def _html_grid_png(self, kw: Dict[str, Any]) -> Optional[bytes]:
+        """走 AstrBot 的 html_render（Playwright 截图 templates/grid.html）。"""
+        hr = getattr(self, "html_render", None)
+        if not callable(hr):
+            return None
+        g = _grid()
+        try:
+            tmpl = (_PLUGIN_DIR / "templates" / "grid.html").read_text(encoding="utf-8")
+        except Exception as e:
+            logger.warning(f"[网格图] 模板读取失败: {type(e).__name__}: {e}")
+            return None
+        try:
+            data = g.html_data(**kw)
+        except Exception as e:
+            logger.warning(f"[网格图] 模板数据整理失败: {type(e).__name__}: {e}")
+            return None
+        opts = {"type": "png", "full_page": True, "omit_background": False,
+                "scale": "device", "animations": "disabled"}
+        tmo = float(self._int_cfg("grid_timeout", 30, 5, 120))
+        res = None
+        # 不同 AstrBot 版本的 html_render 参数不一样，挨个试
+        for call in (lambda: hr(tmpl, data, return_url=False, options=opts),
+                     lambda: hr(tmpl, data, options=opts)):
+            try:
+                res = await asyncio.wait_for(call(), timeout=tmo)
+                break
+            except TypeError:
+                continue
+            except asyncio.TimeoutError:
+                logger.warning(f"[网格图] html_render 超时（>{tmo:.0f}s）")
+                return None
+            except Exception as e:
+                logger.warning(f"[网格图] html_render 失败: {type(e).__name__}: {e}")
+                return None
+        return await self._as_png(res)
+
+    async def _grid_png(self, *, header: str,
+                        cards: Optional[List[Dict[str, Any]]] = None,
+                        panels: Optional[List[Dict[str, Any]]] = None,
+                        subtitle: str = "", footer: str = "",
+                        page: int = 1, total_pages: int = 1,
+                        total: int = 0) -> Optional[bytes]:
+        """两条引擎一个出口：先试 HTML（CSS Grid，效果最好），不行就用 Pillow 复刻。
+
+        cards  —— 单栏
+        panels —— 两栏（左常驻 / 右奇遇），`[{"title","color","cards"}, …]`
+        """
+        g = _grid()
+        if g is None:
+            return None
+        kw: Dict[str, Any] = {
+            "header": header,
+            "cards": cards or [],
+            "panels": panels,
+            "subtitle": subtitle,
+            "footer": footer,
+            "page": page,
+            "total_pages": total_pages,
+            "total": total,
+            "width": self._int_cfg("grid_width", 1080, 640, 1400),
+            "cols": self._int_cfg("grid_cols", 4, 2, 6),
+            "font_size": self._int_cfg("card_font_size", 18, 10, 40),
+            "font_path": str(self._cfg("card_font_path", "") or ""),
+            "theme": self._grid_theme_text(),
+        }
+        engine = self._grid_engine()
+        if engine in ("auto", "html"):
+            try:
+                png = await self._html_grid_png(kw)
+            except Exception as e:
+                logger.warning(f"[网格图] HTML 引擎异常: {type(e).__name__}: {e}")
+                png = None
+            if png:
+                return png
+            if engine == "html":
+                logger.warning("[网格图] 指定 HTML 引擎但没渲染出来，改用 Pillow 复刻版")
+        if not g.available():
+            return None
+        try:
+            return await asyncio.to_thread(lambda: g.render_grid(**kw))
+        except Exception as e:
+            logger.warning(f"[网格图] Pillow 渲染失败: {type(e).__name__}: {e}")
+            return None
+
+    def _shiny_args(self, raw: str):
+        """「异色 s5 2」→ (赛季, 页码, 是否强制文字)。"""
+        s = str(raw or "").lstrip("/#").strip()
+        want_text = bool(re.search(r"(文字|文本|纯文字)", s))
+        s = re.sub(r"(纯文字|文字|文本)", " ", s)
         season = ""
+        m = re.search(r"(?:[sS]\s*([1-5])|第?\s*([1-5一二三四五])\s*赛季?)", s)
+        rest = s
         if m:
             g = m.group(1) or m.group(2)
             n = self.CN_NUM.get(g) or (int(g) if str(g).isdigit() else 0)
             season = f"S{n}" if n else ""
-        if not await self._perm_gate(event, "market"):
-            return
-        yield await self._say(event, self._shiny_report(season))
+            rest = (s[:m.start()] + " " + s[m.end():]).strip()
+        elif ("全部" in s) or ("所有" in s):
+            rest = re.sub(r"(全部|所有)", " ", s).strip()
+        pm = re.search(r"(?:第\s*)?(\d{1,3})\s*页?", rest)
+        page = int(pm.group(1)) if pm else 0
+        return season, page, want_text
 
-    @filter.regex(r"^\s*[/#]?\s*[sS]\s*([1-5])\s*(?:异色|闪光)\s*$")
-    async def on_shiny_by_season2(self, event: AstrMessageEvent):
-        """s5 异色（赛季写前面）"""
-        raw = str(getattr(event, "message_str", "") or "").lstrip("/#").strip()
-        m = re.search(r"[sS]\s*([1-5])", raw)
+    async def _emit_panels(self, event: Any, *, header: str, text: str,
+                           cards_res: List[Dict[str, Any]],
+                           cards_enc: List[Dict[str, Any]],
+                           res_title: str, enc_title: str, flip: str,
+                           footer: str, caption_lead: str,
+                           page: int = 0):
+        """网格图统一出口：有常驻有奇遇 → 左常驻 / 右奇遇两栏；只有一边 → 单栏 4 列。
+
+        两栏时第 1 页放「常驻全量 + 奇遇前一半」，剩下的奇遇从第 2 页起单栏接着排，
+        免得常驻只有七八只却占着后面每一页的左半张。
+        """
+        if not cards_res and not cards_enc:
+            return await self._say(event, text)
+        per = self._int_cfg("grid_per_page", 20, 4, 40)
+        cap2 = max(2, per // 2)                  # 两栏时每栏最多 10 只
+        total = len(cards_res) + len(cards_enc)
+
+        # 每一页的 panels 先排好，再统一渲染
+        page_panels: List[List[Dict[str, Any]]] = []
+        if cards_res and cards_enc:
+            page_panels.append([
+                {"title": f"{res_title} · {len(cards_res)} 只", "color": "#4B6A88",
+                 "cards": cards_res[:cap2]},
+                {"title": f"{enc_title} · {len(cards_enc)} 只", "color": "#C25828",
+                 "cards": cards_enc[:cap2]},
+            ])
+            tail = cards_res[cap2:] + cards_enc[cap2:]
+            for i in range(0, len(tail), per):
+                page_panels.append([{"title": f"{enc_title}（续）· {len(tail)} 只",
+                                     "color": "#C25828", "cards": tail[i:i + per]}])
+        else:
+            seq = cards_enc or cards_res
+            title = (f"{enc_title} · {len(seq)} 只" if cards_enc
+                     else f"{res_title} · {len(seq)} 只")
+            color = "#C25828" if cards_enc else "#4B6A88"
+            for i in range(0, max(1, len(seq)), per):
+                page_panels.append([{"title": title, "color": color,
+                                     "cards": seq[i:i + per]}])
+
+        pages = max(1, len(page_panels))
+        cap = self._int_cfg("grid_max_pages", 3, 0, 12)
+        if page and page > 0:
+            want = [min(page, pages)]
+        else:
+            want = list(range(1, (pages if cap <= 0 else min(pages, cap)) + 1))
+
+        pngs: List[bytes] = []
+        for p in want:
+            foot = footer + (f" · 翻页：{flip}" if pages > 1 else "")
+            png = await self._grid_png(
+                header=header, panels=page_panels[p - 1],
+                subtitle=(f"第 {p} / {pages} 页 · 共 {total} 只"
+                          f"（常驻 {len(cards_res)} + 奇遇 {len(cards_enc)}）"),
+                footer=foot, page=p, total_pages=pages, total=total)
+            if png:
+                pngs.append(png)
+        if not pngs:
+            return await self._say(event, text)
+
+        caption = (f"{caption_lead}｜共 {total} 只"
+                   f"（常驻 {len(cards_res)} · 奇遇 {len(cards_enc)}）")
+        if pages > 1:
+            caption += f"｜第 {want[0]}-{want[-1]} / {pages} 页"
+            if len(want) < pages:
+                caption += f"（发「{flip.replace('页码', str(want[-1] + 1))}」看下一页）"
+        r = self._result_images(event, pngs, caption)
+        if r is not None:
+            return r
+        return event.plain_result(text)
+
+    def _split_resident(self, rows: List[Dict[str, Any]]):
+        """按赛季把行拆成（常驻, 奇遇）。"""
+        res = [r for r in rows if str(r.get("season") or "S0") == "S0"]
+        enc = [r for r in rows if str(r.get("season") or "S0") != "S0"]
+        return res, enc
+
+    async def _shiny_result(self, event: Any, season: str = "", page: int = 0):
+        """异色名单：左常驻 / 右奇遇的网格图，出不了就发原来的文字版。"""
+        text = self._shiny_report(season)
+        # 名单以官方「异色记录本」为准：常驻（none）+ 各赛季奇遇
+        rows_res = self._book_rows("S0")                          # 常驻
+        if season == "S0":
+            rows_enc = []                                          # 只看常驻，右边留空
+        elif season:
+            rows_enc = self._book_rows(season)                      # 该赛季奇遇
+        else:
+            rows_enc = self._book_rows("")                          # 全部（不含常驻）
+            rows_enc = [r for r in rows_enc if str(r.get("season")) != "S0"]
+        if not rows_res and not rows_enc:
+            return await self._say(event, text)
+        if not (self._grid_enabled() and self._image_reply_on() and _grid() is not None):
+            return await self._say(event, text)
+
+        cards_res = self._shiny_grid_cards(sorted(rows_res, key=self._grid_sort_key))
+        cards_enc = self._shiny_grid_cards(sorted(rows_enc, key=self._grid_sort_key))
+        label = self._season_label(season)
+        return await self._emit_panels(
+            event, header=f"异色精灵 · {label}", text=text,
+            cards_res=cards_res, cards_enc=cards_enc,
+            res_title="常驻（S0）",
+            enc_title=f"奇遇（{season}）" if season else "奇遇（S1~S5）",
+            flip=f"异色 {season} 页码" if season else "异色全部 页码",
+            footer=("左=常驻（S0）· 右=奇遇 · 头像左下角=系别（底色同系别色）"
+                    " · 标签=精灵组别 + 同乘"),
+            caption_lead=f"异色精灵 · {label}", page=page)
+
+    #: 中文数字 → 赛季号
+    CN_NUM = {"一": 1, "二": 2, "三": 3, "四": 4, "五": 5}
+
+    @filter.regex(r"^\s*[/#]?\s*(?:(?:查询|查)\s*)?(?:异色|闪光)\s*(?:(?:[sS]\s*[1-5]|第?\s*[1-5一二三四五]\s*赛季?)|全部|所有)?\s*(?:(?:第\s*)?\d{1,3}\s*页?)?\s*(?:纯文字|文字|文本)?\s*$")
+    async def on_shiny_by_season(self, event: AstrMessageEvent):
+        """异色 / 异色 s5 / 异色 s5 2 / 异色全部 3 —— 网格图看异色精灵（分页）"""
+        raw = str(getattr(event, "message_str", "") or "")
+        season, page, want_text = self._shiny_args(raw)
         if not await self._perm_gate(event, "market"):
             return
-        yield await self._say(event, self._shiny_report("S" + m.group(1) if m else ""))
+        if want_text:
+            yield await self._say(event, self._shiny_report(season))
+            return
+        yield await self._shiny_result(event, season, page)
+
+    @filter.regex(r"^\s*[/#]?\s*[sS]\s*[1-5]\s*(?:异色|闪光)\s*(?:(?:第\s*)?\d{1,3}\s*页?)?\s*(?:纯文字|文字|文本)?\s*$")
+    async def on_shiny_by_season2(self, event: AstrMessageEvent):
+        """s5 异色 / s5 异色 2（赛季写前面）"""
+        raw = str(getattr(event, "message_str", "") or "")
+        season, page, want_text = self._shiny_args(raw)
+        if not await self._perm_gate(event, "market"):
+            return
+        if want_text:
+            yield await self._say(event, self._shiny_report(season))
+            return
+        yield await self._shiny_result(event, season, page)
 
     @filter.command("花种")
     async def cmd_flower(self, event: AstrMessageEvent):
@@ -4823,6 +5676,16 @@ class LkMarketNotify(Star):
         "（查蛋时会顺带显示实时行情）"
     )
 
+    MENU_SHINY = (
+        "—————— 异色名单（4 列网格图）——————\n"
+        "异色                     全部赛季的异色精灵\n"
+        "异色 s5                  只看 S5（头像=异色立绘，四角小图标=一阶段/蛋/异色蛋）\n"
+        "异色 s5 2                翻到第 2 页（一页 16 只）\n"
+        "异色全部 3               全部赛季的第 3 页\n"
+        "异色 s5 文字             强制发文字版名单\n"
+        "（头像外圈颜色 = 蛋组；紫=异色 · 青=异色蛋 · 橙=首领化）"
+    )
+
     MENU_FLOWER = (
         "—————— 花种（炫彩花种市场）——————\n"
         "花种                     列市场上所有品种\n"
@@ -4875,7 +5738,7 @@ class LkMarketNotify(Star):
     )
 
     #: 完整版（管理员看的，全列出）
-    MENU = "\n".join([MENU_HEAD, MENU_BASIC, MENU_MARKET, MENU_FLOWER,
+    MENU = "\n".join([MENU_HEAD, MENU_BASIC, MENU_MARKET, MENU_SHINY, MENU_FLOWER,
                      MENU_ID, MENU_MARKS, MENU_WATCH, MENU_PUSH, MENU_TAIL])
 
     async def _menu_for(self, event: Any) -> str:
@@ -4883,6 +5746,7 @@ class LkMarketNotify(Star):
         parts = [self.MENU_HEAD, self.MENU_BASIC]
         if await self._perm_allowed(event, "market"):
             parts.append(self.MENU_MARKET)
+            parts.append(self.MENU_SHINY)
         if await self._perm_allowed(event, "flower"):
             parts.append(self.MENU_FLOWER)
         if await self._perm_allowed(event, "lookup_id"):
@@ -5879,8 +6743,80 @@ class LkMarketNotify(Star):
         lines.append(f"发「查询 {group}」随时看这个组；发「查询 名字」看单只的蛋数据")
         return "\n".join(lines)
 
+    #: 官方精灵表（pets.json）：名字 → 记录（赛季 / 图鉴号 / 阶段 / 异色 / 同乘 / 蛋组 / 系别）
+    _PETS_TABLE: Optional[Dict[str, Dict[str, Any]]] = None
+
+    @classmethod
+    def _pets_table(cls) -> Dict[str, Dict[str, Any]]:
+        if cls._PETS_TABLE is not None:
+            return cls._PETS_TABLE
+        out: Dict[str, Dict[str, Any]] = {}
+        try:
+            fp = _PLUGIN_DIR / "pets.json"
+            if fp.is_file():
+                d = json.loads(fp.read_text(encoding="utf-8-sig"))
+                for r in (d.get("pets") or []):
+                    nm = str(r.get("name") or "")
+                    if nm and nm not in out:
+                        out[nm] = r
+        except Exception as e:
+            logger.warning(f"[蛋组] pets.json 读取失败: {type(e).__name__}: {e}")
+        cls._PETS_TABLE = out
+        return out
+
+    def _group_rows(self, group: str) -> List[Dict[str, Any]]:
+        """某个蛋组的精灵 → 网格图的行（跟异色名单同一套结构，卡片画法完全一样）。"""
+        heads = self._group_heads(group)
+        pets = self._pets_table()
+        sp = self.ranges.get("species") or {}
+        out: List[Dict[str, Any]] = []
+        for nm, dex in heads.items():
+            info = pets.get(nm) or {}
+            rec = sp.get(nm) or {}
+            # 常驻 / 奇遇 以官方异色记录本为准（有记录就用记录的赛季，没有才退回官方表的 season_id）
+            book_sid = str((self._book_by_name().get(nm) or {}).get("season") or "")
+            if book_sid:
+                sid_txt = "S0" if book_sid in ("none", "S0") else book_sid
+            else:
+                try:
+                    sid = int(info.get("season") or 0)
+                except (TypeError, ValueError):
+                    sid = 0
+                sid_txt = f"S{sid}" if sid >= 1 else "S0"
+            out.append({
+                "season": sid_txt,
+                "name": nm,
+                "group": group,
+                "groups": [g for g in (info.get("groups") or []) if g] or [group],
+                "marks": ["异色"] if info.get("has_shiny") else [],
+                "leader": int(info.get("stage") or 0) >= 4,
+                "ride": info.get("ride"),
+                "no": str(info.get("no") or dex or ""),
+                "stage": int(info.get("stage") or 0),
+                "egg": str(rec.get("蛋名") or f"{nm}的蛋"),
+            })
+        return out
+
     async def _group_reply(self, event: Any, group: str):
-        return await self._say(event, self._group_reply_text(group))
+        """查蛋组：两栏网格图（左常驻 / 右奇遇），出不了图就发文字清单。"""
+        text = self._group_reply_text(group)
+        if not group or not (self._grid_enabled() and self._image_reply_on()
+                             and _grid() is not None):
+            return await self._say(event, text)
+        rows = self._group_rows(group)
+        if not rows:
+            return await self._say(event, text)
+        rows_res, rows_enc = self._split_resident(rows)
+        cards_res = self._shiny_grid_cards(sorted(rows_res, key=self._grid_sort_key))
+        cards_enc = self._shiny_grid_cards(sorted(rows_enc, key=self._grid_sort_key))
+        return await self._emit_panels(
+            event, header=f"蛋组 · {group} · {len(rows)} 只", text=text,
+            cards_res=cards_res, cards_enc=cards_enc,
+            res_title="常驻（S0）", enc_title="奇遇（S1~S5）",
+            flip=f"{group} 页码",
+            footer=("左=常驻 · 右=奇遇 · 头像左下角=系别（底色同系别色）"
+                    " · 标签=精灵组别 + 同乘"),
+            caption_lead=f"蛋组 · {group}")
 
     def _sp_split_mode(self, arg: str):
         """'红绒十字 最近' / '红绒十字历史' → ('红绒十字', 'recent')"""

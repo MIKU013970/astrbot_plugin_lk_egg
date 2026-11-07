@@ -146,6 +146,84 @@
     "default": "",
     "hint": "留空自动找（Windows 微软雅黑 / Linux 文泉驿·思源黑体）。Linux、Docker 上如果系统没有中文字体，出图会退回文字，这里填个字体路径就行"
   },
+  "grid_enabled": {
+    "description": "「异色」发网格图",
+    "type": "bool",
+    "default": true,
+    "hint": "开启后「异色 / 异色 s5」发 4 列网格图（一页 16 只，可翻页）。关掉就发原来的文字名单"
+  },
+  "grid_engine": {
+    "description": "网格图渲染引擎",
+    "type": "string",
+    "default": "auto",
+    "hint": "auto=有 AstrBot 的 html_render（Playwright）就用 HTML+CSS Grid 模板，没有/失败自动退回 Pillow 复刻版；html=优先 HTML；pillow=只用 Pillow（最快，约 60 毫秒一张）"
+  },
+  "grid_per_page": {
+    "description": "网格图一页几只",
+    "type": "int",
+    "default": 20,
+    "hint": "4 列 × 5 行 = 20（合并形态后每个赛季 17~20 只，一页正好发完）。范围 4~40"
+  },
+  "grid_max_pages": {
+    "description": "一条消息最多发几页",
+    "type": "int",
+    "default": 3,
+    "hint": "默认 3 页（最多 48 只一起发）。填 0 = 不限，一次把整个赛季发完"
+  },
+  "grid_width": {
+    "description": "网格图画布宽度（像素）",
+    "type": "int",
+    "default": 1080,
+    "hint": "固定画幅保证每次排版一致。范围 640~1400，手机上看 1080 就够清楚了"
+  },
+  "grid_cols": {
+    "description": "网格图列数",
+    "type": "int",
+    "default": 4,
+    "hint": "参考图是 4 列。范围 2~6（列数越多卡片越窄，标签会自动换行）"
+  },
+  "grid_avatar": {
+    "description": "网格图卡片头像用哪张图",
+    "type": "string",
+    "default": "stage1",
+    "hint": "stage1（默认）=一阶段精灵图，卡片只显示「一阶段 + 精灵蛋 + 异色蛋」；shiny=异色立绘（这时一阶段图退到四角徽标）"
+  },
+  "grid_show_ride": {
+    "description": "卡片上标不标「是否同乘」",
+    "type": "string",
+    "default": "yes",
+    "hint": "yes（默认）=只给能同乘的标绿「可同乘」，不能的什么都不显示；both=可/不可都标；off=不标"
+  },
+  "grid_special_pets": {
+    "description": "特殊精灵果实（不算在赛季常驻里）",
+    "type": "string",
+    "default": "云梦豚,长江豚,火红尾,雅丹鬃",
+    "hint": "逗号分隔。这些是活动/特殊途径的果实，异色记录本里挂在常驻下，但不算任何赛季的常驻；留空则用内置名单"
+  },
+  "grid_elem_tint": {
+    "description": "系别色占卡片底色的比例",
+    "type": "float",
+    "default": 0.8,
+    "hint": "卡片底色 = 系别色 × 这个比例（混白）。1=满色最艳，0=纯白卡；默认 0.8 是淡淡一层系别色，字还清楚"
+  },
+  "grid_theme": {
+    "description": "网格图配色（覆盖 card_theme）",
+    "type": "text",
+    "default": "",
+    "hint": "每行一项「键=#RRGGBB」。可配：背景 卡片 边框 标题 正文 次要 强调 标签底 网格线 容器底 头像底 阴影 空白。例：背景=#F4F0E7"
+  },
+  "grid_season_titles": {
+    "description": "赛季名（画在网格图标题上）",
+    "type": "text",
+    "default": "S5=圣龙宝藏",
+    "hint": "每行一个「S5=圣龙宝藏」。没登记的赛季只显示 S 号，不影响功能"
+  },
+  "grid_timeout": {
+    "description": "HTML 截图超时（秒）",
+    "type": "int",
+    "default": 30,
+    "hint": "超时就自动改用 Pillow 复刻版，不会卡住回复。范围 5~120"
+  },
   "rocom_api_key": {
     "description": "洛克魔法书 API Key（可选）",
     "type": "string",

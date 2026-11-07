@@ -1,0 +1,12713 @@
+{
+ "source": "wegame.shallow.ink /wiki/pets",
+ "count": 708,
+ "pets": [
+  {
+   "name": "圣光迪莫",
+   "pet_id_u": "5025",
+   "pet_id": 5025,
+   "no": "001",
+   "season": 0,
+   "stage": 4,
+   "has_shiny": false,
+   "ride": false,
+   "groups": [
+    "未发现"
+   ],
+   "types": [
+    "光"
+   ],
+   "quality": 2
+  },
+  {
+   "name": "圣水迪莫",
+   "pet_id_u": "5028",
+   "pet_id": 5028,
+   "no": "001",
+   "season": 0,
+   "stage": 4,
+   "has_shiny": false,
+   "ride": false,
+   "groups": [
+    "未发现"
+   ],
+   "types": [
+    "光",
+    "水"
+   ],
+   "quality": 2
+  },
+  {
+   "name": "圣火迪莫",
+   "pet_id_u": "5027",
+   "pet_id": 5027,
+   "no": "001",
+   "season": 0,
+   "stage": 4,
+   "has_shiny": false,
+   "ride": false,
+   "groups": [
+    "未发现"
+   ],
+   "types": [
+    "光",
+    "火"
+   ],
+   "quality": 2
+  },
+  {
+   "name": "圣草迪莫",
+   "pet_id_u": "5026",
+   "pet_id": 5026,
+   "no": "001",
+   "season": 0,
+   "stage": 4,
+   "has_shiny": false,
+   "ride": false,
+   "groups": [
+    "未发现"
+   ],
+   "types": [
+    "光",
+    "草"
+   ],
+   "quality": 2
+  },
+  {
+   "name": "迪莫",
+   "pet_id_u": "3004",
+   "pet_id": 3004,
+   "no": "001",
+   "season": 0,
+   "stage": 1,
+   "has_shiny": false,
+   "ride": false,
+   "groups": [
+    "未发现"
+   ],
+   "types": [
+    "光"
+   ],
+   "quality": 3
+  },
+  {
+   "name": "喵喵",
+   "pet_id_u": "3001",
+   "pet_id": 3001,
+   "no": "002",
+   "season": 0,
+   "stage": 1,
+   "has_shiny": false,
+   "ride": true,
+   "groups": [
+    "动物组",
+    "拟人组"
+   ],
+   "types": [
+    "草"
+   ],
+   "quality": 2
+  },
+  {
+   "name": "喵呜",
+   "pet_id_u": "3025",
+   "pet_id": 3025,
+   "no": "003",
+   "season": 0,
+   "stage": 2,
+   "has_shiny": false,
+   "ride": true,
+   "groups": [
+    "动物组",
+    "拟人组"
+   ],
+   "types": [
+    "草"
+   ],
+   "quality": 2
+  },
+  {
+   "name": "叶冕魔力猫",
+   "pet_id_u": "4007",
+   "pet_id": 4007,
+   "no": "004",
+   "season": 0,
+   "stage": 3,
+   "has_shiny": false,
+   "ride": false,
+   "groups": [],
+   "types": [
+    "草"
+   ],
+   "quality": 2
+  },
+  {
+   "name": "叶冕魔力猫",
+   "pet_id_u": "5003",
+   "pet_id": 5003,
+   "no": "004",
+   "season": 0,
+   "stage": 4,
+   "has_shiny": false,
+   "ride": false,
+   "groups": [
+    "动物组",
+    "拟人组"
+   ],
+   "types": [
+    "草"
+   ],
+   "quality": 2
+  },
+  {
+   "name": "武斗酷猫",
+   "pet_id_u": "5061",
+   "pet_id": 5061,
+   "no": "004",
+   "season": 0,
+   "stage": 4,
+   "has_shiny": false,
+   "ride": false,
+   "groups": [
+    "动物组",
+    "拟人组"
+   ],
+   "types": [
+    "草"
+   ],
+   "quality": 2
+  },
+  {
+   "name": "魔力猫",
+   "pet_id_u": "3007",
+   "pet_id": 3007,
+   "no": "004",
+   "season": 0,
+   "stage": 3,
+   "has_shiny": false,
+   "ride": true,
+   "groups": [
+    "动物组",
+    "拟人组"
+   ],
+   "types": [
+    "草"
+   ],
+   "quality": 2
+  },
+  {
+   "name": "火花",
+   "pet_id_u": "3003",
+   "pet_id": 3003,
+   "no": "005",
+   "season": 0,
+   "stage": 1,
+   "has_shiny": false,
+   "ride": true,
+   "groups": [
+    "魔力组",
+    "巨灵组"
+   ],
+   "types": [
+    "火"
+   ],
+   "quality": 2
+  },
+  {
+   "name": "焰火",
+   "pet_id_u": "3032",
+   "pet_id": 3032,
+   "no": "006",
+   "season": 0,
+   "stage": 2,
+   "has_shiny": false,
+   "ride": true,
+   "groups": [
+    "魔力组",
+    "巨灵组"
+   ],
+   "types": [
+    "火"
+   ],
+   "quality": 2
+  },
+  {
+   "name": "火神",
+   "pet_id_u": "3006",
+   "pet_id": 3006,
+   "no": "007",
+   "season": 0,
+   "stage": 3,
+   "has_shiny": false,
+   "ride": true,
+   "groups": [
+    "魔力组",
+    "巨灵组"
+   ],
+   "types": [
+    "火"
+   ],
+   "quality": 2
+  },
+  {
+   "name": "烈火战神",
+   "pet_id_u": "4006",
+   "pet_id": 4006,
+   "no": "007",
+   "season": 0,
+   "stage": 3,
+   "has_shiny": false,
+   "ride": false,
+   "groups": [],
+   "types": [
+    "火"
+   ],
+   "quality": 2
+  },
+  {
+   "name": "烈火战神",
+   "pet_id_u": "5017",
+   "pet_id": 5017,
+   "no": "007",
+   "season": 0,
+   "stage": 4,
+   "has_shiny": false,
+   "ride": false,
+   "groups": [
+    "魔力组",
+    "巨灵组"
+   ],
+   "types": [
+    "火"
+   ],
+   "quality": 2
+  },
+  {
+   "name": "水蓝蓝",
+   "pet_id_u": "3002",
+   "pet_id": 3002,
+   "no": "008",
+   "season": 0,
+   "stage": 1,
+   "has_shiny": false,
+   "ride": true,
+   "groups": [
+    "魔力组"
+   ],
+   "types": [
+    "水"
+   ],
+   "quality": 2
+  },
+  {
+   "name": "波波拉",
+   "pet_id_u": "3033",
+   "pet_id": 3033,
+   "no": "009",
+   "season": 0,
+   "stage": 2,
+   "has_shiny": false,
+   "ride": true,
+   "groups": [
+    "魔力组"
+   ],
+   "types": [
+    "水"
+   ],
+   "quality": 2
+  },
+  {
+   "name": "圣水守护",
+   "pet_id_u": "4005",
+   "pet_id": 4005,
+   "no": "010",
+   "season": 0,
+   "stage": 3,
+   "has_shiny": false,
+   "ride": false,
+   "groups": [],
+   "types": [
+    "水"
+   ],
+   "quality": 2
+  },
+  {
+   "name": "圣水守护",
+   "pet_id_u": "5010",
+   "pet_id": 5010,
+   "no": "010",
+   "season": 0,
+   "stage": 4,
+   "has_shiny": false,
+   "ride": false,
+   "groups": [
+    "魔力组"
+   ],
+   "types": [
+    "水"
+   ],
+   "quality": 2
+  },
+  {
+   "name": "水灵",
+   "pet_id_u": "3005",
+   "pet_id": 3005,
+   "no": "010",
+   "season": 0,
+   "stage": 3,
+   "has_shiny": false,
+   "ride": true,
+   "groups": [
+    "魔力组"
+   ],
+   "types": [
+    "水"
+   ],
+   "quality": 2
+  },
+  {
+   "name": "鸭吉吉",
+   "pet_id_u": "3012",
+   "pet_id": 3012,
+   "no": "011",
+   "season": 0,
+   "stage": 1,
+   "has_shiny": false,
+   "ride": false,
+   "groups": [
+    "天空组"
+   ],
+   "types": [
+    "普通"
+   ],
+   "quality": 2
+  },
+  {
+   "name": "鸭吉吉",
+   "pet_id_u": "3036",
+   "pet_id": 3036,
+   "no": "011",
+   "season": 0,
+   "stage": 1,
+   "has_shiny": false,
+   "ride": false,
+   "groups": [
+    "天空组"
+   ],
+   "types": [
+    "普通"
+   ],
+   "quality": 2
+  },
+  {
+   "name": "鸭吉吉",
+   "pet_id_u": "3452",
+   "pet_id": 3452,
+   "no": "011",
+   "season": 0,
+   "stage": 1,
+   "has_shiny": false,
+   "ride": false,
+   "groups": [
+    "天空组"
+   ],
+   "types": [
+    "普通"
+   ],
+   "quality": 2
+  },
+  {
+   "name": "鸭吉吉",
+   "pet_id_u": "3453",
+   "pet_id": 3453,
+   "no": "011",
+   "season": 0,
+   "stage": 1,
+   "has_shiny": false,
+   "ride": false,
+   "groups": [
+    "天空组"
+   ],
+   "types": [
+    "普通"
+   ],
+   "quality": 2
+  },
+  {
+   "name": "鸭吉吉",
+   "pet_id_u": "3495",
+   "pet_id": 3495,
+   "no": "011",
+   "season": 0,
+   "stage": 1,
+   "has_shiny": false,
+   "ride": false,
+   "groups": [
+    "天空组"
+   ],
+   "types": [
+    "普通"
+   ],
+   "quality": 2
+  },
+  {
+   "name": "鸭吉吉",
+   "pet_id_u": "3742",
+   "pet_id": 3742,
+   "no": "011",
+   "season": 0,
+   "stage": 1,
+   "has_shiny": false,
+   "ride": false,
+   "groups": [
+    "天空组"
+   ],
+   "types": [
+    "普通"
+   ],
+   "quality": 2
+  },
+  {
+   "name": "鸭吉吉国王",
+   "pet_id_u": "4012",
+   "pet_id": 4012,
+   "no": "011",
+   "season": 0,
+   "stage": 1,
+   "has_shiny": false,
+   "ride": false,
+   "groups": [],
+   "types": [
+    "普通"
+   ],
+   "quality": 2
+  },
+  {
+   "name": "鸭吉吉国王",
+   "pet_id_u": "5006",
+   "pet_id": 5006,
+   "no": "011",
+   "season": 0,
+   "stage": 4,
+   "has_shiny": false,
+   "ride": false,
+   "groups": [
+    "天空组"
+   ],
+   "types": [
+    "普通"
+   ],
+   "quality": 3
+  },
+  {
+   "name": "鸭吉吉国王",
+   "pet_id_u": "5036",
+   "pet_id": 5036,
+   "no": "011",
+   "season": 0,
+   "stage": 4,
+   "has_shiny": false,
+   "ride": false,
+   "groups": [
+    "天空组"
+   ],
+   "types": [
+    "普通"
+   ],
+   "quality": 3
+  },
+  {
+   "name": "鸭吉吉国王",
+   "pet_id_u": "5037",
+   "pet_id": 5037,
+   "no": "011",
+   "season": 0,
+   "stage": 4,
+   "has_shiny": false,
+   "ride": false,
+   "groups": [
+    "天空组"
+   ],
+   "types": [
+    "普通"
+   ],
+   "quality": 3
+  },
+  {
+   "name": "鸭吉吉国王",
+   "pet_id_u": "5038",
+   "pet_id": 5038,
+   "no": "011",
+   "season": 0,
+   "stage": 4,
+   "has_shiny": false,
+   "ride": false,
+   "groups": [
+    "天空组"
+   ],
+   "types": [
+    "普通"
+   ],
+   "quality": 3
+  },
+  {
+   "name": "鸭吉吉国王",
+   "pet_id_u": "5039",
+   "pet_id": 5039,
+   "no": "011",
+   "season": 0,
+   "stage": 4,
+   "has_shiny": false,
+   "ride": false,
+   "groups": [
+    "天空组"
+   ],
+   "types": [
+    "普通"
+   ],
+   "quality": 3
+  },
+  {
+   "name": "鸭吉吉国王",
+   "pet_id_u": "5052",
+   "pet_id": 5052,
+   "no": "011",
+   "season": 0,
+   "stage": 4,
+   "has_shiny": false,
+   "ride": false,
+   "groups": [
+    "天空组"
+   ],
+   "types": [
+    "普通"
+   ],
+   "quality": 3
+  },
+  {
+   "name": "板板壳",
+   "pet_id_u": "3055",
+   "pet_id": 3055,
+   "no": "012",
+   "season": 0,
+   "stage": 1,
+   "has_shiny": false,
+   "ride": true,
+   "groups": [
+    "两栖组"
+   ],
+   "types": [
+    "水"
+   ],
+   "quality": 2
+  },
+  {
+   "name": "板板壳",
+   "pet_id_u": "3516",
+   "pet_id": 3516,
+   "no": "012",
+   "season": 0,
+   "stage": 1,
+   "has_shiny": false,
+   "ride": true,
+   "groups": [
+    "两栖组"
+   ],
+   "types": [
+    "水"
+   ],
+   "quality": 2
+  },
+  {
+   "name": "咔咔壳",
+   "pet_id_u": "3056",
+   "pet_id": 3056,
+   "no": "013",
+   "season": 0,
+   "stage": 2,
+   "has_shiny": false,
+   "ride": true,
+   "groups": [
+    "两栖组"
+   ],
+   "types": [
+    "水"
+   ],
+   "quality": 2
+  },
+  {
+   "name": "咔咔壳",
+   "pet_id_u": "3517",
+   "pet_id": 3517,
+   "no": "013",
+   "season": 0,
+   "stage": 2,
+   "has_shiny": false,
+   "ride": true,
+   "groups": [
+    "两栖组"
+   ],
+   "types": [
+    "水"
+   ],
+   "quality": 2
+  },
+  {
+   "name": "水泡壳",
+   "pet_id_u": "3057",
+   "pet_id": 3057,
+   "no": "014",
+   "season": 0,
+   "stage": 3,
+   "has_shiny": false,
+   "ride": true,
+   "groups": [
+    "两栖组"
+   ],
+   "types": [
+    "水"
+   ],
+   "quality": 2
+  },
+  {
+   "name": "水泡壳",
+   "pet_id_u": "3518",
+   "pet_id": 3518,
+   "no": "014",
+   "season": 0,
+   "stage": 3,
+   "has_shiny": false,
+   "ride": true,
+   "groups": [
+    "两栖组"
+   ],
+   "types": [
+    "水"
+   ],
+   "quality": 2
+  },
+  {
+   "name": "锥尾羊",
+   "pet_id_u": "3045",
+   "pet_id": 3045,
+   "no": "015",
+   "season": 0,
+   "stage": 1,
+   "has_shiny": false,
+   "ride": true,
+   "groups": [
+    "动物组"
+   ],
+   "types": [
+    "幽"
+   ],
+   "quality": 2
+  },
+  {
+   "name": "铃兰羊",
+   "pet_id_u": "3046",
+   "pet_id": 3046,
+   "no": "016",
+   "season": 0,
+   "stage": 2,
+   "has_shiny": false,
+   "ride": true,
+   "groups": [
+    "动物组"
+   ],
+   "types": [
+    "幽"
+   ],
+   "quality": 2
+  },
+  {
+   "name": "花影羚羊",
+   "pet_id_u": "3047",
+   "pet_id": 3047,
+   "no": "017",
+   "season": 0,
+   "stage": 3,
+   "has_shiny": false,
+   "ride": true,
+   "groups": [
+    "动物组"
+   ],
+   "types": [
+    "幽",
+    "恶"
+   ],
+   "quality": 2
+  },
+  {
+   "name": "雪绒鸟",
+   "pet_id_u": "3279",
+   "pet_id": 3279,
+   "no": "018",
+   "season": 0,
+   "stage": 1,
+   "has_shiny": false,
+   "ride": true,
+   "groups": [
+    "天空组"
+   ],
+   "types": [
+    "翼"
+   ],
+   "quality": 2
+  },
+  {
+   "name": "雪绒鸟",
+   "pet_id_u": "3280",
+   "pet_id": 3280,
+   "no": "018",
+   "season": 0,
+   "stage": 1,
+   "has_shiny": false,
+   "ride": true,
+   "groups": [
+    "天空组"
+   ],
+   "types": [
+    "翼"
+   ],
+   "quality": 2
+  },
+  {
+   "name": "雪绒鸟",
+   "pet_id_u": "3281",
+   "pet_id": 3281,
+   "no": "018",
+   "season": 0,
+   "stage": 1,
+   "has_shiny": false,
+   "ride": true,
+   "groups": [
+    "天空组"
+   ],
+   "types": [
+    "翼"
+   ],
+   "quality": 2
+  },
+  {
+   "name": "雪绒鸟",
+   "pet_id_u": "3533",
+   "pet_id": 3533,
+   "no": "018",
+   "season": 0,
+   "stage": 1,
+   "has_shiny": false,
+   "ride": true,
+   "groups": [
+    "天空组"
+   ],
+   "types": [
+    "翼"
+   ],
+   "quality": 2
+  },
+  {
+   "name": "冬羽雀",
+   "pet_id_u": "3028",
+   "pet_id": 3028,
+   "no": "019",
+   "season": 0,
+   "stage": 2,
+   "has_shiny": false,
+   "ride": true,
+   "groups": [
+    "天空组"
+   ],
+   "types": [
+    "翼"
+   ],
+   "quality": 2
+  },
+  {
+   "name": "冬羽雀",
+   "pet_id_u": "3282",
+   "pet_id": 3282,
+   "no": "019",
+   "season": 0,
+   "stage": 2,
+   "has_shiny": false,
+   "ride": true,
+   "groups": [
+    "天空组"
+   ],
+   "types": [
+    "翼"
+   ],
+   "quality": 2
+  },
+  {
+   "name": "冬羽雀",
+   "pet_id_u": "3283",
+   "pet_id": 3283,
+   "no": "019",
+   "season": 0,
+   "stage": 2,
+   "has_shiny": false,
+   "ride": true,
+   "groups": [
+    "天空组"
+   ],
+   "types": [
+    "翼"
+   ],
+   "quality": 2
+  },
+  {
+   "name": "冬羽雀",
+   "pet_id_u": "3284",
+   "pet_id": 3284,
+   "no": "019",
+   "season": 0,
+   "stage": 2,
+   "has_shiny": false,
+   "ride": true,
+   "groups": [
+    "天空组"
+   ],
+   "types": [
+    "翼"
+   ],
+   "quality": 2
+  },
+  {
+   "name": "岚鸟",
+   "pet_id_u": "3037",
+   "pet_id": 3037,
+   "no": "020",
+   "season": 0,
+   "stage": 3,
+   "has_shiny": false,
+   "ride": true,
+   "groups": [
+    "天空组"
+   ],
+   "types": [
+    "翼"
+   ],
+   "quality": 2
+  },
+  {
+   "name": "岚鸟",
+   "pet_id_u": "3285",
+   "pet_id": 3285,
+   "no": "020",
+   "season": 0,
+   "stage": 3,
+   "has_shiny": false,
+   "ride": true,
+   "groups": [
+    "天空组"
+   ],
+   "types": [
+    "翼"
+   ],
+   "quality": 2
+  },
+  {
+   "name": "岚鸟",
+   "pet_id_u": "3286",
+   "pet_id": 3286,
+   "no": "020",
+   "season": 0,
+   "stage": 3,
+   "has_shiny": false,
+   "ride": true,
+   "groups": [
+    "天空组"
+   ],
+   "types": [
+    "翼"
+   ],
+   "quality": 2
+  },
+  {
+   "name": "岚鸟",
+   "pet_id_u": "3287",
+   "pet_id": 3287,
+   "no": "020",
+   "season": 0,
+   "stage": 3,
+   "has_shiny": false,
+   "ride": true,
+   "groups": [
+    "天空组"
+   ],
+   "types": [
+    "翼"
+   ],
+   "quality": 2
+  },
+  {
+   "name": "霜翼领主",
+   "pet_id_u": "4074",
+   "pet_id": 4074,
+   "no": "020",
+   "season": 0,
+   "stage": 2,
+   "has_shiny": false,
+   "ride": false,
+   "groups": [],
+   "types": [
+    "翼"
+   ],
+   "quality": 2
+  },
+  {
+   "name": "霜翼领主",
+   "pet_id_u": "5014",
+   "pet_id": 5014,
+   "no": "020",
+   "season": 0,
+   "stage": 4,
+   "has_shiny": false,
+   "ride": false,
+   "groups": [
+    "天空组"
+   ],
+   "types": [
+    "翼"
+   ],
+   "quality": 2
+  },
+  {
+   "name": "霜翼领主",
+   "pet_id_u": "5030",
+   "pet_id": 5030,
+   "no": "020",
+   "season": 0,
+   "stage": 4,
+   "has_shiny": false,
+   "ride": false,
+   "groups": [
+    "天空组"
+   ],
+   "types": [
+    "翼"
+   ],
+   "quality": 2
+  },
+  {
+   "name": "霜翼领主",
+   "pet_id_u": "5031",
+   "pet_id": 5031,
+   "no": "020",
+   "season": 0,
+   "stage": 4,
+   "has_shiny": false,
+   "ride": false,
+   "groups": [
+    "天空组"
+   ],
+   "types": [
+    "翼"
+   ],
+   "quality": 2
+  },
+  {
+   "name": "霜翼领主",
+   "pet_id_u": "5032",
+   "pet_id": 5032,
+   "no": "020",
+   "season": 0,
+   "stage": 4,
+   "has_shiny": false,
+   "ride": false,
+   "groups": [
+    "天空组"
+   ],
+   "types": [
+    "翼"
+   ],
+   "quality": 2
+  },
+  {
+   "name": "石肤蜥",
+   "pet_id_u": "3106",
+   "pet_id": 3106,
+   "no": "024",
+   "season": 0,
+   "stage": 1,
+   "has_shiny": false,
+   "ride": true,
+   "groups": [
+    "两栖组",
+    "岩石组"
+   ],
+   "types": [
+    "地"
+   ],
+   "quality": 2
+  },
+  {
+   "name": "石肤蜥",
+   "pet_id_u": "3500",
+   "pet_id": 3500,
+   "no": "024",
+   "season": 0,
+   "stage": 1,
+   "has_shiny": false,
+   "ride": true,
+   "groups": [
+    "两栖组",
+    "岩石组"
+   ],
+   "types": [
+    "地"
+   ],
+   "quality": 2
+  },
+  {
+   "name": "石刺蜥",
+   "pet_id_u": "3107",
+   "pet_id": 3107,
+   "no": "025",
+   "season": 0,
+   "stage": 2,
+   "has_shiny": false,
+   "ride": true,
+   "groups": [
+    "两栖组",
+    "岩石组"
+   ],
+   "types": [
+    "地"
+   ],
+   "quality": 2
+  },
+  {
+   "name": "石刺蜥",
+   "pet_id_u": "3501",
+   "pet_id": 3501,
+   "no": "025",
+   "season": 0,
+   "stage": 2,
+   "has_shiny": false,
+   "ride": true,
+   "groups": [
+    "两栖组",
+    "岩石组"
+   ],
+   "types": [
+    "地"
+   ],
+   "quality": 2
+  },
+  {
+   "name": "石冠王蜥",
+   "pet_id_u": "3108",
+   "pet_id": 3108,
+   "no": "026",
+   "season": 0,
+   "stage": 3,
+   "has_shiny": false,
+   "ride": true,
+   "groups": [
+    "两栖组",
+    "岩石组"
+   ],
+   "types": [
+    "地"
+   ],
+   "quality": 2
+  },
+  {
+   "name": "石冠王蜥",
+   "pet_id_u": "3502",
+   "pet_id": 3502,
+   "no": "026",
+   "season": 0,
+   "stage": 3,
+   "has_shiny": false,
+   "ride": true,
+   "groups": [
+    "两栖组",
+    "岩石组"
+   ],
+   "types": [
+    "地"
+   ],
+   "quality": 2
+  },
+  {
+   "name": "布是石",
+   "pet_id_u": "3103",
+   "pet_id": 3103,
+   "no": "027",
+   "season": 0,
+   "stage": 1,
+   "has_shiny": false,
+   "ride": true,
+   "groups": [
+    "岩石组",
+    "巨灵组"
+   ],
+   "types": [
+    "地"
+   ],
+   "quality": 2
+  },
+  {
+   "name": "布是岩",
+   "pet_id_u": "3104",
+   "pet_id": 3104,
+   "no": "028",
+   "season": 0,
+   "stage": 2,
+   "has_shiny": false,
+   "ride": true,
+   "groups": [
+    "岩石组",
+    "巨灵组"
+   ],
+   "types": [
+    "地"
+   ],
+   "quality": 2
+  },
+  {
+   "name": "布克棱岩",
+   "pet_id_u": "3105",
+   "pet_id": 3105,
+   "no": "029",
+   "season": 0,
+   "stage": 3,
+   "has_shiny": false,
+   "ride": true,
+   "groups": [
+    "岩石组",
+    "巨灵组"
+   ],
+   "types": [
+    "地"
+   ],
+   "quality": 2
+  },
+  {
+   "name": "迷嶂布莱克",
+   "pet_id_u": "4072",
+   "pet_id": 4072,
+   "no": "029",
+   "season": 0,
+   "stage": 3,
+   "has_shiny": false,
+   "ride": false,
+   "groups": [],
+   "types": [
+    "地"
+   ],
+   "quality": 2
+  },
+  {
+   "name": "迷嶂布莱克",
+   "pet_id_u": "5008",
+   "pet_id": 5008,
+   "no": "029",
+   "season": 0,
+   "stage": 4,
+   "has_shiny": false,
+   "ride": false,
+   "groups": [
+    "岩石组",
+    "巨灵组"
+   ],
+   "types": [
+    "地"
+   ],
+   "quality": 3
+  },
+  {
+   "name": "恶魔男爵",
+   "pet_id_u": "13000172",
+   "pet_id": 13000172,
+   "no": "031",
+   "season": 0,
+   "stage": 2,
+   "has_shiny": true,
+   "ride": false,
+   "groups": [],
+   "types": [
+    "恶",
+    "翼"
+   ],
+   "quality": 2
+  },
+  {
+   "name": "毛毛",
+   "pet_id_u": "3136",
+   "pet_id": 3136,
+   "no": "032",
+   "season": 0,
+   "stage": 1,
+   "has_shiny": false,
+   "ride": true,
+   "groups": [
+    "昆虫组",
+    "软体组"
+   ],
+   "types": [
+    "虫",
+    "萌"
+   ],
+   "quality": 2
+  },
+  {
+   "name": "爬爬",
+   "pet_id_u": "3137",
+   "pet_id": 3137,
+   "no": "033",
+   "season": 0,
+   "stage": 2,
+   "has_shiny": false,
+   "ride": true,
+   "groups": [
+    "昆虫组",
+    "软体组"
+   ],
+   "types": [
+    "虫",
+    "萌"
+   ],
+   "quality": 2
+  },
+  {
+   "name": "化蝶",
+   "pet_id_u": "3138",
+   "pet_id": 3138,
+   "no": "034",
+   "season": 0,
+   "stage": 3,
+   "has_shiny": false,
+   "ride": true,
+   "groups": [
+    "昆虫组",
+    "软体组"
+   ],
+   "types": [
+    "虫",
+    "萌"
+   ],
+   "quality": 2
+  },
+  {
+   "name": "化蝶",
+   "pet_id_u": "3470",
+   "pet_id": 3470,
+   "no": "034",
+   "season": 0,
+   "stage": 3,
+   "has_shiny": false,
+   "ride": true,
+   "groups": [
+    "昆虫组",
+    "软体组"
+   ],
+   "types": [
+    "虫",
+    "萌"
+   ],
+   "quality": 2
+  },
+  {
+   "name": "化蝶",
+   "pet_id_u": "3471",
+   "pet_id": 3471,
+   "no": "034",
+   "season": 0,
+   "stage": 3,
+   "has_shiny": false,
+   "ride": true,
+   "groups": [
+    "昆虫组",
+    "软体组"
+   ],
+   "types": [
+    "虫",
+    "萌"
+   ],
+   "quality": 2
+  },
+  {
+   "name": "化蝶",
+   "pet_id_u": "3472",
+   "pet_id": 3472,
+   "no": "034",
+   "season": 0,
+   "stage": 3,
+   "has_shiny": false,
+   "ride": true,
+   "groups": [
+    "昆虫组",
+    "软体组"
+   ],
+   "types": [
+    "虫",
+    "萌"
+   ],
+   "quality": 2
+  },
+  {
+   "name": "小鼠獭",
+   "pet_id_u": "3315",
+   "pet_id": 3315,
+   "no": "036",
+   "season": 0,
+   "stage": 1,
+   "has_shiny": false,
+   "ride": true,
+   "groups": [
+    "动物组",
+    "两栖组"
+   ],
+   "types": [
+    "普通",
+    "水"
+   ],
+   "quality": 2
+  },
+  {
+   "name": "燕尾獭",
+   "pet_id_u": "3316",
+   "pet_id": 3316,
+   "no": "037",
+   "season": 0,
+   "stage": 2,
+   "has_shiny": false,
+   "ride": true,
+   "groups": [
+    "动物组",
+    "两栖组"
+   ],
+   "types": [
+    "普通",
+    "水"
+   ],
+   "quality": 2
+  },
+  {
+   "name": "卷胡巨獭",
+   "pet_id_u": "3317",
+   "pet_id": 3317,
+   "no": "038",
+   "season": 0,
+   "stage": 3,
+   "has_shiny": false,
+   "ride": true,
+   "groups": [
+    "动物组",
+    "两栖组"
+   ],
+   "types": [
+    "普通",
+    "水"
+   ],
+   "quality": 2
+  },
+  {
+   "name": "矿晶虫",
+   "pet_id_u": "3307",
+   "pet_id": 3307,
+   "no": "039",
+   "season": 0,
+   "stage": 1,
+   "has_shiny": false,
+   "ride": false,
+   "groups": [
+    "软体组",
+    "岩石组"
+   ],
+   "types": [
+    "光",
+    "地"
+   ],
+   "quality": 2
+  },
+  {
+   "name": "晶石蜗",
+   "pet_id_u": "3308",
+   "pet_id": 3308,
+   "no": "040",
+   "season": 0,
+   "stage": 2,
+   "has_shiny": false,
+   "ride": false,
+   "groups": [
+    "软体组",
+    "岩石组"
+   ],
+   "types": [
+    "光",
+    "地"
+   ],
+   "quality": 2
+  },
+  {
+   "name": "晶石蜗",
+   "pet_id_u": "3448",
+   "pet_id": 3448,
+   "no": "040",
+   "season": 0,
+   "stage": 2,
+   "has_shiny": false,
+   "ride": false,
+   "groups": [
+    "软体组",
+    "岩石组"
+   ],
+   "types": [
+    "光",
+    "地"
+   ],
+   "quality": 2
+  },
+  {
+   "name": "晶石蜗",
+   "pet_id_u": "3449",
+   "pet_id": 3449,
+   "no": "040",
+   "season": 0,
+   "stage": 2,
+   "has_shiny": false,
+   "ride": false,
+   "groups": [
+    "软体组",
+    "岩石组"
+   ],
+   "types": [
+    "光",
+    "地"
+   ],
+   "quality": 2
+  },
+  {
+   "name": "晶石蜗",
+   "pet_id_u": "3450",
+   "pet_id": 3450,
+   "no": "040",
+   "season": 0,
+   "stage": 2,
+   "has_shiny": false,
+   "ride": false,
+   "groups": [
+    "软体组",
+    "岩石组"
+   ],
+   "types": [
+    "光",
+    "地"
+   ],
+   "quality": 2
+  },
+  {
+   "name": "晶石蜗",
+   "pet_id_u": "3451",
+   "pet_id": 3451,
+   "no": "040",
+   "season": 0,
+   "stage": 2,
+   "has_shiny": false,
+   "ride": false,
+   "groups": [
+    "软体组",
+    "岩石组"
+   ],
+   "types": [
+    "光",
+    "地"
+   ],
+   "quality": 2
+  },
+  {
+   "name": "晶石蜗",
+   "pet_id_u": "3486",
+   "pet_id": 3486,
+   "no": "040",
+   "season": 0,
+   "stage": 2,
+   "has_shiny": false,
+   "ride": false,
+   "groups": [
+    "软体组",
+    "岩石组"
+   ],
+   "types": [
+    "光",
+    "地"
+   ],
+   "quality": 2
+  },
+  {
+   "name": "钻石蜗",
+   "pet_id_u": "4079",
+   "pet_id": 4079,
+   "no": "040",
+   "season": 0,
+   "stage": 2,
+   "has_shiny": false,
+   "ride": false,
+   "groups": [],
+   "types": [
+    "光",
+    "地"
+   ],
+   "quality": 2
+  },
+  {
+   "name": "钻石蜗",
+   "pet_id_u": "5001",
+   "pet_id": 5001,
+   "no": "040",
+   "season": 0,
+   "stage": 4,
+   "has_shiny": false,
+   "ride": false,
+   "groups": [
+    "软体组",
+    "岩石组"
+   ],
+   "types": [
+    "光",
+    "地"
+   ],
+   "quality": 2
+  },
+  {
+   "name": "钻石蜗",
+   "pet_id_u": "5047",
+   "pet_id": 5047,
+   "no": "040",
+   "season": 0,
+   "stage": 4,
+   "has_shiny": false,
+   "ride": false,
+   "groups": [
+    "软体组",
+    "岩石组"
+   ],
+   "types": [
+    "光",
+    "地"
+   ],
+   "quality": 2
+  },
+  {
+   "name": "钻石蜗",
+   "pet_id_u": "5048",
+   "pet_id": 5048,
+   "no": "040",
+   "season": 0,
+   "stage": 4,
+   "has_shiny": false,
+   "ride": false,
+   "groups": [
+    "软体组",
+    "岩石组"
+   ],
+   "types": [
+    "光",
+    "地"
+   ],
+   "quality": 2
+  },
+  {
+   "name": "钻石蜗",
+   "pet_id_u": "5049",
+   "pet_id": 5049,
+   "no": "040",
+   "season": 0,
+   "stage": 4,
+   "has_shiny": false,
+   "ride": false,
+   "groups": [
+    "软体组",
+    "岩石组"
+   ],
+   "types": [
+    "光",
+    "地"
+   ],
+   "quality": 2
+  },
+  {
+   "name": "钻石蜗",
+   "pet_id_u": "5050",
+   "pet_id": 5050,
+   "no": "040",
+   "season": 0,
+   "stage": 4,
+   "has_shiny": false,
+   "ride": false,
+   "groups": [
+    "软体组",
+    "岩石组"
+   ],
+   "types": [
+    "光",
+    "地"
+   ],
+   "quality": 2
+  },
+  {
+   "name": "钻石蜗",
+   "pet_id_u": "5051",
+   "pet_id": 5051,
+   "no": "040",
+   "season": 0,
+   "stage": 4,
+   "has_shiny": false,
+   "ride": false,
+   "groups": [
+    "软体组",
+    "岩石组"
+   ],
+   "types": [
+    "光",
+    "地"
+   ],
+   "quality": 2
+  },
+  {
+   "name": "丢丢",
+   "pet_id_u": "3040",
+   "pet_id": 3040,
+   "no": "044",
+   "season": 0,
+   "stage": 1,
+   "has_shiny": false,
+   "ride": true,
+   "groups": [
+    "两栖组"
+   ],
+   "types": [
+    "草"
+   ],
+   "quality": 2
+  },
+  {
+   "name": "丢丢",
+   "pet_id_u": "3288",
+   "pet_id": 3288,
+   "no": "044",
+   "season": 0,
+   "stage": 1,
+   "has_shiny": false,
+   "ride": true,
+   "groups": [
+    "两栖组"
+   ],
+   "types": [
+    "草",
+    "火"
+   ],
+   "quality": 2
+  },
+  {
+   "name": "丢丢",
+   "pet_id_u": "3289",
+   "pet_id": 3289,
+   "no": "044",
+   "season": 0,
+   "stage": 1,
+   "has_shiny": false,
+   "ride": true,
+   "groups": [
+    "两栖组"
+   ],
+   "types": [
+    "草",
+    "地"
+   ],
+   "quality": 2
+  },
+  {
+   "name": "丢丢",
+   "pet_id_u": "3290",
+   "pet_id": 3290,
+   "no": "044",
+   "season": 0,
+   "stage": 1,
+   "has_shiny": false,
+   "ride": true,
+   "groups": [
+    "两栖组"
+   ],
+   "types": [
+    "草",
+    "冰"
+   ],
+   "quality": 2
+  },
+  {
+   "name": "卡卡虫",
+   "pet_id_u": "3041",
+   "pet_id": 3041,
+   "no": "045",
+   "season": 0,
+   "stage": 2,
+   "has_shiny": false,
+   "ride": true,
+   "groups": [
+    "两栖组"
+   ],
+   "types": [
+    "草"
+   ],
+   "quality": 2
+  },
+  {
+   "name": "卡卡虫",
+   "pet_id_u": "3291",
+   "pet_id": 3291,
+   "no": "045",
+   "season": 0,
+   "stage": 2,
+   "has_shiny": false,
+   "ride": true,
+   "groups": [
+    "两栖组"
+   ],
+   "types": [
+    "草",
+    "火"
+   ],
+   "quality": 2
+  },
+  {
+   "name": "卡卡虫",
+   "pet_id_u": "3292",
+   "pet_id": 3292,
+   "no": "045",
+   "season": 0,
+   "stage": 2,
+   "has_shiny": false,
+   "ride": true,
+   "groups": [
+    "两栖组"
+   ],
+   "types": [
+    "草",
+    "地"
+   ],
+   "quality": 2
+  },
+  {
+   "name": "卡卡虫",
+   "pet_id_u": "3293",
+   "pet_id": 3293,
+   "no": "045",
+   "season": 0,
+   "stage": 2,
+   "has_shiny": false,
+   "ride": true,
+   "groups": [
+    "两栖组"
+   ],
+   "types": [
+    "草",
+    "冰"
+   ],
+   "quality": 2
+  },
+  {
+   "name": "卡瓦重",
+   "pet_id_u": "3042",
+   "pet_id": 3042,
+   "no": "046",
+   "season": 0,
+   "stage": 3,
+   "has_shiny": false,
+   "ride": true,
+   "groups": [
+    "两栖组"
+   ],
+   "types": [
+    "草"
+   ],
+   "quality": 2
+  },
+  {
+   "name": "卡瓦重",
+   "pet_id_u": "3294",
+   "pet_id": 3294,
+   "no": "046",
+   "season": 0,
+   "stage": 3,
+   "has_shiny": false,
+   "ride": true,
+   "groups": [
+    "两栖组"
+   ],
+   "types": [
+    "草",
+    "火"
+   ],
+   "quality": 2
+  },
+  {
+   "name": "卡瓦重",
+   "pet_id_u": "3295",
+   "pet_id": 3295,
+   "no": "046",
+   "season": 0,
+   "stage": 3,
+   "has_shiny": false,
+   "ride": true,
+   "groups": [
+    "两栖组"
+   ],
+   "types": [
+    "草",
+    "地"
+   ],
+   "quality": 2
+  },
+  {
+   "name": "卡瓦重",
+   "pet_id_u": "3296",
+   "pet_id": 3296,
+   "no": "046",
+   "season": 0,
+   "stage": 3,
+   "has_shiny": false,
+   "ride": true,
+   "groups": [
+    "两栖组"
+   ],
+   "types": [
+    "草",
+    "冰"
+   ],
+   "quality": 2
+  },
+  {
+   "name": "护主犬",
+   "pet_id_u": "3070",
+   "pet_id": 3070,
+   "no": "047",
+   "season": 0,
+   "stage": 1,
+   "has_shiny": false,
+   "ride": true,
+   "groups": [
+    "动物组"
+   ],
+   "types": [
+    "火"
+   ],
+   "quality": 2
+  },
+  {
+   "name": "护主犬",
+   "pet_id_u": "3870",
+   "pet_id": 3870,
+   "no": "047",
+   "season": 0,
+   "stage": 1,
+   "has_shiny": false,
+   "ride": false,
+   "groups": [
+    "动物组"
+   ],
+   "types": [
+    "火"
+   ],
+   "quality": 2
+  },
+  {
+   "name": "音速犬",
+   "pet_id_u": "3071",
+   "pet_id": 3071,
+   "no": "048",
+   "season": 0,
+   "stage": 2,
+   "has_shiny": false,
+   "ride": true,
+   "groups": [
+    "动物组"
+   ],
+   "types": [
+    "火"
+   ],
+   "quality": 2
+  },
+  {
+   "name": "音速犬",
+   "pet_id_u": "3871",
+   "pet_id": 3871,
+   "no": "048",
+   "season": 0,
+   "stage": 2,
+   "has_shiny": false,
+   "ride": false,
+   "groups": [
+    "动物组"
+   ],
+   "types": [
+    "火"
+   ],
+   "quality": 2
+  },
+  {
+   "name": "风暴战犬",
+   "pet_id_u": "4078",
+   "pet_id": 4078,
+   "no": "048",
+   "season": 0,
+   "stage": 2,
+   "has_shiny": false,
+   "ride": false,
+   "groups": [],
+   "types": [
+    "火"
+   ],
+   "quality": 2
+  },
+  {
+   "name": "风暴战犬",
+   "pet_id_u": "5018",
+   "pet_id": 5018,
+   "no": "048",
+   "season": 0,
+   "stage": 4,
+   "has_shiny": false,
+   "ride": false,
+   "groups": [
+    "动物组"
+   ],
+   "types": [
+    "火"
+   ],
+   "quality": 2
+  },
+  {
+   "name": "风暴战犬",
+   "pet_id_u": "5075",
+   "pet_id": 5075,
+   "no": "048",
+   "season": 0,
+   "stage": 4,
+   "has_shiny": false,
+   "ride": false,
+   "groups": [
+    "动物组"
+   ],
+   "types": [
+    "火"
+   ],
+   "quality": 2
+  },
+  {
+   "name": "绿耳松鼠",
+   "pet_id_u": "3098",
+   "pet_id": 3098,
+   "no": "049",
+   "season": 0,
+   "stage": 1,
+   "has_shiny": false,
+   "ride": false,
+   "groups": [
+    "动物组"
+   ],
+   "types": [
+    "普通"
+   ],
+   "quality": 2
+  },
+  {
+   "name": "抱枕松鼠",
+   "pet_id_u": "3099",
+   "pet_id": 3099,
+   "no": "050",
+   "season": 0,
+   "stage": 2,
+   "has_shiny": false,
+   "ride": false,
+   "groups": [
+    "动物组"
+   ],
+   "types": [
+    "普通"
+   ],
+   "quality": 2
+  },
+  {
+   "name": "蹦床松鼠",
+   "pet_id_u": "3100",
+   "pet_id": 3100,
+   "no": "051",
+   "season": 0,
+   "stage": 3,
+   "has_shiny": false,
+   "ride": false,
+   "groups": [
+    "动物组"
+   ],
+   "types": [
+    "普通"
+   ],
+   "quality": 2
+  },
+  {
+   "name": "小灵面",
+   "pet_id_u": "3060",
+   "pet_id": 3060,
+   "no": "054",
+   "season": 0,
+   "stage": 1,
+   "has_shiny": false,
+   "ride": false,
+   "groups": [
+    "魔力组"
+   ],
+   "types": [
+    "幽"
+   ],
+   "quality": 2
+  },
+  {
+   "name": "暗影灵面",
+   "pet_id_u": "3061",
+   "pet_id": 3061,
+   "no": "055",
+   "season": 0,
+   "stage": 2,
+   "has_shiny": false,
+   "ride": false,
+   "groups": [
+    "魔力组"
+   ],
+   "types": [
+    "幽"
+   ],
+   "quality": 2
+  },
+  {
+   "name": "暗影灵面",
+   "pet_id_u": "3481",
+   "pet_id": 3481,
+   "no": "055",
+   "season": 0,
+   "stage": 2,
+   "has_shiny": false,
+   "ride": false,
+   "groups": [
+    "魔力组"
+   ],
+   "types": [
+    "幽"
+   ],
+   "quality": 2
+  },
+  {
+   "name": "幽冥眼",
+   "pet_id_u": "3405",
+   "pet_id": 3405,
+   "no": "056",
+   "season": 0,
+   "stage": 3,
+   "has_shiny": false,
+   "ride": false,
+   "groups": [
+    "魔力组"
+   ],
+   "types": [
+    "幽"
+   ],
+   "quality": 2
+  },
+  {
+   "name": "幽冥眼",
+   "pet_id_u": "3482",
+   "pet_id": 3482,
+   "no": "056",
+   "season": 0,
+   "stage": 3,
+   "has_shiny": false,
+   "ride": false,
+   "groups": [
+    "魔力组"
+   ],
+   "types": [
+    "幽"
+   ],
+   "quality": 2
+  },
+  {
+   "name": "梦游",
+   "pet_id_u": "3438",
+   "pet_id": 3438,
+   "no": "057",
+   "season": 0,
+   "stage": 1,
+   "has_shiny": false,
+   "ride": true,
+   "groups": [
+    "魔力组",
+    "妖精组"
+   ],
+   "types": [
+    "幽"
+   ],
+   "quality": 2
+  },
+  {
+   "name": "梦游",
+   "pet_id_u": "3440",
+   "pet_id": 3440,
+   "no": "057",
+   "season": 0,
+   "stage": 1,
+   "has_shiny": false,
+   "ride": true,
+   "groups": [
+    "妖精组",
+    "魔力组"
+   ],
+   "types": [
+    "幽",
+    "光"
+   ],
+   "quality": 2
+  },
+  {
+   "name": "梦悠悠",
+   "pet_id_u": "3439",
+   "pet_id": 3439,
+   "no": "058",
+   "season": 0,
+   "stage": 2,
+   "has_shiny": false,
+   "ride": true,
+   "groups": [
+    "魔力组",
+    "妖精组"
+   ],
+   "types": [
+    "幽"
+   ],
+   "quality": 2
+  },
+  {
+   "name": "梦悠悠",
+   "pet_id_u": "3441",
+   "pet_id": 3441,
+   "no": "058",
+   "season": 0,
+   "stage": 2,
+   "has_shiny": false,
+   "ride": true,
+   "groups": [
+    "妖精组",
+    "魔力组"
+   ],
+   "types": [
+    "幽",
+    "光"
+   ],
+   "quality": 2
+  },
+  {
+   "name": "兽花蕾",
+   "pet_id_u": "3492",
+   "pet_id": 3492,
+   "no": "059",
+   "season": 0,
+   "stage": 1,
+   "has_shiny": false,
+   "ride": false,
+   "groups": [
+    "植物组"
+   ],
+   "types": [
+    "光",
+    "草"
+   ],
+   "quality": 2
+  },
+  {
+   "name": "伏地兽",
+   "pet_id_u": "3165",
+   "pet_id": 3165,
+   "no": "060",
+   "season": 0,
+   "stage": 1,
+   "has_shiny": false,
+   "ride": true,
+   "groups": [
+    "动物组"
+   ],
+   "types": [
+    "普通"
+   ],
+   "quality": 2
+  },
+  {
+   "name": "贪食鼹",
+   "pet_id_u": "3166",
+   "pet_id": 3166,
+   "no": "061",
+   "season": 0,
+   "stage": 2,
+   "has_shiny": false,
+   "ride": true,
+   "groups": [
+    "动物组"
+   ],
+   "types": [
+    "普通"
+   ],
+   "quality": 2
+  },
+  {
+   "name": "巨噬针鼹",
+   "pet_id_u": "3167",
+   "pet_id": 3167,
+   "no": "062",
+   "season": 0,
+   "stage": 3,
+   "has_shiny": false,
+   "ride": true,
+   "groups": [
+    "动物组"
+   ],
+   "types": [
+    "普通"
+   ],
+   "quality": 2
+  },
+  {
+   "name": "蹦蹦种子",
+   "pet_id_u": "3017",
+   "pet_id": 3017,
+   "no": "063",
+   "season": 0,
+   "stage": 1,
+   "has_shiny": false,
+   "ride": true,
+   "groups": [
+    "植物组"
+   ],
+   "types": [
+    "草",
+    "毒"
+   ],
+   "quality": 2
+  },
+  {
+   "name": "蹦蹦种子",
+   "pet_id_u": "3297",
+   "pet_id": 3297,
+   "no": "063",
+   "season": 0,
+   "stage": 1,
+   "has_shiny": false,
+   "ride": true,
+   "groups": [
+    "植物组"
+   ],
+   "types": [
+    "草",
+    "毒"
+   ],
+   "quality": 2
+  },
+  {
+   "name": "蹦蹦种子",
+   "pet_id_u": "3298",
+   "pet_id": 3298,
+   "no": "063",
+   "season": 0,
+   "stage": 1,
+   "has_shiny": false,
+   "ride": true,
+   "groups": [
+    "植物组"
+   ],
+   "types": [
+    "草",
+    "毒"
+   ],
+   "quality": 2
+  },
+  {
+   "name": "蹦蹦种子",
+   "pet_id_u": "3299",
+   "pet_id": 3299,
+   "no": "063",
+   "season": 0,
+   "stage": 1,
+   "has_shiny": false,
+   "ride": true,
+   "groups": [
+    "植物组"
+   ],
+   "types": [
+    "草",
+    "毒"
+   ],
+   "quality": 2
+  },
+  {
+   "name": "蹦蹦草",
+   "pet_id_u": "3018",
+   "pet_id": 3018,
+   "no": "064",
+   "season": 0,
+   "stage": 2,
+   "has_shiny": false,
+   "ride": true,
+   "groups": [
+    "植物组"
+   ],
+   "types": [
+    "草",
+    "毒"
+   ],
+   "quality": 2
+  },
+  {
+   "name": "蹦蹦草",
+   "pet_id_u": "3300",
+   "pet_id": 3300,
+   "no": "064",
+   "season": 0,
+   "stage": 2,
+   "has_shiny": false,
+   "ride": true,
+   "groups": [
+    "植物组"
+   ],
+   "types": [
+    "草",
+    "毒"
+   ],
+   "quality": 2
+  },
+  {
+   "name": "蹦蹦草",
+   "pet_id_u": "3301",
+   "pet_id": 3301,
+   "no": "064",
+   "season": 0,
+   "stage": 2,
+   "has_shiny": false,
+   "ride": true,
+   "groups": [
+    "植物组"
+   ],
+   "types": [
+    "草",
+    "毒"
+   ],
+   "quality": 2
+  },
+  {
+   "name": "蹦蹦草",
+   "pet_id_u": "3302",
+   "pet_id": 3302,
+   "no": "064",
+   "season": 0,
+   "stage": 2,
+   "has_shiny": false,
+   "ride": true,
+   "groups": [
+    "植物组"
+   ],
+   "types": [
+    "草",
+    "毒"
+   ],
+   "quality": 2
+  },
+  {
+   "name": "蹦蹦果",
+   "pet_id_u": "4019",
+   "pet_id": 4019,
+   "no": "065",
+   "season": 0,
+   "stage": 3,
+   "has_shiny": false,
+   "ride": false,
+   "groups": [],
+   "types": [
+    "草",
+    "毒"
+   ],
+   "quality": 3
+  },
+  {
+   "name": "蹦蹦果",
+   "pet_id_u": "5004",
+   "pet_id": 5004,
+   "no": "065",
+   "season": 0,
+   "stage": 4,
+   "has_shiny": false,
+   "ride": false,
+   "groups": [
+    "植物组"
+   ],
+   "types": [
+    "草",
+    "毒"
+   ],
+   "quality": 2
+  },
+  {
+   "name": "蹦蹦果",
+   "pet_id_u": "5033",
+   "pet_id": 5033,
+   "no": "065",
+   "season": 0,
+   "stage": 4,
+   "has_shiny": false,
+   "ride": false,
+   "groups": [
+    "植物组"
+   ],
+   "types": [
+    "草",
+    "毒"
+   ],
+   "quality": 2
+  },
+  {
+   "name": "蹦蹦果",
+   "pet_id_u": "5034",
+   "pet_id": 5034,
+   "no": "065",
+   "season": 0,
+   "stage": 4,
+   "has_shiny": false,
+   "ride": false,
+   "groups": [
+    "植物组"
+   ],
+   "types": [
+    "草",
+    "毒"
+   ],
+   "quality": 2
+  },
+  {
+   "name": "蹦蹦果",
+   "pet_id_u": "5035",
+   "pet_id": 5035,
+   "no": "065",
+   "season": 0,
+   "stage": 4,
+   "has_shiny": false,
+   "ride": false,
+   "groups": [
+    "植物组"
+   ],
+   "types": [
+    "草",
+    "毒"
+   ],
+   "quality": 2
+  },
+  {
+   "name": "蹦蹦花",
+   "pet_id_u": "3019",
+   "pet_id": 3019,
+   "no": "065",
+   "season": 0,
+   "stage": 3,
+   "has_shiny": false,
+   "ride": true,
+   "groups": [
+    "植物组"
+   ],
+   "types": [
+    "草",
+    "毒"
+   ],
+   "quality": 2
+  },
+  {
+   "name": "蹦蹦花",
+   "pet_id_u": "3303",
+   "pet_id": 3303,
+   "no": "065",
+   "season": 0,
+   "stage": 3,
+   "has_shiny": false,
+   "ride": true,
+   "groups": [
+    "植物组"
+   ],
+   "types": [
+    "草",
+    "毒"
+   ],
+   "quality": 2
+  },
+  {
+   "name": "蹦蹦花",
+   "pet_id_u": "3304",
+   "pet_id": 3304,
+   "no": "065",
+   "season": 0,
+   "stage": 3,
+   "has_shiny": false,
+   "ride": true,
+   "groups": [
+    "植物组"
+   ],
+   "types": [
+    "草",
+    "毒"
+   ],
+   "quality": 2
+  },
+  {
+   "name": "蹦蹦花",
+   "pet_id_u": "3305",
+   "pet_id": 3305,
+   "no": "065",
+   "season": 0,
+   "stage": 3,
+   "has_shiny": false,
+   "ride": true,
+   "groups": [
+    "植物组"
+   ],
+   "types": [
+    "草",
+    "毒"
+   ],
+   "quality": 2
+  },
+  {
+   "name": "电咩咩",
+   "pet_id_u": "3190",
+   "pet_id": 3190,
+   "no": "066",
+   "season": 0,
+   "stage": 1,
+   "has_shiny": false,
+   "ride": true,
+   "groups": [
+    "动物组"
+   ],
+   "types": [
+    "电"
+   ],
+   "quality": 2
+  },
+  {
+   "name": "粉咩咩",
+   "pet_id_u": "3191",
+   "pet_id": 3191,
+   "no": "067",
+   "season": 0,
+   "stage": 2,
+   "has_shiny": false,
+   "ride": true,
+   "groups": [
+    "动物组"
+   ],
+   "types": [
+    "电"
+   ],
+   "quality": 2
+  },
+  {
+   "name": "电球咩咩",
+   "pet_id_u": "3192",
+   "pet_id": 3192,
+   "no": "068",
+   "season": 0,
+   "stage": 3,
+   "has_shiny": false,
+   "ride": true,
+   "groups": [
+    "动物组"
+   ],
+   "types": [
+    "电"
+   ],
+   "quality": 2
+  },
+  {
+   "name": "蒲公英",
+   "pet_id_u": "3034",
+   "pet_id": 3034,
+   "no": "069",
+   "season": 0,
+   "stage": 1,
+   "has_shiny": false,
+   "ride": true,
+   "groups": [
+    "植物组",
+    "天空组"
+   ],
+   "types": [
+    "草",
+    "萌"
+   ],
+   "quality": 2
+  },
+  {
+   "name": "蒲公英娃娃",
+   "pet_id_u": "3027",
+   "pet_id": 3027,
+   "no": "070",
+   "season": 0,
+   "stage": 2,
+   "has_shiny": false,
+   "ride": true,
+   "groups": [
+    "植物组",
+    "天空组"
+   ],
+   "types": [
+    "草",
+    "萌"
+   ],
+   "quality": 2
+  },
+  {
+   "name": "白发懒人",
+   "pet_id_u": "3049",
+   "pet_id": 3049,
+   "no": "073",
+   "season": 0,
+   "stage": 1,
+   "has_shiny": false,
+   "ride": true,
+   "groups": [
+    "拟人组",
+    "巨灵组"
+   ],
+   "types": [
+    "普通"
+   ],
+   "quality": 2
+  },
+  {
+   "name": "动力猿",
+   "pet_id_u": "3101",
+   "pet_id": 3101,
+   "no": "074",
+   "season": 0,
+   "stage": 2,
+   "has_shiny": false,
+   "ride": true,
+   "groups": [
+    "拟人组",
+    "巨灵组"
+   ],
+   "types": [
+    "普通",
+    "武"
+   ],
+   "quality": 2
+  },
+  {
+   "name": "瞌睡王",
+   "pet_id_u": "3102",
+   "pet_id": 3102,
+   "no": "075",
+   "season": 0,
+   "stage": 3,
+   "has_shiny": false,
+   "ride": true,
+   "groups": [
+    "拟人组",
+    "巨灵组"
+   ],
+   "types": [
+    "普通",
+    "武"
+   ],
+   "quality": 2
+  },
+  {
+   "name": "小星光",
+   "pet_id_u": "3193",
+   "pet_id": 3193,
+   "no": "080",
+   "season": 0,
+   "stage": 1,
+   "has_shiny": false,
+   "ride": false,
+   "groups": [
+    "动物组"
+   ],
+   "types": [
+    "电"
+   ],
+   "quality": 2
+  },
+  {
+   "name": "小星光",
+   "pet_id_u": "3442",
+   "pet_id": 3442,
+   "no": "080",
+   "season": 0,
+   "stage": 1,
+   "has_shiny": false,
+   "ride": false,
+   "groups": [
+    "动物组"
+   ],
+   "types": [
+    "电",
+    "光"
+   ],
+   "quality": 2
+  },
+  {
+   "name": "星光狮",
+   "pet_id_u": "3194",
+   "pet_id": 3194,
+   "no": "081",
+   "season": 0,
+   "stage": 2,
+   "has_shiny": false,
+   "ride": false,
+   "groups": [
+    "动物组"
+   ],
+   "types": [
+    "电"
+   ],
+   "quality": 2
+  },
+  {
+   "name": "星光狮",
+   "pet_id_u": "3443",
+   "pet_id": 3443,
+   "no": "081",
+   "season": 0,
+   "stage": 2,
+   "has_shiny": false,
+   "ride": false,
+   "groups": [
+    "动物组"
+   ],
+   "types": [
+    "电",
+    "光"
+   ],
+   "quality": 2
+  },
+  {
+   "name": "一窝蜂",
+   "pet_id_u": "3058",
+   "pet_id": 3058,
+   "no": "082",
+   "season": 0,
+   "stage": 1,
+   "has_shiny": false,
+   "ride": true,
+   "groups": [
+    "昆虫组",
+    "天空组"
+   ],
+   "types": [
+    "虫",
+    "翼"
+   ],
+   "quality": 2
+  },
+  {
+   "name": "黄蜂后",
+   "pet_id_u": "3059",
+   "pet_id": 3059,
+   "no": "083",
+   "season": 0,
+   "stage": 2,
+   "has_shiny": false,
+   "ride": true,
+   "groups": [
+    "昆虫组",
+    "天空组"
+   ],
+   "types": [
+    "虫",
+    "翼"
+   ],
+   "quality": 2
+  },
+  {
+   "name": "女王蜂",
+   "pet_id_u": "4021",
+   "pet_id": 4021,
+   "no": "084",
+   "season": 0,
+   "stage": 3,
+   "has_shiny": false,
+   "ride": false,
+   "groups": [],
+   "types": [
+    "虫",
+    "翼"
+   ],
+   "quality": 3
+  },
+  {
+   "name": "女王蜂",
+   "pet_id_u": "5015",
+   "pet_id": 5015,
+   "no": "084",
+   "season": 0,
+   "stage": 4,
+   "has_shiny": false,
+   "ride": false,
+   "groups": [
+    "昆虫组",
+    "天空组"
+   ],
+   "types": [
+    "虫",
+    "翼"
+   ],
+   "quality": 2
+  },
+  {
+   "name": "花魁蜂后",
+   "pet_id_u": "3157",
+   "pet_id": 3157,
+   "no": "084",
+   "season": 0,
+   "stage": 3,
+   "has_shiny": false,
+   "ride": true,
+   "groups": [
+    "昆虫组",
+    "天空组"
+   ],
+   "types": [
+    "虫",
+    "翼"
+   ],
+   "quality": 2
+  },
+  {
+   "name": "乖乖鹄",
+   "pet_id_u": "3344",
+   "pet_id": 3344,
+   "no": "088",
+   "season": 0,
+   "stage": 1,
+   "has_shiny": false,
+   "ride": false,
+   "groups": [
+    "天空组",
+    "两栖组"
+   ],
+   "types": [
+    "翼",
+    "水"
+   ],
+   "quality": 2
+  },
+  {
+   "name": "蓝珠天鹅",
+   "pet_id_u": "3345",
+   "pet_id": 3345,
+   "no": "089",
+   "season": 0,
+   "stage": 2,
+   "has_shiny": false,
+   "ride": false,
+   "groups": [
+    "天空组",
+    "两栖组"
+   ],
+   "types": [
+    "翼",
+    "水"
+   ],
+   "quality": 2
+  },
+  {
+   "name": "翠顶夫人",
+   "pet_id_u": "3346",
+   "pet_id": 3346,
+   "no": "090",
+   "season": 0,
+   "stage": 3,
+   "has_shiny": false,
+   "ride": false,
+   "groups": [
+    "天空组",
+    "两栖组"
+   ],
+   "types": [
+    "翼",
+    "水"
+   ],
+   "quality": 2
+  },
+  {
+   "name": "黑羽夫人",
+   "pet_id_u": "3571",
+   "pet_id": 3571,
+   "no": "091",
+   "season": 0,
+   "stage": 3,
+   "has_shiny": false,
+   "ride": false,
+   "groups": [
+    "天空组",
+    "两栖组"
+   ],
+   "types": [
+    "翼",
+    "恶"
+   ],
+   "quality": 2
+  },
+  {
+   "name": "绿草精灵",
+   "pet_id_u": "3026",
+   "pet_id": 3026,
+   "no": "093",
+   "season": 0,
+   "stage": 1,
+   "has_shiny": false,
+   "ride": false,
+   "groups": [
+    "妖精组",
+    "拟人组"
+   ],
+   "types": [
+    "草",
+    "幻"
+   ],
+   "quality": 2
+  },
+  {
+   "name": "魔草巫灵",
+   "pet_id_u": "3035",
+   "pet_id": 3035,
+   "no": "094",
+   "season": 0,
+   "stage": 2,
+   "has_shiny": false,
+   "ride": false,
+   "groups": [
+    "妖精组",
+    "拟人组"
+   ],
+   "types": [
+    "草",
+    "幻"
+   ],
+   "quality": 2
+  },
+  {
+   "name": "记忆石",
+   "pet_id_u": "3050",
+   "pet_id": 3050,
+   "no": "095",
+   "season": 0,
+   "stage": 1,
+   "has_shiny": false,
+   "ride": true,
+   "groups": [
+    "岩石组"
+   ],
+   "types": [
+    "地"
+   ],
+   "quality": 2
+  },
+  {
+   "name": "咔咔羽毛",
+   "pet_id_u": "3175",
+   "pet_id": 3175,
+   "no": "096",
+   "season": 0,
+   "stage": 1,
+   "has_shiny": false,
+   "ride": false,
+   "groups": [
+    "天空组"
+   ],
+   "types": [
+    "翼",
+    "普通"
+   ],
+   "quality": 2
+  },
+  {
+   "name": "咔咔雀",
+   "pet_id_u": "3176",
+   "pet_id": 3176,
+   "no": "097",
+   "season": 0,
+   "stage": 2,
+   "has_shiny": false,
+   "ride": false,
+   "groups": [
+    "天空组"
+   ],
+   "types": [
+    "翼",
+    "普通"
+   ],
+   "quality": 2
+  },
+  {
+   "name": "咔咔鸟",
+   "pet_id_u": "3177",
+   "pet_id": 3177,
+   "no": "098",
+   "season": 0,
+   "stage": 3,
+   "has_shiny": false,
+   "ride": false,
+   "groups": [
+    "天空组"
+   ],
+   "types": [
+    "翼",
+    "普通"
+   ],
+   "quality": 2
+  },
+  {
+   "name": "绿翼鸟",
+   "pet_id_u": "3276",
+   "pet_id": 3276,
+   "no": "102",
+   "season": 0,
+   "stage": 1,
+   "has_shiny": false,
+   "ride": false,
+   "groups": [
+    "天空组",
+    "妖精组"
+   ],
+   "types": [
+    "萌",
+    "翼"
+   ],
+   "quality": 2
+  },
+  {
+   "name": "魔翼鸟",
+   "pet_id_u": "3277",
+   "pet_id": 3277,
+   "no": "103",
+   "season": 0,
+   "stage": 2,
+   "has_shiny": false,
+   "ride": false,
+   "groups": [
+    "天空组",
+    "妖精组"
+   ],
+   "types": [
+    "萌",
+    "翼"
+   ],
+   "quality": 2
+  },
+  {
+   "name": "魔眷鸟",
+   "pet_id_u": "3278",
+   "pet_id": 3278,
+   "no": "104",
+   "season": 0,
+   "stage": 3,
+   "has_shiny": false,
+   "ride": false,
+   "groups": [
+    "天空组",
+    "妖精组"
+   ],
+   "types": [
+    "萌",
+    "翼"
+   ],
+   "quality": 2
+  },
+  {
+   "name": "阿米亚特",
+   "pet_id_u": "3014",
+   "pet_id": 3014,
+   "no": "105",
+   "season": 0,
+   "stage": 1,
+   "has_shiny": false,
+   "ride": true,
+   "groups": [
+    "岩石组",
+    "巨灵组"
+   ],
+   "types": [
+    "地"
+   ],
+   "quality": 2
+  },
+  {
+   "name": "阿米樱",
+   "pet_id_u": "3015",
+   "pet_id": 3015,
+   "no": "106",
+   "season": 0,
+   "stage": 2,
+   "has_shiny": false,
+   "ride": true,
+   "groups": [
+    "岩石组",
+    "巨灵组"
+   ],
+   "types": [
+    "地"
+   ],
+   "quality": 2
+  },
+  {
+   "name": "深渊罗隐",
+   "pet_id_u": "5053",
+   "pet_id": 5053,
+   "no": "107",
+   "season": 0,
+   "stage": 4,
+   "has_shiny": false,
+   "ride": false,
+   "groups": [
+    "岩石组",
+    "巨灵组"
+   ],
+   "types": [
+    "地",
+    "恶"
+   ],
+   "quality": 2
+  },
+  {
+   "name": "深渊罗隐",
+   "pet_id_u": "13000169",
+   "pet_id": 13000169,
+   "no": "107",
+   "season": 0,
+   "stage": 3,
+   "has_shiny": false,
+   "ride": false,
+   "groups": [],
+   "types": [
+    "地",
+    "恶"
+   ],
+   "quality": 2
+  },
+  {
+   "name": "罗隐",
+   "pet_id_u": "3016",
+   "pet_id": 3016,
+   "no": "107",
+   "season": 0,
+   "stage": 3,
+   "has_shiny": false,
+   "ride": true,
+   "groups": [
+    "岩石组",
+    "巨灵组"
+   ],
+   "types": [
+    "地",
+    "恶"
+   ],
+   "quality": 2
+  },
+  {
+   "name": "风铃鲨",
+   "pet_id_u": "3115",
+   "pet_id": 3115,
+   "no": "108",
+   "season": 0,
+   "stage": 1,
+   "has_shiny": false,
+   "ride": true,
+   "groups": [
+    "海洋组",
+    "天空组"
+   ],
+   "types": [
+    "水",
+    "翼"
+   ],
+   "quality": 2
+  },
+  {
+   "name": "蓝蝶鲨",
+   "pet_id_u": "3116",
+   "pet_id": 3116,
+   "no": "109",
+   "season": 0,
+   "stage": 2,
+   "has_shiny": false,
+   "ride": true,
+   "groups": [
+    "海洋组",
+    "天空组"
+   ],
+   "types": [
+    "水",
+    "翼"
+   ],
+   "quality": 2
+  },
+  {
+   "name": "彩蝶鲨",
+   "pet_id_u": "3117",
+   "pet_id": 3117,
+   "no": "110",
+   "season": 0,
+   "stage": 3,
+   "has_shiny": false,
+   "ride": true,
+   "groups": [
+    "海洋组",
+    "天空组"
+   ],
+   "types": [
+    "水",
+    "翼"
+   ],
+   "quality": 2
+  },
+  {
+   "name": "神谕鲨",
+   "pet_id_u": "4073",
+   "pet_id": 4073,
+   "no": "110",
+   "season": 0,
+   "stage": 3,
+   "has_shiny": false,
+   "ride": false,
+   "groups": [],
+   "types": [
+    "水",
+    "翼"
+   ],
+   "quality": 2
+  },
+  {
+   "name": "神谕鲨",
+   "pet_id_u": "5011",
+   "pet_id": 5011,
+   "no": "110",
+   "season": 0,
+   "stage": 4,
+   "has_shiny": false,
+   "ride": false,
+   "groups": [
+    "海洋组",
+    "天空组"
+   ],
+   "types": [
+    "水",
+    "翼"
+   ],
+   "quality": 2
+  },
+  {
+   "name": "石石",
+   "pet_id_u": "3170",
+   "pet_id": 3170,
+   "no": "111",
+   "season": 0,
+   "stage": 1,
+   "has_shiny": false,
+   "ride": true,
+   "groups": [
+    "岩石组",
+    "魔力组"
+   ],
+   "types": [
+    "地"
+   ],
+   "quality": 2
+  },
+  {
+   "name": "巨灵石",
+   "pet_id_u": "3171",
+   "pet_id": 3171,
+   "no": "112",
+   "season": 0,
+   "stage": 2,
+   "has_shiny": false,
+   "ride": true,
+   "groups": [
+    "岩石组",
+    "魔力组"
+   ],
+   "types": [
+    "地",
+    "幽"
+   ],
+   "quality": 2
+  },
+  {
+   "name": "仪使者",
+   "pet_id_u": "3109",
+   "pet_id": 3109,
+   "no": "113",
+   "season": 0,
+   "stage": 1,
+   "has_shiny": false,
+   "ride": true,
+   "groups": [
+    "妖精组",
+    "岩石组"
+   ],
+   "types": [
+    "地",
+    "幻"
+   ],
+   "quality": 2
+  },
+  {
+   "name": "仪式之星",
+   "pet_id_u": "3110",
+   "pet_id": 3110,
+   "no": "114",
+   "season": 0,
+   "stage": 2,
+   "has_shiny": false,
+   "ride": true,
+   "groups": [
+    "妖精组",
+    "岩石组"
+   ],
+   "types": [
+    "地",
+    "幻"
+   ],
+   "quality": 2
+  },
+  {
+   "name": "仪式巨像",
+   "pet_id_u": "3111",
+   "pet_id": 3111,
+   "no": "115",
+   "season": 0,
+   "stage": 3,
+   "has_shiny": false,
+   "ride": true,
+   "groups": [
+    "妖精组",
+    "岩石组"
+   ],
+   "types": [
+    "地",
+    "幻"
+   ],
+   "quality": 2
+  },
+  {
+   "name": "祭礼巨像",
+   "pet_id_u": "4084",
+   "pet_id": 4084,
+   "no": "115",
+   "season": 0,
+   "stage": 3,
+   "has_shiny": false,
+   "ride": false,
+   "groups": [],
+   "types": [
+    "地",
+    "幻"
+   ],
+   "quality": 2
+  },
+  {
+   "name": "祭礼巨像",
+   "pet_id_u": "5009",
+   "pet_id": 5009,
+   "no": "115",
+   "season": 0,
+   "stage": 4,
+   "has_shiny": false,
+   "ride": false,
+   "groups": [
+    "妖精组",
+    "岩石组"
+   ],
+   "types": [
+    "地",
+    "幻"
+   ],
+   "quality": 2
+  },
+  {
+   "name": "旋叶虫",
+   "pet_id_u": "3376",
+   "pet_id": 3376,
+   "no": "118",
+   "season": 0,
+   "stage": 1,
+   "has_shiny": false,
+   "ride": false,
+   "groups": [
+    "昆虫组",
+    "植物组"
+   ],
+   "types": [
+    "普通",
+    "虫"
+   ],
+   "quality": 2
+  },
+  {
+   "name": "旋叶虫",
+   "pet_id_u": "3496",
+   "pet_id": 3496,
+   "no": "118",
+   "season": 0,
+   "stage": 1,
+   "has_shiny": false,
+   "ride": false,
+   "groups": [
+    "昆虫组",
+    "植物组"
+   ],
+   "types": [
+    "普通",
+    "虫"
+   ],
+   "quality": 2
+  },
+  {
+   "name": "蓬叶虫",
+   "pet_id_u": "3483",
+   "pet_id": 3483,
+   "no": "119",
+   "season": 0,
+   "stage": 2,
+   "has_shiny": false,
+   "ride": false,
+   "groups": [
+    "昆虫组",
+    "植物组"
+   ],
+   "types": [
+    "普通",
+    "虫"
+   ],
+   "quality": 2
+  },
+  {
+   "name": "蓬叶虫",
+   "pet_id_u": "3497",
+   "pet_id": 3497,
+   "no": "119",
+   "season": 0,
+   "stage": 2,
+   "has_shiny": false,
+   "ride": false,
+   "groups": [
+    "昆虫组",
+    "植物组"
+   ],
+   "types": [
+    "普通",
+    "虫"
+   ],
+   "quality": 2
+  },
+  {
+   "name": "暮风隐者",
+   "pet_id_u": "4101",
+   "pet_id": 4101,
+   "no": "120",
+   "season": 0,
+   "stage": 3,
+   "has_shiny": false,
+   "ride": false,
+   "groups": [],
+   "types": [
+    "普通",
+    "虫"
+   ],
+   "quality": 2
+  },
+  {
+   "name": "暮风隐者",
+   "pet_id_u": "5056",
+   "pet_id": 5056,
+   "no": "120",
+   "season": 0,
+   "stage": 4,
+   "has_shiny": false,
+   "ride": false,
+   "groups": [
+    "昆虫组",
+    "植物组"
+   ],
+   "types": [
+    "普通",
+    "虫"
+   ],
+   "quality": 2
+  },
+  {
+   "name": "暮风隐者",
+   "pet_id_u": "5062",
+   "pet_id": 5062,
+   "no": "120",
+   "season": 0,
+   "stage": 4,
+   "has_shiny": false,
+   "ride": false,
+   "groups": [
+    "昆虫组",
+    "植物组"
+   ],
+   "types": [
+    "普通",
+    "虫"
+   ],
+   "quality": 2
+  },
+  {
+   "name": "风滚暮虫",
+   "pet_id_u": "3377",
+   "pet_id": 3377,
+   "no": "120",
+   "season": 0,
+   "stage": 3,
+   "has_shiny": false,
+   "ride": false,
+   "groups": [
+    "昆虫组",
+    "植物组"
+   ],
+   "types": [
+    "普通",
+    "虫"
+   ],
+   "quality": 2
+  },
+  {
+   "name": "风滚暮虫",
+   "pet_id_u": "3498",
+   "pet_id": 3498,
+   "no": "120",
+   "season": 0,
+   "stage": 3,
+   "has_shiny": false,
+   "ride": false,
+   "groups": [
+    "昆虫组",
+    "植物组"
+   ],
+   "types": [
+    "普通",
+    "虫"
+   ],
+   "quality": 2
+  },
+  {
+   "name": "忽幽狸",
+   "pet_id_u": "3065",
+   "pet_id": 3065,
+   "no": "123",
+   "season": 0,
+   "stage": 1,
+   "has_shiny": false,
+   "ride": false,
+   "groups": [
+    "动物组",
+    "拟人组"
+   ],
+   "types": [
+    "幽",
+    "毒"
+   ],
+   "quality": 2
+  },
+  {
+   "name": "影狸",
+   "pet_id_u": "3066",
+   "pet_id": 3066,
+   "no": "124",
+   "season": 0,
+   "stage": 2,
+   "has_shiny": false,
+   "ride": false,
+   "groups": [
+    "动物组",
+    "拟人组"
+   ],
+   "types": [
+    "幽",
+    "毒"
+   ],
+   "quality": 2
+  },
+  {
+   "name": "多多",
+   "pet_id_u": "3151",
+   "pet_id": 3151,
+   "no": "125",
+   "season": 0,
+   "stage": 1,
+   "has_shiny": false,
+   "ride": false,
+   "groups": [
+    "拟人组"
+   ],
+   "types": [
+    "毒",
+    "地"
+   ],
+   "quality": 2
+  },
+  {
+   "name": "多啦多",
+   "pet_id_u": "3152",
+   "pet_id": 3152,
+   "no": "126",
+   "season": 0,
+   "stage": 2,
+   "has_shiny": false,
+   "ride": false,
+   "groups": [
+    "拟人组"
+   ],
+   "types": [
+    "毒",
+    "地"
+   ],
+   "quality": 2
+  },
+  {
+   "name": "古啦多",
+   "pet_id_u": "3153",
+   "pet_id": 3153,
+   "no": "127",
+   "season": 0,
+   "stage": 3,
+   "has_shiny": false,
+   "ride": false,
+   "groups": [
+    "拟人组"
+   ],
+   "types": [
+    "毒",
+    "地"
+   ],
+   "quality": 2
+  },
+  {
+   "name": "哭哭菇",
+   "pet_id_u": "3239",
+   "pet_id": 3239,
+   "no": "128",
+   "season": 0,
+   "stage": 1,
+   "has_shiny": false,
+   "ride": true,
+   "groups": [
+    "植物组"
+   ],
+   "types": [
+    "幻"
+   ],
+   "quality": 2
+  },
+  {
+   "name": "怖须菇",
+   "pet_id_u": "3240",
+   "pet_id": 3240,
+   "no": "129",
+   "season": 0,
+   "stage": 2,
+   "has_shiny": false,
+   "ride": true,
+   "groups": [
+    "植物组"
+   ],
+   "types": [
+    "幻"
+   ],
+   "quality": 2
+  },
+  {
+   "name": "怖哭菇",
+   "pet_id_u": "3241",
+   "pet_id": 3241,
+   "no": "130",
+   "season": 0,
+   "stage": 3,
+   "has_shiny": false,
+   "ride": true,
+   "groups": [
+    "植物组"
+   ],
+   "types": [
+    "幻"
+   ],
+   "quality": 2
+  },
+  {
+   "name": "小电企鹅",
+   "pet_id_u": "3434",
+   "pet_id": 3434,
+   "no": "132",
+   "season": 0,
+   "stage": 1,
+   "has_shiny": false,
+   "ride": false,
+   "groups": [
+    "天空组"
+   ],
+   "types": [
+    "冰",
+    "电"
+   ],
+   "quality": 2
+  },
+  {
+   "name": "电企鹅",
+   "pet_id_u": "3435",
+   "pet_id": 3435,
+   "no": "133",
+   "season": 0,
+   "stage": 2,
+   "has_shiny": false,
+   "ride": false,
+   "groups": [
+    "天空组"
+   ],
+   "types": [
+    "冰",
+    "电"
+   ],
+   "quality": 2
+  },
+  {
+   "name": "雪豆丁",
+   "pet_id_u": "3172",
+   "pet_id": 3172,
+   "no": "134",
+   "season": 0,
+   "stage": 1,
+   "has_shiny": false,
+   "ride": true,
+   "groups": [
+    "拟人组",
+    "巨灵组"
+   ],
+   "types": [
+    "冰"
+   ],
+   "quality": 2
+  },
+  {
+   "name": "雪蛮人",
+   "pet_id_u": "3173",
+   "pet_id": 3173,
+   "no": "135",
+   "season": 0,
+   "stage": 2,
+   "has_shiny": false,
+   "ride": true,
+   "groups": [
+    "拟人组",
+    "巨灵组"
+   ],
+   "types": [
+    "冰"
+   ],
+   "quality": 2
+  },
+  {
+   "name": "雪巨人",
+   "pet_id_u": "3174",
+   "pet_id": 3174,
+   "no": "136",
+   "season": 0,
+   "stage": 3,
+   "has_shiny": false,
+   "ride": true,
+   "groups": [
+    "拟人组",
+    "巨灵组"
+   ],
+   "types": [
+    "冰"
+   ],
+   "quality": 2
+  },
+  {
+   "name": "雪娃娃",
+   "pet_id_u": "3333",
+   "pet_id": 3333,
+   "no": "139",
+   "season": 0,
+   "stage": 1,
+   "has_shiny": false,
+   "ride": false,
+   "groups": [
+    "妖精组"
+   ],
+   "types": [
+    "冰"
+   ],
+   "quality": 2
+  },
+  {
+   "name": "冰封怨灵",
+   "pet_id_u": "3334",
+   "pet_id": 3334,
+   "no": "140",
+   "season": 0,
+   "stage": 2,
+   "has_shiny": false,
+   "ride": false,
+   "groups": [
+    "妖精组"
+   ],
+   "types": [
+    "冰"
+   ],
+   "quality": 2
+  },
+  {
+   "name": "雪灵",
+   "pet_id_u": "3335",
+   "pet_id": 3335,
+   "no": "141",
+   "season": 0,
+   "stage": 3,
+   "has_shiny": false,
+   "ride": false,
+   "groups": [
+    "妖精组"
+   ],
+   "types": [
+    "冰"
+   ],
+   "quality": 2
+  },
+  {
+   "name": "权杖-Ⅱ",
+   "pet_id_u": "3410",
+   "pet_id": 3410,
+   "no": "145",
+   "season": 0,
+   "stage": 1,
+   "has_shiny": false,
+   "ride": false,
+   "groups": [
+    "机械组"
+   ],
+   "types": [
+    "机械"
+   ],
+   "quality": 2
+  },
+  {
+   "name": "权杖-V",
+   "pet_id_u": "3411",
+   "pet_id": 3411,
+   "no": "146",
+   "season": 0,
+   "stage": 2,
+   "has_shiny": false,
+   "ride": false,
+   "groups": [
+    "机械组"
+   ],
+   "types": [
+    "机械"
+   ],
+   "quality": 2
+  },
+  {
+   "name": "里奥",
+   "pet_id_u": "3395",
+   "pet_id": 3395,
+   "no": "150",
+   "season": 0,
+   "stage": 1,
+   "has_shiny": false,
+   "ride": true,
+   "groups": [
+    "未发现"
+   ],
+   "types": [
+    "翼"
+   ],
+   "quality": 2
+  },
+  {
+   "name": "灵羽勇士",
+   "pet_id_u": "3396",
+   "pet_id": 3396,
+   "no": "151",
+   "season": 0,
+   "stage": 2,
+   "has_shiny": false,
+   "ride": true,
+   "groups": [
+    "未发现"
+   ],
+   "types": [
+    "翼"
+   ],
+   "quality": 2
+  },
+  {
+   "name": "圣羽翼王",
+   "pet_id_u": "3397",
+   "pet_id": 3397,
+   "no": "152",
+   "season": 0,
+   "stage": 3,
+   "has_shiny": false,
+   "ride": true,
+   "groups": [
+    "未发现"
+   ],
+   "types": [
+    "翼"
+   ],
+   "quality": 2
+  },
+  {
+   "name": "松仔",
+   "pet_id_u": "3594",
+   "pet_id": 3594,
+   "no": "153",
+   "season": 0,
+   "stage": 1,
+   "has_shiny": false,
+   "ride": true,
+   "groups": [
+    "动物组"
+   ],
+   "types": [
+    "草",
+    "武"
+   ],
+   "quality": 2
+  },
+  {
+   "name": "松叶羊",
+   "pet_id_u": "3595",
+   "pet_id": 3595,
+   "no": "154",
+   "season": 0,
+   "stage": 2,
+   "has_shiny": false,
+   "ride": true,
+   "groups": [
+    "动物组"
+   ],
+   "types": [
+    "草",
+    "武"
+   ],
+   "quality": 2
+  },
+  {
+   "name": "针叶巡林",
+   "pet_id_u": "3596",
+   "pet_id": 3596,
+   "no": "155",
+   "season": 0,
+   "stage": 3,
+   "has_shiny": false,
+   "ride": true,
+   "groups": [
+    "动物组"
+   ],
+   "types": [
+    "草",
+    "武"
+   ],
+   "quality": 2
+  },
+  {
+   "name": "小勇狮",
+   "pet_id_u": "3600",
+   "pet_id": 3600,
+   "no": "156",
+   "season": 0,
+   "stage": 1,
+   "has_shiny": false,
+   "ride": true,
+   "groups": [
+    "动物组"
+   ],
+   "types": [
+    "火",
+    "武"
+   ],
+   "quality": 2
+  },
+  {
+   "name": "炽焰狮",
+   "pet_id_u": "3601",
+   "pet_id": 3601,
+   "no": "157",
+   "season": 0,
+   "stage": 2,
+   "has_shiny": false,
+   "ride": true,
+   "groups": [
+    "动物组"
+   ],
+   "types": [
+    "火",
+    "武"
+   ],
+   "quality": 2
+  },
+  {
+   "name": "炽心勇狮",
+   "pet_id_u": "3602",
+   "pet_id": 3602,
+   "no": "158",
+   "season": 0,
+   "stage": 3,
+   "has_shiny": false,
+   "ride": true,
+   "groups": [
+    "动物组"
+   ],
+   "types": [
+    "火",
+    "武"
+   ],
+   "quality": 2
+  },
+  {
+   "name": "水滴蛇",
+   "pet_id_u": "3597",
+   "pet_id": 3597,
+   "no": "159",
+   "season": 0,
+   "stage": 1,
+   "has_shiny": false,
+   "ride": true,
+   "groups": [
+    "两栖组",
+    "妖精组"
+   ],
+   "types": [
+    "水",
+    "武"
+   ],
+   "quality": 2
+  },
+  {
+   "name": "水蛇锁",
+   "pet_id_u": "3598",
+   "pet_id": 3598,
+   "no": "160",
+   "season": 0,
+   "stage": 2,
+   "has_shiny": false,
+   "ride": true,
+   "groups": [
+    "两栖组",
+    "妖精组"
+   ],
+   "types": [
+    "水",
+    "武"
+   ],
+   "quality": 2
+  },
+  {
+   "name": "游蛇魔使",
+   "pet_id_u": "3599",
+   "pet_id": 3599,
+   "no": "161",
+   "season": 0,
+   "stage": 3,
+   "has_shiny": false,
+   "ride": true,
+   "groups": [
+    "两栖组",
+    "妖精组"
+   ],
+   "types": [
+    "水",
+    "武"
+   ],
+   "quality": 2
+  },
+  {
+   "name": "公平鸽",
+   "pet_id_u": "3872",
+   "pet_id": 3872,
+   "no": "162",
+   "season": 0,
+   "stage": 1,
+   "has_shiny": false,
+   "ride": false,
+   "groups": [
+    "天空组"
+   ],
+   "types": [
+    "普通"
+   ],
+   "quality": 2
+  },
+  {
+   "name": "小怂猫",
+   "pet_id_u": "3237",
+   "pet_id": 3237,
+   "no": "163",
+   "season": 0,
+   "stage": 1,
+   "has_shiny": false,
+   "ride": true,
+   "groups": [
+    "动物组",
+    "拟人组"
+   ],
+   "types": [
+    "武"
+   ],
+   "quality": 2
+  },
+  {
+   "name": "怒目怂猫",
+   "pet_id_u": "3238",
+   "pet_id": 3238,
+   "no": "164",
+   "season": 0,
+   "stage": 2,
+   "has_shiny": false,
+   "ride": true,
+   "groups": [
+    "动物组",
+    "拟人组"
+   ],
+   "types": [
+    "武"
+   ],
+   "quality": 2
+  },
+  {
+   "name": "小狮鹫",
+   "pet_id_u": "3127",
+   "pet_id": 3127,
+   "no": "165",
+   "season": 0,
+   "stage": 1,
+   "has_shiny": false,
+   "ride": true,
+   "groups": [
+    "动物组",
+    "天空组"
+   ],
+   "types": [
+    "翼"
+   ],
+   "quality": 2
+  },
+  {
+   "name": "小狮鹫",
+   "pet_id_u": "3467",
+   "pet_id": 3467,
+   "no": "165",
+   "season": 0,
+   "stage": 1,
+   "has_shiny": false,
+   "ride": true,
+   "groups": [
+    "动物组",
+    "天空组"
+   ],
+   "types": [
+    "翼"
+   ],
+   "quality": 2
+  },
+  {
+   "name": "神圣狮鹫",
+   "pet_id_u": "3128",
+   "pet_id": 3128,
+   "no": "166",
+   "season": 0,
+   "stage": 2,
+   "has_shiny": false,
+   "ride": true,
+   "groups": [
+    "动物组",
+    "天空组"
+   ],
+   "types": [
+    "翼"
+   ],
+   "quality": 2
+  },
+  {
+   "name": "神圣狮鹫",
+   "pet_id_u": "3468",
+   "pet_id": 3468,
+   "no": "166",
+   "season": 0,
+   "stage": 2,
+   "has_shiny": false,
+   "ride": true,
+   "groups": [
+    "动物组",
+    "天空组"
+   ],
+   "types": [
+    "翼"
+   ],
+   "quality": 2
+  },
+  {
+   "name": "皇家狮鹫",
+   "pet_id_u": "3129",
+   "pet_id": 3129,
+   "no": "167",
+   "season": 0,
+   "stage": 3,
+   "has_shiny": false,
+   "ride": true,
+   "groups": [
+    "动物组",
+    "天空组"
+   ],
+   "types": [
+    "翼"
+   ],
+   "quality": 2
+  },
+  {
+   "name": "皇家狮鹫",
+   "pet_id_u": "3469",
+   "pet_id": 3469,
+   "no": "167",
+   "season": 0,
+   "stage": 3,
+   "has_shiny": false,
+   "ride": true,
+   "groups": [
+    "动物组",
+    "天空组"
+   ],
+   "types": [
+    "翼"
+   ],
+   "quality": 2
+  },
+  {
+   "name": "圆眼蜘蛛",
+   "pet_id_u": "3130",
+   "pet_id": 3130,
+   "no": "168",
+   "season": 0,
+   "stage": 1,
+   "has_shiny": false,
+   "ride": false,
+   "groups": [
+    "昆虫组"
+   ],
+   "types": [
+    "虫"
+   ],
+   "quality": 2
+  },
+  {
+   "name": "尖角蜘蛛",
+   "pet_id_u": "3131",
+   "pet_id": 3131,
+   "no": "169",
+   "season": 0,
+   "stage": 2,
+   "has_shiny": false,
+   "ride": false,
+   "groups": [
+    "昆虫组"
+   ],
+   "types": [
+    "虫",
+    "毒"
+   ],
+   "quality": 2
+  },
+  {
+   "name": "芋香巨角蛛",
+   "pet_id_u": "3132",
+   "pet_id": 3132,
+   "no": "170",
+   "season": 0,
+   "stage": 3,
+   "has_shiny": false,
+   "ride": false,
+   "groups": [
+    "昆虫组"
+   ],
+   "types": [
+    "虫",
+    "毒"
+   ],
+   "quality": 2
+  },
+  {
+   "name": "波波螺",
+   "pet_id_u": "3508",
+   "pet_id": 3508,
+   "no": "171",
+   "season": 0,
+   "stage": 1,
+   "has_shiny": false,
+   "ride": true,
+   "groups": [
+    "两栖组",
+    "岩石组"
+   ],
+   "types": [
+    "地",
+    "水"
+   ],
+   "quality": 2
+  },
+  {
+   "name": "波波螺",
+   "pet_id_u": "3511",
+   "pet_id": 3511,
+   "no": "171",
+   "season": 0,
+   "stage": 1,
+   "has_shiny": false,
+   "ride": false,
+   "groups": [
+    "两栖组",
+    "岩石组"
+   ],
+   "types": [
+    "地",
+    "水"
+   ],
+   "quality": 2
+  },
+  {
+   "name": "消波螺",
+   "pet_id_u": "3509",
+   "pet_id": 3509,
+   "no": "172",
+   "season": 0,
+   "stage": 2,
+   "has_shiny": false,
+   "ride": true,
+   "groups": [
+    "两栖组",
+    "岩石组"
+   ],
+   "types": [
+    "地",
+    "水"
+   ],
+   "quality": 2
+  },
+  {
+   "name": "消波螺",
+   "pet_id_u": "3512",
+   "pet_id": 3512,
+   "no": "172",
+   "season": 0,
+   "stage": 2,
+   "has_shiny": false,
+   "ride": false,
+   "groups": [
+    "两栖组",
+    "岩石组"
+   ],
+   "types": [
+    "地",
+    "水"
+   ],
+   "quality": 2
+  },
+  {
+   "name": "嗜波螺",
+   "pet_id_u": "3510",
+   "pet_id": 3510,
+   "no": "173",
+   "season": 0,
+   "stage": 3,
+   "has_shiny": false,
+   "ride": true,
+   "groups": [
+    "两栖组",
+    "岩石组"
+   ],
+   "types": [
+    "地",
+    "水"
+   ],
+   "quality": 2
+  },
+  {
+   "name": "嗜波螺",
+   "pet_id_u": "3513",
+   "pet_id": 3513,
+   "no": "173",
+   "season": 0,
+   "stage": 3,
+   "has_shiny": false,
+   "ride": false,
+   "groups": [
+    "两栖组",
+    "岩石组"
+   ],
+   "types": [
+    "地",
+    "水"
+   ],
+   "quality": 2
+  },
+  {
+   "name": "菇菇丁",
+   "pet_id_u": "3378",
+   "pet_id": 3378,
+   "no": "174",
+   "season": 0,
+   "stage": 1,
+   "has_shiny": false,
+   "ride": true,
+   "groups": [
+    "植物组"
+   ],
+   "types": [
+    "地",
+    "草"
+   ],
+   "quality": 2
+  },
+  {
+   "name": "多菇丁",
+   "pet_id_u": "3379",
+   "pet_id": 3379,
+   "no": "175",
+   "season": 0,
+   "stage": 2,
+   "has_shiny": false,
+   "ride": true,
+   "groups": [
+    "植物组"
+   ],
+   "types": [
+    "地",
+    "草"
+   ],
+   "quality": 2
+  },
+  {
+   "name": "九幽菇",
+   "pet_id_u": "3380",
+   "pet_id": 3380,
+   "no": "176",
+   "season": 0,
+   "stage": 3,
+   "has_shiny": false,
+   "ride": true,
+   "groups": [
+    "植物组"
+   ],
+   "types": [
+    "地",
+    "草"
+   ],
+   "quality": 2
+  },
+  {
+   "name": "草头鸭",
+   "pet_id_u": "3008",
+   "pet_id": 3008,
+   "no": "179",
+   "season": 0,
+   "stage": 1,
+   "has_shiny": false,
+   "ride": false,
+   "groups": [
+    "两栖组",
+    "天空组"
+   ],
+   "types": [
+    "草"
+   ],
+   "quality": 2
+  },
+  {
+   "name": "卷毛鸭",
+   "pet_id_u": "3067",
+   "pet_id": 3067,
+   "no": "180",
+   "season": 0,
+   "stage": 2,
+   "has_shiny": false,
+   "ride": false,
+   "groups": [
+    "两栖组",
+    "天空组"
+   ],
+   "types": [
+    "草",
+    "武"
+   ],
+   "quality": 2
+  },
+  {
+   "name": "海豹战士",
+   "pet_id_u": "3215",
+   "pet_id": 3215,
+   "no": "181",
+   "season": 0,
+   "stage": 1,
+   "has_shiny": false,
+   "ride": false,
+   "groups": [
+    "动物组",
+    "两栖组"
+   ],
+   "types": [
+    "武",
+    "水"
+   ],
+   "quality": 2
+  },
+  {
+   "name": "海豹船长",
+   "pet_id_u": "3216",
+   "pet_id": 3216,
+   "no": "182",
+   "season": 0,
+   "stage": 2,
+   "has_shiny": false,
+   "ride": false,
+   "groups": [
+    "动物组",
+    "两栖组"
+   ],
+   "types": [
+    "武",
+    "水"
+   ],
+   "quality": 2
+  },
+  {
+   "name": "号儿鱼",
+   "pet_id_u": "3529",
+   "pet_id": 3529,
+   "no": "183",
+   "season": 0,
+   "stage": 1,
+   "has_shiny": false,
+   "ride": false,
+   "groups": [
+    "海洋组",
+    "妖精组"
+   ],
+   "types": [
+    "水"
+   ],
+   "quality": 2
+  },
+  {
+   "name": "圆号鱼",
+   "pet_id_u": "3530",
+   "pet_id": 3530,
+   "no": "184",
+   "season": 0,
+   "stage": 2,
+   "has_shiny": false,
+   "ride": false,
+   "groups": [
+    "海洋组",
+    "妖精组"
+   ],
+   "types": [
+    "水"
+   ],
+   "quality": 2
+  },
+  {
+   "name": "甜田螺",
+   "pet_id_u": "3112",
+   "pet_id": 3112,
+   "no": "185",
+   "season": 0,
+   "stage": 1,
+   "has_shiny": false,
+   "ride": false,
+   "groups": [
+    "妖精组",
+    "软体组"
+   ],
+   "types": [
+    "水",
+    "萌"
+   ],
+   "quality": 2
+  },
+  {
+   "name": "壳乙螺",
+   "pet_id_u": "3113",
+   "pet_id": 3113,
+   "no": "186",
+   "season": 0,
+   "stage": 2,
+   "has_shiny": false,
+   "ride": false,
+   "groups": [
+    "妖精组",
+    "软体组"
+   ],
+   "types": [
+    "水",
+    "萌"
+   ],
+   "quality": 2
+  },
+  {
+   "name": "卡洛儿",
+   "pet_id_u": "3114",
+   "pet_id": 3114,
+   "no": "187",
+   "season": 0,
+   "stage": 3,
+   "has_shiny": false,
+   "ride": false,
+   "groups": [
+    "妖精组",
+    "软体组"
+   ],
+   "types": [
+    "水",
+    "萌"
+   ],
+   "quality": 2
+  },
+  {
+   "name": "棋棋",
+   "pet_id_u": "3550",
+   "pet_id": 3550,
+   "no": "188",
+   "season": 0,
+   "stage": 1,
+   "has_shiny": false,
+   "ride": true,
+   "groups": [
+    "妖精组"
+   ],
+   "types": [
+    "武",
+    "地"
+   ],
+   "quality": 2
+  },
+  {
+   "name": "棋棋",
+   "pet_id_u": "3555",
+   "pet_id": 3555,
+   "no": "188",
+   "season": 0,
+   "stage": 1,
+   "has_shiny": false,
+   "ride": true,
+   "groups": [
+    "妖精组"
+   ],
+   "types": [
+    "武",
+    "地"
+   ],
+   "quality": 2
+  },
+  {
+   "name": "棋契陛下",
+   "pet_id_u": "4086",
+   "pet_id": 4086,
+   "no": "189",
+   "season": 0,
+   "stage": 3,
+   "has_shiny": false,
+   "ride": false,
+   "groups": [],
+   "types": [
+    "武",
+    "地"
+   ],
+   "quality": 2
+  },
+  {
+   "name": "棋契陛下",
+   "pet_id_u": "5023",
+   "pet_id": 5023,
+   "no": "189",
+   "season": 0,
+   "stage": 4,
+   "has_shiny": false,
+   "ride": false,
+   "groups": [
+    "妖精组"
+   ],
+   "types": [
+    "武",
+    "地"
+   ],
+   "quality": 2
+  },
+  {
+   "name": "棋契陛下",
+   "pet_id_u": "5043",
+   "pet_id": 5043,
+   "no": "189",
+   "season": 0,
+   "stage": 4,
+   "has_shiny": false,
+   "ride": false,
+   "groups": [
+    "妖精组"
+   ],
+   "types": [
+    "武",
+    "地"
+   ],
+   "quality": 2
+  },
+  {
+   "name": "棋骑士",
+   "pet_id_u": "3551",
+   "pet_id": 3551,
+   "no": "189",
+   "season": 0,
+   "stage": 2,
+   "has_shiny": false,
+   "ride": true,
+   "groups": [
+    "妖精组"
+   ],
+   "types": [
+    "武",
+    "地"
+   ],
+   "quality": 2
+  },
+  {
+   "name": "棋骑士",
+   "pet_id_u": "3556",
+   "pet_id": 3556,
+   "no": "189",
+   "season": 0,
+   "stage": 2,
+   "has_shiny": false,
+   "ride": true,
+   "groups": [
+    "妖精组"
+   ],
+   "types": [
+    "武",
+    "地"
+   ],
+   "quality": 2
+  },
+  {
+   "name": "棋契陛下",
+   "pet_id_u": "5041",
+   "pet_id": 5041,
+   "no": "190",
+   "season": 0,
+   "stage": 4,
+   "has_shiny": false,
+   "ride": false,
+   "groups": [
+    "妖精组"
+   ],
+   "types": [
+    "武",
+    "地"
+   ],
+   "quality": 2
+  },
+  {
+   "name": "棋契陛下",
+   "pet_id_u": "5045",
+   "pet_id": 5045,
+   "no": "190",
+   "season": 0,
+   "stage": 4,
+   "has_shiny": false,
+   "ride": false,
+   "groups": [
+    "妖精组"
+   ],
+   "types": [
+    "武",
+    "地"
+   ],
+   "quality": 2
+  },
+  {
+   "name": "棋齐垒",
+   "pet_id_u": "3553",
+   "pet_id": 3553,
+   "no": "190",
+   "season": 0,
+   "stage": 2,
+   "has_shiny": false,
+   "ride": true,
+   "groups": [
+    "妖精组"
+   ],
+   "types": [
+    "武",
+    "地"
+   ],
+   "quality": 2
+  },
+  {
+   "name": "棋齐垒",
+   "pet_id_u": "3558",
+   "pet_id": 3558,
+   "no": "190",
+   "season": 0,
+   "stage": 2,
+   "has_shiny": false,
+   "ride": true,
+   "groups": [
+    "妖精组"
+   ],
+   "types": [
+    "武",
+    "地"
+   ],
+   "quality": 2
+  },
+  {
+   "name": "棋契陛下",
+   "pet_id_u": "5042",
+   "pet_id": 5042,
+   "no": "191",
+   "season": 0,
+   "stage": 4,
+   "has_shiny": false,
+   "ride": false,
+   "groups": [
+    "妖精组"
+   ],
+   "types": [
+    "武",
+    "地"
+   ],
+   "quality": 2
+  },
+  {
+   "name": "棋契陛下",
+   "pet_id_u": "5046",
+   "pet_id": 5046,
+   "no": "191",
+   "season": 0,
+   "stage": 4,
+   "has_shiny": false,
+   "ride": false,
+   "groups": [
+    "妖精组"
+   ],
+   "types": [
+    "武",
+    "地"
+   ],
+   "quality": 2
+  },
+  {
+   "name": "棋祈督",
+   "pet_id_u": "3554",
+   "pet_id": 3554,
+   "no": "191",
+   "season": 0,
+   "stage": 2,
+   "has_shiny": false,
+   "ride": true,
+   "groups": [
+    "妖精组"
+   ],
+   "types": [
+    "武",
+    "地"
+   ],
+   "quality": 2
+  },
+  {
+   "name": "棋祈督",
+   "pet_id_u": "3559",
+   "pet_id": 3559,
+   "no": "191",
+   "season": 0,
+   "stage": 2,
+   "has_shiny": false,
+   "ride": true,
+   "groups": [
+    "妖精组"
+   ],
+   "types": [
+    "武",
+    "地"
+   ],
+   "quality": 2
+  },
+  {
+   "name": "棋契陛下",
+   "pet_id_u": "5040",
+   "pet_id": 5040,
+   "no": "192",
+   "season": 0,
+   "stage": 4,
+   "has_shiny": false,
+   "ride": false,
+   "groups": [
+    "妖精组"
+   ],
+   "types": [
+    "武",
+    "地"
+   ],
+   "quality": 2
+  },
+  {
+   "name": "棋契陛下",
+   "pet_id_u": "5044",
+   "pet_id": 5044,
+   "no": "192",
+   "season": 0,
+   "stage": 4,
+   "has_shiny": false,
+   "ride": false,
+   "groups": [
+    "妖精组"
+   ],
+   "types": [
+    "武",
+    "地"
+   ],
+   "quality": 2
+  },
+  {
+   "name": "棋绮后",
+   "pet_id_u": "3552",
+   "pet_id": 3552,
+   "no": "192",
+   "season": 0,
+   "stage": 2,
+   "has_shiny": false,
+   "ride": true,
+   "groups": [
+    "妖精组"
+   ],
+   "types": [
+    "武",
+    "地"
+   ],
+   "quality": 2
+  },
+  {
+   "name": "棋绮后",
+   "pet_id_u": "3557",
+   "pet_id": 3557,
+   "no": "192",
+   "season": 0,
+   "stage": 2,
+   "has_shiny": false,
+   "ride": true,
+   "groups": [
+    "妖精组"
+   ],
+   "types": [
+    "武",
+    "地"
+   ],
+   "quality": 2
+  },
+  {
+   "name": "奔波鼠",
+   "pet_id_u": "3255",
+   "pet_id": 3255,
+   "no": "193",
+   "season": 0,
+   "stage": 1,
+   "has_shiny": false,
+   "ride": false,
+   "groups": [
+    "动物组",
+    "拟人组"
+   ],
+   "types": [
+    "地"
+   ],
+   "quality": 2
+  },
+  {
+   "name": "奔波鼠",
+   "pet_id_u": "3873",
+   "pet_id": 3873,
+   "no": "193",
+   "season": 0,
+   "stage": 1,
+   "has_shiny": false,
+   "ride": false,
+   "groups": [
+    "动物组",
+    "拟人组"
+   ],
+   "types": [
+    "地"
+   ],
+   "quality": 2
+  },
+  {
+   "name": "流浪鼠",
+   "pet_id_u": "3256",
+   "pet_id": 3256,
+   "no": "194",
+   "season": 0,
+   "stage": 2,
+   "has_shiny": false,
+   "ride": false,
+   "groups": [
+    "动物组",
+    "拟人组"
+   ],
+   "types": [
+    "地"
+   ],
+   "quality": 2
+  },
+  {
+   "name": "流浪鼠",
+   "pet_id_u": "3874",
+   "pet_id": 3874,
+   "no": "194",
+   "season": 0,
+   "stage": 2,
+   "has_shiny": false,
+   "ride": false,
+   "groups": [
+    "动物组",
+    "拟人组"
+   ],
+   "types": [
+    "地"
+   ],
+   "quality": 2
+  },
+  {
+   "name": "呆小路",
+   "pet_id_u": "3093",
+   "pet_id": 3093,
+   "no": "195",
+   "season": 0,
+   "stage": 1,
+   "has_shiny": false,
+   "ride": false,
+   "groups": [
+    "动物组",
+    "拟人组"
+   ],
+   "types": [
+    "草",
+    "萌"
+   ],
+   "quality": 2
+  },
+  {
+   "name": "舞动路路",
+   "pet_id_u": "3094",
+   "pet_id": 3094,
+   "no": "196",
+   "season": 0,
+   "stage": 2,
+   "has_shiny": false,
+   "ride": false,
+   "groups": [
+    "动物组",
+    "拟人组"
+   ],
+   "types": [
+    "草",
+    "萌"
+   ],
+   "quality": 2
+  },
+  {
+   "name": "白发路路",
+   "pet_id_u": "3095",
+   "pet_id": 3095,
+   "no": "197",
+   "season": 0,
+   "stage": 3,
+   "has_shiny": false,
+   "ride": false,
+   "groups": [
+    "动物组",
+    "拟人组"
+   ],
+   "types": [
+    "草",
+    "萌"
+   ],
+   "quality": 2
+  },
+  {
+   "name": "花怨鳗",
+   "pet_id_u": "3875",
+   "pet_id": 3875,
+   "no": "201",
+   "season": 0,
+   "stage": 1,
+   "has_shiny": false,
+   "ride": false,
+   "groups": [
+    "海洋组",
+    "两栖组"
+   ],
+   "types": [
+    "地",
+    "草"
+   ],
+   "quality": 2
+  },
+  {
+   "name": "鳗尾兽",
+   "pet_id_u": "3876",
+   "pet_id": 3876,
+   "no": "202",
+   "season": 0,
+   "stage": 2,
+   "has_shiny": false,
+   "ride": false,
+   "groups": [
+    "海洋组",
+    "两栖组"
+   ],
+   "types": [
+    "地",
+    "草"
+   ],
+   "quality": 2
+  },
+  {
+   "name": "风暴酷拉",
+   "pet_id_u": "13000171",
+   "pet_id": 13000171,
+   "no": "206",
+   "season": 0,
+   "stage": 3,
+   "has_shiny": true,
+   "ride": false,
+   "groups": [],
+   "types": [
+    "电"
+   ],
+   "quality": 2
+  },
+  {
+   "name": "闪电环",
+   "pet_id_u": "3195",
+   "pet_id": 3195,
+   "no": "207",
+   "season": 0,
+   "stage": 1,
+   "has_shiny": false,
+   "ride": false,
+   "groups": [
+    "魔力组"
+   ],
+   "types": [
+    "电"
+   ],
+   "quality": 2
+  },
+  {
+   "name": "刺电环",
+   "pet_id_u": "3196",
+   "pet_id": 3196,
+   "no": "208",
+   "season": 0,
+   "stage": 2,
+   "has_shiny": false,
+   "ride": false,
+   "groups": [
+    "魔力组"
+   ],
+   "types": [
+    "电"
+   ],
+   "quality": 2
+  },
+  {
+   "name": "荆棘电环",
+   "pet_id_u": "3197",
+   "pet_id": 3197,
+   "no": "209",
+   "season": 0,
+   "stage": 3,
+   "has_shiny": false,
+   "ride": false,
+   "groups": [
+    "魔力组"
+   ],
+   "types": [
+    "电"
+   ],
+   "quality": 2
+  },
+  {
+   "name": "小箱怪",
+   "pet_id_u": "3618",
+   "pet_id": 3618,
+   "no": "210",
+   "season": 0,
+   "stage": 1,
+   "has_shiny": false,
+   "ride": true,
+   "groups": [
+    "机械组",
+    "妖精组"
+   ],
+   "types": [
+    "机械",
+    "幻"
+   ],
+   "quality": 2
+  },
+  {
+   "name": "迷迷箱怪",
+   "pet_id_u": "3619",
+   "pet_id": 3619,
+   "no": "211",
+   "season": 0,
+   "stage": 2,
+   "has_shiny": false,
+   "ride": true,
+   "groups": [
+    "机械组",
+    "妖精组"
+   ],
+   "types": [
+    "机械",
+    "幻"
+   ],
+   "quality": 2
+  },
+  {
+   "name": "古钟蛇",
+   "pet_id_u": "3225",
+   "pet_id": 3225,
+   "no": "212",
+   "season": 0,
+   "stage": 1,
+   "has_shiny": false,
+   "ride": true,
+   "groups": [
+    "动物组",
+    "两栖组"
+   ],
+   "types": [
+    "萌",
+    "毒"
+   ],
+   "quality": 2
+  },
+  {
+   "name": "寒音蛇",
+   "pet_id_u": "3226",
+   "pet_id": 3226,
+   "no": "213",
+   "season": 0,
+   "stage": 2,
+   "has_shiny": false,
+   "ride": true,
+   "groups": [
+    "动物组",
+    "两栖组"
+   ],
+   "types": [
+    "萌",
+    "毒"
+   ],
+   "quality": 2
+  },
+  {
+   "name": "矮脚爬爬",
+   "pet_id_u": "3178",
+   "pet_id": 3178,
+   "no": "214",
+   "season": 0,
+   "stage": 1,
+   "has_shiny": false,
+   "ride": true,
+   "groups": [
+    "昆虫组",
+    "巨灵组"
+   ],
+   "types": [
+    "虫"
+   ],
+   "quality": 2
+  },
+  {
+   "name": "恶魔红钻",
+   "pet_id_u": "3179",
+   "pet_id": 3179,
+   "no": "215",
+   "season": 0,
+   "stage": 2,
+   "has_shiny": false,
+   "ride": true,
+   "groups": [
+    "昆虫组",
+    "巨灵组"
+   ],
+   "types": [
+    "虫",
+    "恶"
+   ],
+   "quality": 2
+  },
+  {
+   "name": "火尾瓦特",
+   "pet_id_u": "3090",
+   "pet_id": 3090,
+   "no": "216",
+   "season": 0,
+   "stage": 1,
+   "has_shiny": false,
+   "ride": false,
+   "groups": [
+    "巨灵组"
+   ],
+   "types": [
+    "火"
+   ],
+   "quality": 2
+  },
+  {
+   "name": "火尾战士",
+   "pet_id_u": "3091",
+   "pet_id": 3091,
+   "no": "217",
+   "season": 0,
+   "stage": 2,
+   "has_shiny": false,
+   "ride": false,
+   "groups": [
+    "巨灵组"
+   ],
+   "types": [
+    "火"
+   ],
+   "quality": 2
+  },
+  {
+   "name": "烈火守护",
+   "pet_id_u": "3092",
+   "pet_id": 3092,
+   "no": "218",
+   "season": 0,
+   "stage": 3,
+   "has_shiny": false,
+   "ride": false,
+   "groups": [
+    "巨灵组"
+   ],
+   "types": [
+    "火"
+   ],
+   "quality": 2
+  },
+  {
+   "name": "烈焰狂战士",
+   "pet_id_u": "5063",
+   "pet_id": 5063,
+   "no": "218",
+   "season": 0,
+   "stage": 4,
+   "has_shiny": false,
+   "ride": false,
+   "groups": [
+    "巨灵组"
+   ],
+   "types": [
+    "火"
+   ],
+   "quality": 2
+  },
+  {
+   "name": "烈焰狂战士",
+   "pet_id_u": "13000174",
+   "pet_id": 13000174,
+   "no": "218",
+   "season": 0,
+   "stage": 4,
+   "has_shiny": false,
+   "ride": false,
+   "groups": [],
+   "types": [
+    "火"
+   ],
+   "quality": 2
+  },
+  {
+   "name": "里拉鳐",
+   "pet_id_u": "3521",
+   "pet_id": 3521,
+   "no": "219",
+   "season": 0,
+   "stage": 1,
+   "has_shiny": false,
+   "ride": false,
+   "groups": [
+    "海洋组",
+    "妖精组"
+   ],
+   "types": [
+    "水"
+   ],
+   "quality": 2
+  },
+  {
+   "name": "海枝枝",
+   "pet_id_u": "3430",
+   "pet_id": 3430,
+   "no": "220",
+   "season": 0,
+   "stage": 1,
+   "has_shiny": false,
+   "ride": false,
+   "groups": [
+    "海洋组",
+    "植物组"
+   ],
+   "types": [
+    "水",
+    "幽"
+   ],
+   "quality": 2
+  },
+  {
+   "name": "海枝枝",
+   "pet_id_u": "3431",
+   "pet_id": 3431,
+   "no": "220",
+   "season": 0,
+   "stage": 1,
+   "has_shiny": false,
+   "ride": false,
+   "groups": [
+    "海洋组",
+    "植物组"
+   ],
+   "types": [
+    "水",
+    "幽"
+   ],
+   "quality": 2
+  },
+  {
+   "name": "海枝枝",
+   "pet_id_u": "3432",
+   "pet_id": 3432,
+   "no": "220",
+   "season": 0,
+   "stage": 1,
+   "has_shiny": false,
+   "ride": false,
+   "groups": [
+    "海洋组",
+    "植物组"
+   ],
+   "types": [
+    "水",
+    "幽"
+   ],
+   "quality": 2
+  },
+  {
+   "name": "海枝枝",
+   "pet_id_u": "3433",
+   "pet_id": 3433,
+   "no": "220",
+   "season": 0,
+   "stage": 1,
+   "has_shiny": false,
+   "ride": false,
+   "groups": [
+    "海洋组",
+    "植物组"
+   ],
+   "types": [
+    "水",
+    "幽"
+   ],
+   "quality": 2
+  },
+  {
+   "name": "多西",
+   "pet_id_u": "3206",
+   "pet_id": 3206,
+   "no": "221",
+   "season": 0,
+   "stage": 1,
+   "has_shiny": false,
+   "ride": true,
+   "groups": [
+    "机械组",
+    "巨灵组"
+   ],
+   "types": [
+    "机械",
+    "地"
+   ],
+   "quality": 2
+  },
+  {
+   "name": "库多西",
+   "pet_id_u": "3207",
+   "pet_id": 3207,
+   "no": "222",
+   "season": 0,
+   "stage": 2,
+   "has_shiny": false,
+   "ride": true,
+   "groups": [
+    "机械组",
+    "巨灵组"
+   ],
+   "types": [
+    "机械",
+    "地"
+   ],
+   "quality": 2
+  },
+  {
+   "name": "波多西",
+   "pet_id_u": "3208",
+   "pet_id": 3208,
+   "no": "223",
+   "season": 0,
+   "stage": 3,
+   "has_shiny": false,
+   "ride": true,
+   "groups": [
+    "机械组",
+    "巨灵组"
+   ],
+   "types": [
+    "机械",
+    "地"
+   ],
+   "quality": 2
+  },
+  {
+   "name": "电动长颈鹿",
+   "pet_id_u": "3357",
+   "pet_id": 3357,
+   "no": "226",
+   "season": 0,
+   "stage": 1,
+   "has_shiny": false,
+   "ride": true,
+   "groups": [
+    "动物组"
+   ],
+   "types": [
+    "电"
+   ],
+   "quality": 2
+  },
+  {
+   "name": "奔乐鹿",
+   "pet_id_u": "3358",
+   "pet_id": 3358,
+   "no": "227",
+   "season": 0,
+   "stage": 2,
+   "has_shiny": false,
+   "ride": true,
+   "groups": [
+    "动物组"
+   ],
+   "types": [
+    "电"
+   ],
+   "quality": 2
+  },
+  {
+   "name": "波普鹿",
+   "pet_id_u": "4088",
+   "pet_id": 4088,
+   "no": "228",
+   "season": 0,
+   "stage": 3,
+   "has_shiny": false,
+   "ride": false,
+   "groups": [],
+   "types": [
+    "电"
+   ],
+   "quality": 2
+  },
+  {
+   "name": "波普鹿",
+   "pet_id_u": "5020",
+   "pet_id": 5020,
+   "no": "228",
+   "season": 0,
+   "stage": 4,
+   "has_shiny": false,
+   "ride": false,
+   "groups": [
+    "动物组"
+   ],
+   "types": [
+    "电"
+   ],
+   "quality": 2
+  },
+  {
+   "name": "爵士鹿",
+   "pet_id_u": "3359",
+   "pet_id": 3359,
+   "no": "228",
+   "season": 0,
+   "stage": 3,
+   "has_shiny": false,
+   "ride": true,
+   "groups": [
+    "动物组"
+   ],
+   "types": [
+    "电"
+   ],
+   "quality": 2
+  },
+  {
+   "name": "高帽鹬者",
+   "pet_id_u": "13000170",
+   "pet_id": 13000170,
+   "no": "233",
+   "season": 0,
+   "stage": 3,
+   "has_shiny": true,
+   "ride": false,
+   "groups": [],
+   "types": [
+    "翼"
+   ],
+   "quality": 2
+  },
+  {
+   "name": "脆筒甜甜",
+   "pet_id_u": "3124",
+   "pet_id": 3124,
+   "no": "234",
+   "season": 0,
+   "stage": 1,
+   "has_shiny": false,
+   "ride": false,
+   "groups": [
+    "软体组",
+    "魔力组"
+   ],
+   "types": [
+    "冰"
+   ],
+   "quality": 2
+  },
+  {
+   "name": "香草甜甜",
+   "pet_id_u": "3125",
+   "pet_id": 3125,
+   "no": "235",
+   "season": 0,
+   "stage": 2,
+   "has_shiny": false,
+   "ride": false,
+   "groups": [
+    "软体组",
+    "魔力组"
+   ],
+   "types": [
+    "冰"
+   ],
+   "quality": 2
+  },
+  {
+   "name": "香草甜甜",
+   "pet_id_u": "3478",
+   "pet_id": 3478,
+   "no": "235",
+   "season": 0,
+   "stage": 2,
+   "has_shiny": false,
+   "ride": false,
+   "groups": [
+    "软体组",
+    "魔力组"
+   ],
+   "types": [
+    "冰"
+   ],
+   "quality": 2
+  },
+  {
+   "name": "香草甜甜",
+   "pet_id_u": "3479",
+   "pet_id": 3479,
+   "no": "235",
+   "season": 0,
+   "stage": 2,
+   "has_shiny": false,
+   "ride": false,
+   "groups": [
+    "软体组",
+    "魔力组"
+   ],
+   "types": [
+    "冰"
+   ],
+   "quality": 2
+  },
+  {
+   "name": "圣代甜甜",
+   "pet_id_u": "3126",
+   "pet_id": 3126,
+   "no": "236",
+   "season": 0,
+   "stage": 3,
+   "has_shiny": false,
+   "ride": false,
+   "groups": [
+    "软体组",
+    "魔力组"
+   ],
+   "types": [
+    "冰"
+   ],
+   "quality": 2
+  },
+  {
+   "name": "圣代甜甜",
+   "pet_id_u": "3458",
+   "pet_id": 3458,
+   "no": "236",
+   "season": 0,
+   "stage": 3,
+   "has_shiny": false,
+   "ride": false,
+   "groups": [
+    "软体组",
+    "魔力组"
+   ],
+   "types": [
+    "冰"
+   ],
+   "quality": 2
+  },
+  {
+   "name": "圣代甜甜",
+   "pet_id_u": "3459",
+   "pet_id": 3459,
+   "no": "236",
+   "season": 0,
+   "stage": 3,
+   "has_shiny": false,
+   "ride": false,
+   "groups": [
+    "软体组",
+    "魔力组"
+   ],
+   "types": [
+    "冰"
+   ],
+   "quality": 2
+  },
+  {
+   "name": "圣代甜甜",
+   "pet_id_u": "3460",
+   "pet_id": 3460,
+   "no": "236",
+   "season": 0,
+   "stage": 3,
+   "has_shiny": false,
+   "ride": false,
+   "groups": [
+    "软体组",
+    "魔力组"
+   ],
+   "types": [
+    "冰"
+   ],
+   "quality": 2
+  },
+  {
+   "name": "圣代甜甜",
+   "pet_id_u": "3461",
+   "pet_id": 3461,
+   "no": "236",
+   "season": 0,
+   "stage": 3,
+   "has_shiny": false,
+   "ride": false,
+   "groups": [
+    "软体组",
+    "魔力组"
+   ],
+   "types": [
+    "冰"
+   ],
+   "quality": 2
+  },
+  {
+   "name": "圣代甜甜",
+   "pet_id_u": "3462",
+   "pet_id": 3462,
+   "no": "236",
+   "season": 0,
+   "stage": 3,
+   "has_shiny": false,
+   "ride": false,
+   "groups": [
+    "软体组",
+    "魔力组"
+   ],
+   "types": [
+    "冰"
+   ],
+   "quality": 2
+  },
+  {
+   "name": "圣代甜甜",
+   "pet_id_u": "3463",
+   "pet_id": 3463,
+   "no": "236",
+   "season": 0,
+   "stage": 3,
+   "has_shiny": false,
+   "ride": false,
+   "groups": [
+    "软体组",
+    "魔力组"
+   ],
+   "types": [
+    "冰"
+   ],
+   "quality": 2
+  },
+  {
+   "name": "圣代甜甜",
+   "pet_id_u": "3464",
+   "pet_id": 3464,
+   "no": "236",
+   "season": 0,
+   "stage": 3,
+   "has_shiny": false,
+   "ride": false,
+   "groups": [
+    "软体组",
+    "魔力组"
+   ],
+   "types": [
+    "冰"
+   ],
+   "quality": 2
+  },
+  {
+   "name": "圣代甜甜",
+   "pet_id_u": "3465",
+   "pet_id": 3465,
+   "no": "236",
+   "season": 0,
+   "stage": 3,
+   "has_shiny": false,
+   "ride": false,
+   "groups": [
+    "软体组",
+    "魔力组"
+   ],
+   "types": [
+    "冰"
+   ],
+   "quality": 2
+  },
+  {
+   "name": "满月砣",
+   "pet_id_u": "13000173",
+   "pet_id": 13000173,
+   "no": "238",
+   "season": 0,
+   "stage": 4,
+   "has_shiny": true,
+   "ride": false,
+   "groups": [],
+   "types": [
+    "毒",
+    "萌"
+   ],
+   "quality": 2
+  },
+  {
+   "name": "胆小鳗鱼",
+   "pet_id_u": "3266",
+   "pet_id": 3266,
+   "no": "242",
+   "season": 0,
+   "stage": 1,
+   "has_shiny": false,
+   "ride": false,
+   "groups": [
+    "海洋组"
+   ],
+   "types": [
+    "电",
+    "水"
+   ],
+   "quality": 2
+  },
+  {
+   "name": "闪电鳗鱼",
+   "pet_id_u": "3267",
+   "pet_id": 3267,
+   "no": "243",
+   "season": 0,
+   "stage": 2,
+   "has_shiny": false,
+   "ride": false,
+   "groups": [
+    "海洋组"
+   ],
+   "types": [
+    "电",
+    "水"
+   ],
+   "quality": 2
+  },
+  {
+   "name": "翡翠水母",
+   "pet_id_u": "3119",
+   "pet_id": 3119,
+   "no": "244",
+   "season": 0,
+   "stage": 1,
+   "has_shiny": false,
+   "ride": false,
+   "groups": [
+    "海洋组",
+    "软体组"
+   ],
+   "types": [
+    "水",
+    "毒"
+   ],
+   "quality": 2
+  },
+  {
+   "name": "琉璃君主",
+   "pet_id_u": "5066",
+   "pet_id": 5066,
+   "no": "245",
+   "season": 0,
+   "stage": 4,
+   "has_shiny": false,
+   "ride": false,
+   "groups": [
+    "海洋组",
+    "软体组"
+   ],
+   "types": [
+    "水",
+    "毒"
+   ],
+   "quality": 2
+  },
+  {
+   "name": "琉璃君主",
+   "pet_id_u": "13000175",
+   "pet_id": 13000175,
+   "no": "245",
+   "season": 0,
+   "stage": 3,
+   "has_shiny": false,
+   "ride": false,
+   "groups": [
+    "海洋组",
+    "软体组"
+   ],
+   "types": [
+    "水",
+    "毒"
+   ],
+   "quality": 2
+  },
+  {
+   "name": "琉璃水母",
+   "pet_id_u": "3120",
+   "pet_id": 3120,
+   "no": "245",
+   "season": 0,
+   "stage": 2,
+   "has_shiny": false,
+   "ride": false,
+   "groups": [
+    "海洋组",
+    "软体组"
+   ],
+   "types": [
+    "水",
+    "毒"
+   ],
+   "quality": 2
+  },
+  {
+   "name": "裘洛",
+   "pet_id_u": "3154",
+   "pet_id": 3154,
+   "no": "246",
+   "season": 0,
+   "stage": 1,
+   "has_shiny": false,
+   "ride": true,
+   "groups": [
+    "动物组",
+    "妖精组"
+   ],
+   "types": [
+    "毒"
+   ],
+   "quality": 2
+  },
+  {
+   "name": "裘力",
+   "pet_id_u": "3155",
+   "pet_id": 3155,
+   "no": "247",
+   "season": 0,
+   "stage": 2,
+   "has_shiny": false,
+   "ride": true,
+   "groups": [
+    "动物组",
+    "妖精组"
+   ],
+   "types": [
+    "毒"
+   ],
+   "quality": 2
+  },
+  {
+   "name": "裘卡",
+   "pet_id_u": "3156",
+   "pet_id": 3156,
+   "no": "248",
+   "season": 0,
+   "stage": 3,
+   "has_shiny": false,
+   "ride": true,
+   "groups": [
+    "动物组",
+    "妖精组"
+   ],
+   "types": [
+    "毒"
+   ],
+   "quality": 2
+  },
+  {
+   "name": "布鲁斯",
+   "pet_id_u": "3257",
+   "pet_id": 3257,
+   "no": "252",
+   "season": 0,
+   "stage": 1,
+   "has_shiny": false,
+   "ride": true,
+   "groups": [
+    "软体组",
+    "海洋组"
+   ],
+   "types": [
+    "冰"
+   ],
+   "quality": 2
+  },
+  {
+   "name": "雪顶布鲁斯",
+   "pet_id_u": "3258",
+   "pet_id": 3258,
+   "no": "253",
+   "season": 0,
+   "stage": 2,
+   "has_shiny": false,
+   "ride": true,
+   "groups": [
+    "软体组",
+    "海洋组"
+   ],
+   "types": [
+    "冰"
+   ],
+   "quality": 2
+  },
+  {
+   "name": "冰钻布鲁斯",
+   "pet_id_u": "3259",
+   "pet_id": 3259,
+   "no": "254",
+   "season": 0,
+   "stage": 3,
+   "has_shiny": false,
+   "ride": true,
+   "groups": [
+    "软体组",
+    "海洋组"
+   ],
+   "types": [
+    "冰"
+   ],
+   "quality": 2
+  },
+  {
+   "name": "圣冠布鲁斯",
+   "pet_id_u": "5067",
+   "pet_id": 5067,
+   "no": "254",
+   "season": 0,
+   "stage": 4,
+   "has_shiny": false,
+   "ride": false,
+   "groups": [
+    "海洋组",
+    "软体组"
+   ],
+   "types": [
+    "冰"
+   ],
+   "quality": 2
+  },
+  {
+   "name": "圣冠布鲁斯",
+   "pet_id_u": "13000176",
+   "pet_id": 13000176,
+   "no": "254",
+   "season": 0,
+   "stage": 4,
+   "has_shiny": false,
+   "ride": false,
+   "groups": [
+    "海洋组",
+    "软体组"
+   ],
+   "types": [
+    "冰"
+   ],
+   "quality": 2
+  },
+  {
+   "name": "乌达",
+   "pet_id_u": "3536",
+   "pet_id": 3536,
+   "no": "258",
+   "season": 0,
+   "stage": 1,
+   "has_shiny": false,
+   "ride": true,
+   "groups": [
+    "巨灵组"
+   ],
+   "types": [
+    "恶",
+    "火"
+   ],
+   "quality": 2
+  },
+  {
+   "name": "乌达",
+   "pet_id_u": "3539",
+   "pet_id": 3539,
+   "no": "258",
+   "season": 0,
+   "stage": 1,
+   "has_shiny": false,
+   "ride": true,
+   "groups": [
+    "巨灵组"
+   ],
+   "types": [
+    "恶",
+    "冰"
+   ],
+   "quality": 2
+  },
+  {
+   "name": "迷你乌",
+   "pet_id_u": "3537",
+   "pet_id": 3537,
+   "no": "259",
+   "season": 0,
+   "stage": 2,
+   "has_shiny": false,
+   "ride": true,
+   "groups": [
+    "巨灵组"
+   ],
+   "types": [
+    "恶",
+    "火"
+   ],
+   "quality": 2
+  },
+  {
+   "name": "迷你乌",
+   "pet_id_u": "3540",
+   "pet_id": 3540,
+   "no": "259",
+   "season": 0,
+   "stage": 2,
+   "has_shiny": false,
+   "ride": true,
+   "groups": [
+    "巨灵组"
+   ],
+   "types": [
+    "恶",
+    "冰"
+   ],
+   "quality": 2
+  },
+  {
+   "name": "乌拉塔",
+   "pet_id_u": "3538",
+   "pet_id": 3538,
+   "no": "260",
+   "season": 0,
+   "stage": 3,
+   "has_shiny": false,
+   "ride": true,
+   "groups": [
+    "巨灵组"
+   ],
+   "types": [
+    "恶",
+    "火"
+   ],
+   "quality": 2
+  },
+  {
+   "name": "乌拉塔",
+   "pet_id_u": "3541",
+   "pet_id": 3541,
+   "no": "260",
+   "season": 0,
+   "stage": 3,
+   "has_shiny": false,
+   "ride": true,
+   "groups": [
+    "巨灵组"
+   ],
+   "types": [
+    "恶",
+    "冰"
+   ],
+   "quality": 2
+  },
+  {
+   "name": "螺旋帕帕",
+   "pet_id_u": "3484",
+   "pet_id": 3484,
+   "no": "261",
+   "season": 0,
+   "stage": 1,
+   "has_shiny": false,
+   "ride": true,
+   "groups": [
+    "机械组",
+    "天空组"
+   ],
+   "types": [
+    "机械",
+    "翼"
+   ],
+   "quality": 2
+  },
+  {
+   "name": "帕帕斯卡",
+   "pet_id_u": "3547",
+   "pet_id": 3547,
+   "no": "262",
+   "season": 0,
+   "stage": 2,
+   "has_shiny": false,
+   "ride": true,
+   "groups": [
+    "机械组",
+    "天空组"
+   ],
+   "types": [
+    "机械",
+    "翼"
+   ],
+   "quality": 2
+  },
+  {
+   "name": "优优",
+   "pet_id_u": "3704",
+   "pet_id": 3704,
+   "no": "270",
+   "season": 0,
+   "stage": 1,
+   "has_shiny": false,
+   "ride": false,
+   "groups": [
+    "动物组"
+   ],
+   "types": [
+    "地",
+    "光"
+   ],
+   "quality": 2
+  },
+  {
+   "name": "绒光优优",
+   "pet_id_u": "3705",
+   "pet_id": 3705,
+   "no": "271",
+   "season": 0,
+   "stage": 2,
+   "has_shiny": false,
+   "ride": false,
+   "groups": [
+    "动物组"
+   ],
+   "types": [
+    "地",
+    "光"
+   ],
+   "quality": 2
+  },
+  {
+   "name": "噼啪鸟",
+   "pet_id_u": "3444",
+   "pet_id": 3444,
+   "no": "272",
+   "season": 0,
+   "stage": 1,
+   "has_shiny": false,
+   "ride": true,
+   "groups": [
+    "天空组",
+    "巨灵组"
+   ],
+   "types": [
+    "电",
+    "翼"
+   ],
+   "quality": 2
+  },
+  {
+   "name": "墨鱿士",
+   "pet_id_u": "3577",
+   "pet_id": 3577,
+   "no": "280",
+   "season": 0,
+   "stage": 1,
+   "has_shiny": false,
+   "ride": true,
+   "groups": [
+    "海洋组",
+    "软体组"
+   ],
+   "types": [
+    "幽"
+   ],
+   "quality": 2
+  },
+  {
+   "name": "混乱鱿彩",
+   "pet_id_u": "3578",
+   "pet_id": 3578,
+   "no": "281",
+   "season": 0,
+   "stage": 2,
+   "has_shiny": false,
+   "ride": true,
+   "groups": [
+    "海洋组",
+    "软体组"
+   ],
+   "types": [
+    "幽",
+    "恶"
+   ],
+   "quality": 2
+  },
+  {
+   "name": "秩序鱿墨",
+   "pet_id_u": "3579",
+   "pet_id": 3579,
+   "no": "282",
+   "season": 0,
+   "stage": 2,
+   "has_shiny": false,
+   "ride": true,
+   "groups": [
+    "海洋组",
+    "软体组"
+   ],
+   "types": [
+    "幽",
+    "萌"
+   ],
+   "quality": 2
+  },
+  {
+   "name": "小甲虫",
+   "pet_id_u": "3038",
+   "pet_id": 3038,
+   "no": "283",
+   "season": 0,
+   "stage": 1,
+   "has_shiny": false,
+   "ride": true,
+   "groups": [
+    "昆虫组",
+    "天空组"
+   ],
+   "types": [
+    "虫"
+   ],
+   "quality": 2
+  },
+  {
+   "name": "铠甲虫",
+   "pet_id_u": "3013",
+   "pet_id": 3013,
+   "no": "284",
+   "season": 0,
+   "stage": 2,
+   "has_shiny": false,
+   "ride": true,
+   "groups": [
+    "昆虫组",
+    "天空组"
+   ],
+   "types": [
+    "虫"
+   ],
+   "quality": 2
+  },
+  {
+   "name": "圣剑侍从",
+   "pet_id_u": "3545",
+   "pet_id": 3545,
+   "no": "285",
+   "season": 0,
+   "stage": 1,
+   "has_shiny": false,
+   "ride": true,
+   "groups": [
+    "机械组",
+    "巨灵组"
+   ],
+   "types": [
+    "机械"
+   ],
+   "quality": 2
+  },
+  {
+   "name": "圣剑-X",
+   "pet_id_u": "3546",
+   "pet_id": 3546,
+   "no": "286",
+   "season": 0,
+   "stage": 2,
+   "has_shiny": false,
+   "ride": true,
+   "groups": [
+    "机械组",
+    "巨灵组"
+   ],
+   "types": [
+    "机械"
+   ],
+   "quality": 2
+  },
+  {
+   "name": "圣剑骑士",
+   "pet_id_u": "4089",
+   "pet_id": 4089,
+   "no": "286",
+   "season": 0,
+   "stage": 2,
+   "has_shiny": false,
+   "ride": false,
+   "groups": [],
+   "types": [
+    "机械"
+   ],
+   "quality": 2
+  },
+  {
+   "name": "圣剑骑士",
+   "pet_id_u": "5021",
+   "pet_id": 5021,
+   "no": "286",
+   "season": 0,
+   "stage": 4,
+   "has_shiny": false,
+   "ride": false,
+   "groups": [
+    "机械组",
+    "巨灵组"
+   ],
+   "types": [
+    "机械"
+   ],
+   "quality": 2
+  },
+  {
+   "name": "大头骨龙",
+   "pet_id_u": "3268",
+   "pet_id": 3268,
+   "no": "289",
+   "season": 0,
+   "stage": 1,
+   "has_shiny": false,
+   "ride": true,
+   "groups": [
+    "巨龙组",
+    "巨灵组"
+   ],
+   "types": [
+    "龙",
+    "幽"
+   ],
+   "quality": 2
+  },
+  {
+   "name": "寂灭骨龙",
+   "pet_id_u": "3269",
+   "pet_id": 3269,
+   "no": "290",
+   "season": 0,
+   "stage": 2,
+   "has_shiny": false,
+   "ride": true,
+   "groups": [
+    "巨龙组",
+    "巨灵组"
+   ],
+   "types": [
+    "龙",
+    "幽"
+   ],
+   "quality": 2
+  },
+  {
+   "name": "厉毒小萝",
+   "pet_id_u": "3419",
+   "pet_id": 3419,
+   "no": "291",
+   "season": 0,
+   "stage": 1,
+   "has_shiny": false,
+   "ride": false,
+   "groups": [
+    "拟人组",
+    "天空组"
+   ],
+   "types": [
+    "毒",
+    "恶"
+   ],
+   "quality": 2
+  },
+  {
+   "name": "厉毒修萝",
+   "pet_id_u": "3420",
+   "pet_id": 3420,
+   "no": "292",
+   "season": 0,
+   "stage": 2,
+   "has_shiny": false,
+   "ride": false,
+   "groups": [
+    "拟人组",
+    "天空组"
+   ],
+   "types": [
+    "毒",
+    "恶"
+   ],
+   "quality": 2
+  },
+  {
+   "name": "毛头小蛛",
+   "pet_id_u": "3603",
+   "pet_id": 3603,
+   "no": "296",
+   "season": 0,
+   "stage": 1,
+   "has_shiny": false,
+   "ride": false,
+   "groups": [
+    "昆虫组",
+    "妖精组"
+   ],
+   "types": [
+    "虫",
+    "地"
+   ],
+   "quality": 2
+  },
+  {
+   "name": "捕尘长绒",
+   "pet_id_u": "3604",
+   "pet_id": 3604,
+   "no": "297",
+   "season": 0,
+   "stage": 2,
+   "has_shiny": false,
+   "ride": false,
+   "groups": [
+    "昆虫组",
+    "妖精组"
+   ],
+   "types": [
+    "虫",
+    "地"
+   ],
+   "quality": 2
+  },
+  {
+   "name": "食尘短绒",
+   "pet_id_u": "3605",
+   "pet_id": 3605,
+   "no": "298",
+   "season": 0,
+   "stage": 2,
+   "has_shiny": false,
+   "ride": false,
+   "groups": [
+    "昆虫组",
+    "妖精组"
+   ],
+   "types": [
+    "虫",
+    "地"
+   ],
+   "quality": 2
+  },
+  {
+   "name": "画精灵",
+   "pet_id_u": "3606",
+   "pet_id": 3606,
+   "no": "299",
+   "season": 0,
+   "stage": 1,
+   "has_shiny": false,
+   "ride": true,
+   "groups": [
+    "妖精组",
+    "巨灵组"
+   ],
+   "types": [
+    "普通"
+   ],
+   "quality": 2
+  },
+  {
+   "name": "画像守护",
+   "pet_id_u": "3607",
+   "pet_id": 3607,
+   "no": "300",
+   "season": 0,
+   "stage": 2,
+   "has_shiny": false,
+   "ride": true,
+   "groups": [
+    "妖精组",
+    "巨灵组"
+   ],
+   "types": [
+    "普通"
+   ],
+   "quality": 2
+  },
+  {
+   "name": "画间法师手",
+   "pet_id_u": "3608",
+   "pet_id": 3608,
+   "no": "301",
+   "season": 0,
+   "stage": 3,
+   "has_shiny": false,
+   "ride": true,
+   "groups": [
+    "妖精组",
+    "巨灵组"
+   ],
+   "types": [
+    "普通",
+    "幻"
+   ],
+   "quality": 2
+  },
+  {
+   "name": "画间沉铁兽",
+   "pet_id_u": "3609",
+   "pet_id": 3609,
+   "no": "302",
+   "season": 0,
+   "stage": 3,
+   "has_shiny": false,
+   "ride": true,
+   "groups": [
+    "妖精组",
+    "巨灵组"
+   ],
+   "types": [
+    "普通",
+    "武"
+   ],
+   "quality": 2
+  },
+  {
+   "name": "书魔虫",
+   "pet_id_u": "3610",
+   "pet_id": 3610,
+   "no": "303",
+   "season": 0,
+   "stage": 1,
+   "has_shiny": false,
+   "ride": true,
+   "groups": [
+    "妖精组",
+    "巨灵组"
+   ],
+   "types": [
+    "普通"
+   ],
+   "quality": 2
+  },
+  {
+   "name": "书卷守护",
+   "pet_id_u": "3611",
+   "pet_id": 3611,
+   "no": "304",
+   "season": 0,
+   "stage": 2,
+   "has_shiny": false,
+   "ride": true,
+   "groups": [
+    "妖精组",
+    "巨灵组"
+   ],
+   "types": [
+    "普通"
+   ],
+   "quality": 2
+  },
+  {
+   "name": "古卷执政官",
+   "pet_id_u": "3612",
+   "pet_id": 3612,
+   "no": "305",
+   "season": 0,
+   "stage": 3,
+   "has_shiny": false,
+   "ride": true,
+   "groups": [
+    "妖精组",
+    "巨灵组"
+   ],
+   "types": [
+    "普通",
+    "幻"
+   ],
+   "quality": 2
+  },
+  {
+   "name": "古卷匣魔像",
+   "pet_id_u": "3613",
+   "pet_id": 3613,
+   "no": "306",
+   "season": 0,
+   "stage": 3,
+   "has_shiny": false,
+   "ride": true,
+   "groups": [
+    "妖精组",
+    "巨灵组"
+   ],
+   "types": [
+    "普通",
+    "武"
+   ],
+   "quality": 2
+  },
+  {
+   "name": "果冻",
+   "pet_id_u": "3118",
+   "pet_id": 3118,
+   "no": "313",
+   "season": 0,
+   "stage": 1,
+   "has_shiny": false,
+   "ride": false,
+   "groups": [
+    "海洋组",
+    "魔力组"
+   ],
+   "types": [
+    "水"
+   ],
+   "quality": 2
+  },
+  {
+   "name": "抹茶布丁",
+   "pet_id_u": "3526",
+   "pet_id": 3526,
+   "no": "314",
+   "season": 0,
+   "stage": 2,
+   "has_shiny": false,
+   "ride": false,
+   "groups": [
+    "海洋组",
+    "魔力组"
+   ],
+   "types": [
+    "水",
+    "草"
+   ],
+   "quality": 2
+  },
+  {
+   "name": "椰浆布丁",
+   "pet_id_u": "3527",
+   "pet_id": 3527,
+   "no": "315",
+   "season": 0,
+   "stage": 2,
+   "has_shiny": false,
+   "ride": false,
+   "groups": [
+    "海洋组",
+    "魔力组"
+   ],
+   "types": [
+    "水",
+    "冰"
+   ],
+   "quality": 2
+  },
+  {
+   "name": "熔岩布丁",
+   "pet_id_u": "3528",
+   "pet_id": 3528,
+   "no": "316",
+   "season": 0,
+   "stage": 2,
+   "has_shiny": false,
+   "ride": false,
+   "groups": [
+    "海洋组",
+    "魔力组"
+   ],
+   "types": [
+    "水",
+    "火"
+   ],
+   "quality": 2
+  },
+  {
+   "name": "星尘虫",
+   "pet_id_u": "3398",
+   "pet_id": 3398,
+   "no": "317",
+   "season": 0,
+   "stage": 1,
+   "has_shiny": false,
+   "ride": true,
+   "groups": [
+    "昆虫组"
+   ],
+   "types": [
+    "虫"
+   ],
+   "quality": 2
+  },
+  {
+   "name": "落星虫",
+   "pet_id_u": "3399",
+   "pet_id": 3399,
+   "no": "318",
+   "season": 0,
+   "stage": 2,
+   "has_shiny": false,
+   "ride": true,
+   "groups": [
+    "昆虫组"
+   ],
+   "types": [
+    "虫"
+   ],
+   "quality": 2
+  },
+  {
+   "name": "陨星虫",
+   "pet_id_u": "3400",
+   "pet_id": 3400,
+   "no": "319",
+   "season": 0,
+   "stage": 3,
+   "has_shiny": false,
+   "ride": true,
+   "groups": [
+    "昆虫组"
+   ],
+   "types": [
+    "虫"
+   ],
+   "quality": 2
+  },
+  {
+   "name": "布瓜蝌",
+   "pet_id_u": "3473",
+   "pet_id": 3473,
+   "no": "338",
+   "season": 0,
+   "stage": 1,
+   "has_shiny": false,
+   "ride": false,
+   "groups": [
+    "两栖组"
+   ],
+   "types": [
+    "幻"
+   ],
+   "quality": 2
+  },
+  {
+   "name": "上岸蛙",
+   "pet_id_u": "3474",
+   "pet_id": 3474,
+   "no": "339",
+   "season": 0,
+   "stage": 2,
+   "has_shiny": false,
+   "ride": false,
+   "groups": [
+    "两栖组"
+   ],
+   "types": [
+    "幻"
+   ],
+   "quality": 2
+  },
+  {
+   "name": "火红尾",
+   "pet_id_u": "3744",
+   "pet_id": 3744,
+   "no": "340",
+   "season": 0,
+   "stage": 1,
+   "has_shiny": true,
+   "ride": false,
+   "groups": [
+    "动物组"
+   ],
+   "types": [
+    "火"
+   ],
+   "quality": 2
+  },
+  {
+   "name": "雅丹鬃",
+   "pet_id_u": "3745",
+   "pet_id": 3745,
+   "no": "341",
+   "season": 0,
+   "stage": 2,
+   "has_shiny": true,
+   "ride": false,
+   "groups": [
+    "动物组"
+   ],
+   "types": [
+    "火"
+   ],
+   "quality": 2
+  },
+  {
+   "name": "春团",
+   "pet_id_u": "3161",
+   "pet_id": 3161,
+   "no": "342",
+   "season": 0,
+   "stage": 1,
+   "has_shiny": false,
+   "ride": false,
+   "groups": [
+    "动物组",
+    "妖精组"
+   ],
+   "types": [
+    "草"
+   ],
+   "quality": 2
+  },
+  {
+   "name": "春兔",
+   "pet_id_u": "3162",
+   "pet_id": 3162,
+   "no": "343",
+   "season": 0,
+   "stage": 2,
+   "has_shiny": false,
+   "ride": false,
+   "groups": [
+    "动物组",
+    "妖精组"
+   ],
+   "types": [
+    "草"
+   ],
+   "quality": 2
+  },
+  {
+   "name": "春花兔",
+   "pet_id_u": "3372",
+   "pet_id": 3372,
+   "no": "344",
+   "season": 0,
+   "stage": 3,
+   "has_shiny": false,
+   "ride": false,
+   "groups": [
+    "动物组",
+    "妖精组"
+   ],
+   "types": [
+    "草"
+   ],
+   "quality": 2
+  },
+  {
+   "name": "幽星光",
+   "pet_id_u": "3369",
+   "pet_id": 3369,
+   "no": "345",
+   "season": 0,
+   "stage": 1,
+   "has_shiny": false,
+   "ride": false,
+   "groups": [
+    "妖精组",
+    "巨灵组"
+   ],
+   "types": [
+    "幻"
+   ],
+   "quality": 2
+  },
+  {
+   "name": "曜星光",
+   "pet_id_u": "3370",
+   "pet_id": 3370,
+   "no": "346",
+   "season": 0,
+   "stage": 2,
+   "has_shiny": false,
+   "ride": false,
+   "groups": [
+    "妖精组",
+    "巨灵组"
+   ],
+   "types": [
+    "幻",
+    "翼"
+   ],
+   "quality": 2
+  },
+  {
+   "name": "暮星辰",
+   "pet_id_u": "3371",
+   "pet_id": 3371,
+   "no": "347",
+   "season": 0,
+   "stage": 3,
+   "has_shiny": false,
+   "ride": false,
+   "groups": [
+    "妖精组",
+    "巨灵组"
+   ],
+   "types": [
+    "幻",
+    "翼"
+   ],
+   "quality": 2
+  },
+  {
+   "name": "凡雀",
+   "pet_id_u": "3392",
+   "pet_id": 3392,
+   "no": "351",
+   "season": 0,
+   "stage": 1,
+   "has_shiny": false,
+   "ride": true,
+   "groups": [
+    "未发现"
+   ],
+   "types": [
+    "翼"
+   ],
+   "quality": 2
+  },
+  {
+   "name": "紫翎鹰",
+   "pet_id_u": "3393",
+   "pet_id": 3393,
+   "no": "352",
+   "season": 0,
+   "stage": 2,
+   "has_shiny": false,
+   "ride": true,
+   "groups": [
+    "未发现"
+   ],
+   "types": [
+    "翼"
+   ],
+   "quality": 2
+  },
+  {
+   "name": "凡鹰",
+   "pet_id_u": "3394",
+   "pet_id": 3394,
+   "no": "353",
+   "season": 0,
+   "stage": 3,
+   "has_shiny": false,
+   "ride": true,
+   "groups": [
+    "未发现"
+   ],
+   "types": [
+    "翼"
+   ],
+   "quality": 2
+  },
+  {
+   "name": "学院呱呱",
+   "pet_id_u": "3620",
+   "pet_id": 3620,
+   "no": "375",
+   "season": 0,
+   "stage": 1,
+   "has_shiny": false,
+   "ride": false,
+   "groups": [
+    "未发现"
+   ],
+   "types": [
+    "武"
+   ],
+   "quality": 2
+  },
+  {
+   "name": "烈钻鸟",
+   "pet_id_u": "3078",
+   "pet_id": 3078,
+   "no": "376",
+   "season": 0,
+   "stage": 1,
+   "has_shiny": false,
+   "ride": false,
+   "groups": [
+    "天空组",
+    "动物组"
+   ],
+   "types": [
+    "火",
+    "翼"
+   ],
+   "quality": 2
+  },
+  {
+   "name": "长尾火鸟",
+   "pet_id_u": "3079",
+   "pet_id": 3079,
+   "no": "377",
+   "season": 0,
+   "stage": 2,
+   "has_shiny": false,
+   "ride": false,
+   "groups": [
+    "天空组",
+    "动物组"
+   ],
+   "types": [
+    "火",
+    "翼"
+   ],
+   "quality": 2
+  },
+  {
+   "name": "火羽",
+   "pet_id_u": "3080",
+   "pet_id": 3080,
+   "no": "378",
+   "season": 0,
+   "stage": 3,
+   "has_shiny": false,
+   "ride": false,
+   "groups": [
+    "天空组",
+    "动物组"
+   ],
+   "types": [
+    "火",
+    "翼"
+   ],
+   "quality": 2
+  },
+  {
+   "name": "碎晶蝎",
+   "pet_id_u": "3402",
+   "pet_id": 3402,
+   "no": "381",
+   "season": 0,
+   "stage": 1,
+   "has_shiny": false,
+   "ride": true,
+   "groups": [
+    "昆虫组",
+    "岩石组"
+   ],
+   "types": [
+    "恶",
+    "地"
+   ],
+   "quality": 2
+  },
+  {
+   "name": "晶尾蝎",
+   "pet_id_u": "3403",
+   "pet_id": 3403,
+   "no": "382",
+   "season": 0,
+   "stage": 2,
+   "has_shiny": false,
+   "ride": true,
+   "groups": [
+    "昆虫组",
+    "岩石组"
+   ],
+   "types": [
+    "恶",
+    "地"
+   ],
+   "quality": 2
+  },
+  {
+   "name": "蝎子王",
+   "pet_id_u": "3404",
+   "pet_id": 3404,
+   "no": "383",
+   "season": 0,
+   "stage": 3,
+   "has_shiny": false,
+   "ride": true,
+   "groups": [
+    "昆虫组",
+    "岩石组"
+   ],
+   "types": [
+    "恶",
+    "地"
+   ],
+   "quality": 2
+  },
+  {
+   "name": "森豆丁",
+   "pet_id_u": "3749",
+   "pet_id": 3749,
+   "no": "384",
+   "season": 0,
+   "stage": 1,
+   "has_shiny": false,
+   "ride": true,
+   "groups": [
+    "巨灵组",
+    "拟人组"
+   ],
+   "types": [
+    "草"
+   ],
+   "quality": 2
+  },
+  {
+   "name": "森蛮人",
+   "pet_id_u": "3750",
+   "pet_id": 3750,
+   "no": "385",
+   "season": 0,
+   "stage": 2,
+   "has_shiny": false,
+   "ride": true,
+   "groups": [
+    "巨灵组",
+    "拟人组"
+   ],
+   "types": [
+    "草"
+   ],
+   "quality": 2
+  },
+  {
+   "name": "森巨人",
+   "pet_id_u": "3751",
+   "pet_id": 3751,
+   "no": "386",
+   "season": 0,
+   "stage": 3,
+   "has_shiny": false,
+   "ride": true,
+   "groups": [
+    "巨灵组",
+    "拟人组"
+   ],
+   "types": [
+    "草"
+   ],
+   "quality": 2
+  },
+  {
+   "name": "霹雳宝宝",
+   "pet_id_u": "3351",
+   "pet_id": 3351,
+   "no": "387",
+   "season": 0,
+   "stage": 1,
+   "has_shiny": false,
+   "ride": false,
+   "groups": [
+    "巨灵组",
+    "拟人组"
+   ],
+   "types": [
+    "电"
+   ],
+   "quality": 2
+  },
+  {
+   "name": "雷鸣小子",
+   "pet_id_u": "3352",
+   "pet_id": 3352,
+   "no": "388",
+   "season": 0,
+   "stage": 2,
+   "has_shiny": false,
+   "ride": false,
+   "groups": [
+    "巨灵组",
+    "拟人组"
+   ],
+   "types": [
+    "电"
+   ],
+   "quality": 2
+  },
+  {
+   "name": "雷神之子",
+   "pet_id_u": "3353",
+   "pet_id": 3353,
+   "no": "389",
+   "season": 0,
+   "stage": 3,
+   "has_shiny": false,
+   "ride": false,
+   "groups": [
+    "巨灵组",
+    "拟人组"
+   ],
+   "types": [
+    "电"
+   ],
+   "quality": 2
+  },
+  {
+   "name": "雪灵兽",
+   "pet_id_u": "3341",
+   "pet_id": 3341,
+   "no": "390",
+   "season": 0,
+   "stage": 1,
+   "has_shiny": false,
+   "ride": false,
+   "groups": [
+    "动物组"
+   ],
+   "types": [
+    "冰"
+   ],
+   "quality": 2
+  },
+  {
+   "name": "幻雪兽",
+   "pet_id_u": "3342",
+   "pet_id": 3342,
+   "no": "391",
+   "season": 0,
+   "stage": 2,
+   "has_shiny": false,
+   "ride": false,
+   "groups": [
+    "动物组"
+   ],
+   "types": [
+    "冰"
+   ],
+   "quality": 2
+  },
+  {
+   "name": "饮雪狂兽",
+   "pet_id_u": "3343",
+   "pet_id": 3343,
+   "no": "392",
+   "season": 0,
+   "stage": 3,
+   "has_shiny": false,
+   "ride": false,
+   "groups": [
+    "动物组"
+   ],
+   "types": [
+    "冰"
+   ],
+   "quality": 2
+  },
+  {
+   "name": "火豆丁",
+   "pet_id_u": "3754",
+   "pet_id": 3754,
+   "no": "393",
+   "season": 0,
+   "stage": 1,
+   "has_shiny": false,
+   "ride": true,
+   "groups": [
+    "巨灵组",
+    "拟人组"
+   ],
+   "types": [
+    "火"
+   ],
+   "quality": 2
+  },
+  {
+   "name": "火蛮人",
+   "pet_id_u": "3755",
+   "pet_id": 3755,
+   "no": "394",
+   "season": 0,
+   "stage": 2,
+   "has_shiny": false,
+   "ride": true,
+   "groups": [
+    "巨灵组",
+    "拟人组"
+   ],
+   "types": [
+    "火"
+   ],
+   "quality": 2
+  },
+  {
+   "name": "火巨人",
+   "pet_id_u": "3756",
+   "pet_id": 3756,
+   "no": "395",
+   "season": 0,
+   "stage": 3,
+   "has_shiny": false,
+   "ride": true,
+   "groups": [
+    "巨灵组",
+    "拟人组"
+   ],
+   "types": [
+    "火"
+   ],
+   "quality": 2
+  },
+  {
+   "name": "友爱天天",
+   "pet_id_u": "3228",
+   "pet_id": 3228,
+   "no": "396",
+   "season": 0,
+   "stage": 1,
+   "has_shiny": false,
+   "ride": false,
+   "groups": [
+    "天空组",
+    "妖精组"
+   ],
+   "types": [
+    "普通"
+   ],
+   "quality": 2
+  },
+  {
+   "name": "友爱星飞",
+   "pet_id_u": "3229",
+   "pet_id": 3229,
+   "no": "397",
+   "season": 0,
+   "stage": 2,
+   "has_shiny": false,
+   "ride": false,
+   "groups": [
+    "天空组",
+    "妖精组"
+   ],
+   "types": [
+    "普通"
+   ],
+   "quality": 2
+  },
+  {
+   "name": "莫比乌乌",
+   "pet_id_u": "3747",
+   "pet_id": 3747,
+   "no": "398",
+   "season": 0,
+   "stage": 1,
+   "has_shiny": false,
+   "ride": true,
+   "groups": [
+    "妖精组",
+    "巨龙组"
+   ],
+   "types": [
+    "龙",
+    "萌"
+   ],
+   "quality": 2
+  },
+  {
+   "name": "克莱因龙",
+   "pet_id_u": "3748",
+   "pet_id": 3748,
+   "no": "399",
+   "season": 0,
+   "stage": 2,
+   "has_shiny": false,
+   "ride": true,
+   "groups": [
+    "妖精组",
+    "巨龙组"
+   ],
+   "types": [
+    "龙",
+    "萌"
+   ],
+   "quality": 2
+  },
+  {
+   "name": "星云旅者",
+   "pet_id_u": "3466",
+   "pet_id": 3466,
+   "no": "409",
+   "season": 0,
+   "stage": 1,
+   "has_shiny": false,
+   "ride": false,
+   "groups": [
+    "妖精组",
+    "魔力组"
+   ],
+   "types": [
+    "翼",
+    "幻"
+   ],
+   "quality": 2
+  },
+  {
+   "name": "点点",
+   "pet_id_u": "3757",
+   "pet_id": 3757,
+   "no": "410",
+   "season": 0,
+   "stage": 1,
+   "has_shiny": false,
+   "ride": false,
+   "groups": [
+    "动物组",
+    "妖精组"
+   ],
+   "types": [
+    "萌"
+   ],
+   "quality": 2
+  },
+  {
+   "name": "珀尔鼬",
+   "pet_id_u": "3758",
+   "pet_id": 3758,
+   "no": "411",
+   "season": 0,
+   "stage": 2,
+   "has_shiny": false,
+   "ride": false,
+   "groups": [
+    "动物组",
+    "妖精组"
+   ],
+   "types": [
+    "萌"
+   ],
+   "quality": 2
+  },
+  {
+   "name": "不咕钟",
+   "pet_id_u": "3616",
+   "pet_id": 3616,
+   "no": "412",
+   "season": 0,
+   "stage": 1,
+   "has_shiny": false,
+   "ride": true,
+   "groups": [
+    "天空组",
+    "机械组"
+   ],
+   "types": [
+    "机械",
+    "幻"
+   ],
+   "quality": 2
+  },
+  {
+   "name": "溯源钟",
+   "pet_id_u": "3617",
+   "pet_id": 3617,
+   "no": "413",
+   "season": 0,
+   "stage": 2,
+   "has_shiny": false,
+   "ride": true,
+   "groups": [
+    "天空组",
+    "机械组"
+   ],
+   "types": [
+    "机械",
+    "幻"
+   ],
+   "quality": 2
+  },
+  {
+   "name": "稻草人",
+   "pet_id_u": "3877",
+   "pet_id": 3877,
+   "no": "436",
+   "season": 0,
+   "stage": 1,
+   "has_shiny": false,
+   "ride": false,
+   "groups": [
+    "妖精组"
+   ],
+   "types": [
+    "萌",
+    "武"
+   ],
+   "quality": 2
+  },
+  {
+   "name": "稻草守护者",
+   "pet_id_u": "3878",
+   "pet_id": 3878,
+   "no": "437",
+   "season": 0,
+   "stage": 2,
+   "has_shiny": false,
+   "ride": false,
+   "groups": [
+    "妖精组"
+   ],
+   "types": [
+    "萌",
+    "武"
+   ],
+   "quality": 2
+  },
+  {
+   "name": "睡铃雪影娃娃",
+   "pet_id_u": "3746",
+   "pet_id": 3746,
+   "no": "440",
+   "season": 0,
+   "stage": 1,
+   "has_shiny": false,
+   "ride": false,
+   "groups": [
+    "未发现"
+   ],
+   "types": [
+    "冰",
+    "草"
+   ],
+   "quality": 2
+  },
+  {
+   "name": "宝藏小狐",
+   "pet_id_u": "3740",
+   "pet_id": 3740,
+   "no": "441",
+   "season": 0,
+   "stage": 1,
+   "has_shiny": false,
+   "ride": false,
+   "groups": [
+    "动物组"
+   ],
+   "types": [
+    "普通"
+   ],
+   "quality": 2
+  },
+  {
+   "name": "宝藏沙狐",
+   "pet_id_u": "3741",
+   "pet_id": 3741,
+   "no": "442",
+   "season": 0,
+   "stage": 2,
+   "has_shiny": false,
+   "ride": false,
+   "groups": [
+    "动物组"
+   ],
+   "types": [
+    "普通"
+   ],
+   "quality": 2
+  },
+  {
+   "name": "矮脚爬爬",
+   "pet_id_u": "3843",
+   "pet_id": 3843,
+   "no": "464",
+   "season": 0,
+   "stage": 1,
+   "has_shiny": false,
+   "ride": false,
+   "groups": [
+    "妖精组"
+   ],
+   "types": [
+    "虫",
+    "毒"
+   ],
+   "quality": 2
+  },
+  {
+   "name": "绿草精灵",
+   "pet_id_u": "3829",
+   "pet_id": 3829,
+   "no": "464",
+   "season": 0,
+   "stage": 1,
+   "has_shiny": false,
+   "ride": false,
+   "groups": [
+    "妖精组"
+   ],
+   "types": [
+    "草",
+    "幻"
+   ],
+   "quality": 2
+  },
+  {
+   "name": "缇塔",
+   "pet_id_u": "3854",
+   "pet_id": 3854,
+   "no": "464",
+   "season": 0,
+   "stage": 1,
+   "has_shiny": false,
+   "ride": false,
+   "groups": [
+    "妖精组"
+   ],
+   "types": [
+    "机械",
+    "武"
+   ],
+   "quality": 2
+  },
+  {
+   "name": "声波缇塔",
+   "pet_id_u": "3855",
+   "pet_id": 3855,
+   "no": "465",
+   "season": 0,
+   "stage": 2,
+   "has_shiny": false,
+   "ride": false,
+   "groups": [
+    "妖精组"
+   ],
+   "types": [
+    "机械",
+    "武"
+   ],
+   "quality": 2
+  },
+  {
+   "name": "恶魔红钻",
+   "pet_id_u": "3844",
+   "pet_id": 3844,
+   "no": "465",
+   "season": 0,
+   "stage": 2,
+   "has_shiny": false,
+   "ride": false,
+   "groups": [
+    "妖精组"
+   ],
+   "types": [
+    "虫",
+    "毒"
+   ],
+   "quality": 2
+  },
+  {
+   "name": "记忆石",
+   "pet_id_u": "3836",
+   "pet_id": 3836,
+   "no": "465",
+   "season": 0,
+   "stage": 1,
+   "has_shiny": false,
+   "ride": false,
+   "groups": [
+    "妖精组"
+   ],
+   "types": [
+    "地",
+    "毒"
+   ],
+   "quality": 2
+  },
+  {
+   "name": "魔草巫灵",
+   "pet_id_u": "3830",
+   "pet_id": 3830,
+   "no": "465",
+   "season": 0,
+   "stage": 2,
+   "has_shiny": false,
+   "ride": false,
+   "groups": [
+    "妖精组"
+   ],
+   "types": [
+    "草",
+    "幻"
+   ],
+   "quality": 2
+  },
+  {
+   "name": "果实立方人",
+   "pet_id_u": "3796",
+   "pet_id": 3796,
+   "no": "466",
+   "season": 0,
+   "stage": 1,
+   "has_shiny": false,
+   "ride": false,
+   "groups": [
+    "未发现"
+   ],
+   "types": [
+    "机械",
+    "草"
+   ],
+   "quality": 2
+  },
+  {
+   "name": "云梦豚",
+   "pet_id_u": "3784",
+   "pet_id": 3784,
+   "no": "467",
+   "season": 0,
+   "stage": 1,
+   "has_shiny": true,
+   "ride": false,
+   "groups": [
+    "海洋组"
+   ],
+   "types": [
+    "水"
+   ],
+   "quality": 2
+  },
+  {
+   "name": "长江豚",
+   "pet_id_u": "3785",
+   "pet_id": 3785,
+   "no": "468",
+   "season": 0,
+   "stage": 2,
+   "has_shiny": true,
+   "ride": false,
+   "groups": [
+    "海洋组"
+   ],
+   "types": [
+    "水"
+   ],
+   "quality": 2
+  },
+  {
+   "name": "超能阿布",
+   "pet_id_u": "5068",
+   "pet_id": 5068,
+   "no": "493",
+   "season": 0,
+   "stage": 4,
+   "has_shiny": false,
+   "ride": false,
+   "groups": [
+    "未发现"
+   ],
+   "types": [
+    "龙"
+   ],
+   "quality": 3
+  },
+  {
+   "name": "阿布",
+   "pet_id_u": "3168",
+   "pet_id": 3168,
+   "no": "493",
+   "season": 0,
+   "stage": 1,
+   "has_shiny": false,
+   "ride": false,
+   "groups": [
+    "未发现"
+   ],
+   "types": [
+    "龙"
+   ],
+   "quality": 3
+  },
+  {
+   "name": "呆呆铃",
+   "pet_id_u": "3822",
+   "pet_id": 3822,
+   "no": "494",
+   "season": 0,
+   "stage": 1,
+   "has_shiny": true,
+   "ride": false,
+   "groups": [
+    "植物组",
+    "拟人组"
+   ],
+   "types": [
+    "萌",
+    "草"
+   ],
+   "quality": 2
+  },
+  {
+   "name": "跳跳铃",
+   "pet_id_u": "3823",
+   "pet_id": 3823,
+   "no": "495",
+   "season": 0,
+   "stage": 2,
+   "has_shiny": true,
+   "ride": false,
+   "groups": [
+    "植物组",
+    "拟人组"
+   ],
+   "types": [
+    "萌",
+    "草"
+   ],
+   "quality": 2
+  },
+  {
+   "name": "铃兰夫人",
+   "pet_id_u": "3824",
+   "pet_id": 3824,
+   "no": "496",
+   "season": 0,
+   "stage": 3,
+   "has_shiny": true,
+   "ride": false,
+   "groups": [
+    "植物组",
+    "拟人组"
+   ],
+   "types": [
+    "萌",
+    "草"
+   ],
+   "quality": 2
+  },
+  {
+   "name": "奇丽草",
+   "pet_id_u": "3029",
+   "pet_id": 3029,
+   "no": "041",
+   "season": 1,
+   "stage": 1,
+   "has_shiny": true,
+   "ride": true,
+   "groups": [
+    "植物组"
+   ],
+   "types": [
+    "草"
+   ],
+   "quality": 2
+  },
+  {
+   "name": "奇丽叶",
+   "pet_id_u": "3030",
+   "pet_id": 3030,
+   "no": "042",
+   "season": 1,
+   "stage": 2,
+   "has_shiny": true,
+   "ride": true,
+   "groups": [
+    "植物组"
+   ],
+   "types": [
+    "草"
+   ],
+   "quality": 2
+  },
+  {
+   "name": "奇丽果",
+   "pet_id_u": "4022",
+   "pet_id": 4022,
+   "no": "043",
+   "season": 1,
+   "stage": 3,
+   "has_shiny": true,
+   "ride": false,
+   "groups": [],
+   "types": [
+    "草"
+   ],
+   "quality": 3
+  },
+  {
+   "name": "奇丽果",
+   "pet_id_u": "5005",
+   "pet_id": 5005,
+   "no": "043",
+   "season": 1,
+   "stage": 4,
+   "has_shiny": true,
+   "ride": false,
+   "groups": [
+    "植物组"
+   ],
+   "types": [
+    "草"
+   ],
+   "quality": 3
+  },
+  {
+   "name": "奇丽花",
+   "pet_id_u": "3031",
+   "pet_id": 3031,
+   "no": "043",
+   "season": 1,
+   "stage": 3,
+   "has_shiny": true,
+   "ride": true,
+   "groups": [
+    "植物组"
+   ],
+   "types": [
+    "草"
+   ],
+   "quality": 2
+  },
+  {
+   "name": "恶魔狼",
+   "pet_id_u": "3011",
+   "pet_id": 3011,
+   "no": "131",
+   "season": 1,
+   "stage": 1,
+   "has_shiny": true,
+   "ride": true,
+   "groups": [
+    "动物组"
+   ],
+   "types": [
+    "恶"
+   ],
+   "quality": 2
+  },
+  {
+   "name": "恶魔狼王",
+   "pet_id_u": "4011",
+   "pet_id": 4011,
+   "no": "131",
+   "season": 1,
+   "stage": 1,
+   "has_shiny": true,
+   "ride": false,
+   "groups": [],
+   "types": [
+    "恶"
+   ],
+   "quality": 2
+  },
+  {
+   "name": "恶魔狼王",
+   "pet_id_u": "5016",
+   "pet_id": 5016,
+   "no": "131",
+   "season": 1,
+   "stage": 4,
+   "has_shiny": true,
+   "ride": false,
+   "groups": [
+    "动物组"
+   ],
+   "types": [
+    "恶"
+   ],
+   "quality": 2
+  },
+  {
+   "name": "呼呼猪",
+   "pet_id_u": "3262",
+   "pet_id": 3262,
+   "no": "137",
+   "season": 1,
+   "stage": 1,
+   "has_shiny": true,
+   "ride": true,
+   "groups": [
+    "动物组"
+   ],
+   "types": [
+    "冰",
+    "地"
+   ],
+   "quality": 2
+  },
+  {
+   "name": "獠牙猪",
+   "pet_id_u": "3263",
+   "pet_id": 3263,
+   "no": "138",
+   "season": 1,
+   "stage": 2,
+   "has_shiny": true,
+   "ride": true,
+   "groups": [
+    "动物组"
+   ],
+   "types": [
+    "冰",
+    "地"
+   ],
+   "quality": 2
+  },
+  {
+   "name": "大耳帽兜",
+   "pet_id_u": "3121",
+   "pet_id": 3121,
+   "no": "142",
+   "season": 1,
+   "stage": 1,
+   "has_shiny": true,
+   "ride": false,
+   "groups": [
+    "妖精组",
+    "拟人组"
+   ],
+   "types": [
+    "冰",
+    "萌"
+   ],
+   "quality": 2
+  },
+  {
+   "name": "帽兜娃娃",
+   "pet_id_u": "3122",
+   "pet_id": 3122,
+   "no": "143",
+   "season": 1,
+   "stage": 2,
+   "has_shiny": true,
+   "ride": false,
+   "groups": [
+    "妖精组",
+    "拟人组"
+   ],
+   "types": [
+    "冰",
+    "萌"
+   ],
+   "quality": 2
+  },
+  {
+   "name": "雪影冰灵",
+   "pet_id_u": "4085",
+   "pet_id": 4085,
+   "no": "144",
+   "season": 1,
+   "stage": 3,
+   "has_shiny": true,
+   "ride": false,
+   "groups": [],
+   "types": [
+    "冰",
+    "萌"
+   ],
+   "quality": 2
+  },
+  {
+   "name": "雪影冰灵",
+   "pet_id_u": "5013",
+   "pet_id": 5013,
+   "no": "144",
+   "season": 1,
+   "stage": 4,
+   "has_shiny": true,
+   "ride": false,
+   "groups": [
+    "妖精组",
+    "拟人组"
+   ],
+   "types": [
+    "冰",
+    "萌"
+   ],
+   "quality": 2
+  },
+  {
+   "name": "雪影娃娃",
+   "pet_id_u": "3123",
+   "pet_id": 3123,
+   "no": "144",
+   "season": 1,
+   "stage": 3,
+   "has_shiny": true,
+   "ride": false,
+   "groups": [
+    "妖精组",
+    "拟人组"
+   ],
+   "types": [
+    "冰",
+    "萌"
+   ],
+   "quality": 2
+  },
+  {
+   "name": "拉特",
+   "pet_id_u": "3188",
+   "pet_id": 3188,
+   "no": "205",
+   "season": 1,
+   "stage": 1,
+   "has_shiny": true,
+   "ride": false,
+   "groups": [
+    "妖精组"
+   ],
+   "types": [
+    "电"
+   ],
+   "quality": 2
+  },
+  {
+   "name": "酷拉",
+   "pet_id_u": "3189",
+   "pet_id": 3189,
+   "no": "206",
+   "season": 1,
+   "stage": 2,
+   "has_shiny": true,
+   "ride": false,
+   "groups": [
+    "妖精组"
+   ],
+   "types": [
+    "电"
+   ],
+   "quality": 2
+  },
+  {
+   "name": "风暴酷拉",
+   "pet_id_u": "5060",
+   "pet_id": 5060,
+   "no": "206",
+   "season": 1,
+   "stage": 4,
+   "has_shiny": true,
+   "ride": false,
+   "groups": [
+    "妖精组"
+   ],
+   "types": [
+    "电"
+   ],
+   "quality": 2
+  },
+  {
+   "name": "治愈兔",
+   "pet_id_u": "3081",
+   "pet_id": 3081,
+   "no": "255",
+   "season": 1,
+   "stage": 1,
+   "has_shiny": true,
+   "ride": false,
+   "groups": [
+    "动物组",
+    "妖精组"
+   ],
+   "types": [
+    "火",
+    "萌"
+   ],
+   "quality": 2
+  },
+  {
+   "name": "红丝绒",
+   "pet_id_u": "3082",
+   "pet_id": 3082,
+   "no": "256",
+   "season": 1,
+   "stage": 2,
+   "has_shiny": true,
+   "ride": false,
+   "groups": [
+    "动物组",
+    "妖精组"
+   ],
+   "types": [
+    "火",
+    "萌"
+   ],
+   "quality": 2
+  },
+  {
+   "name": "红绒十字",
+   "pet_id_u": "3350",
+   "pet_id": 3350,
+   "no": "257",
+   "season": 1,
+   "stage": 3,
+   "has_shiny": true,
+   "ride": false,
+   "groups": [
+    "动物组",
+    "妖精组"
+   ],
+   "types": [
+    "火",
+    "萌"
+   ],
+   "quality": 2
+  },
+  {
+   "name": "机械方方",
+   "pet_id_u": "3200",
+   "pet_id": 3200,
+   "no": "263",
+   "season": 1,
+   "stage": 1,
+   "has_shiny": true,
+   "ride": true,
+   "groups": [
+    "机械组",
+    "拟人组"
+   ],
+   "types": [
+    "机械"
+   ],
+   "quality": 2
+  },
+  {
+   "name": "多彩方方",
+   "pet_id_u": "3201",
+   "pet_id": 3201,
+   "no": "264",
+   "season": 1,
+   "stage": 2,
+   "has_shiny": true,
+   "ride": true,
+   "groups": [
+    "机械组",
+    "拟人组"
+   ],
+   "types": [
+    "机械"
+   ],
+   "quality": 2
+  },
+  {
+   "name": "立方人",
+   "pet_id_u": "3202",
+   "pet_id": 3202,
+   "no": "265",
+   "season": 1,
+   "stage": 3,
+   "has_shiny": true,
+   "ride": true,
+   "groups": [
+    "机械组",
+    "拟人组"
+   ],
+   "types": [
+    "机械"
+   ],
+   "quality": 2
+  },
+  {
+   "name": "格兰种子",
+   "pet_id_u": "3072",
+   "pet_id": 3072,
+   "no": "274",
+   "season": 1,
+   "stage": 1,
+   "has_shiny": true,
+   "ride": false,
+   "groups": [
+    "植物组",
+    "妖精组"
+   ],
+   "types": [
+    "草"
+   ],
+   "quality": 2
+  },
+  {
+   "name": "格兰花",
+   "pet_id_u": "3073",
+   "pet_id": 3073,
+   "no": "275",
+   "season": 1,
+   "stage": 2,
+   "has_shiny": true,
+   "ride": false,
+   "groups": [
+    "植物组",
+    "妖精组"
+   ],
+   "types": [
+    "草"
+   ],
+   "quality": 2
+  },
+  {
+   "name": "格兰球",
+   "pet_id_u": "3074",
+   "pet_id": 3074,
+   "no": "276",
+   "season": 1,
+   "stage": 3,
+   "has_shiny": true,
+   "ride": false,
+   "groups": [
+    "植物组",
+    "妖精组"
+   ],
+   "types": [
+    "草"
+   ],
+   "quality": 2
+  },
+  {
+   "name": "小帕尔",
+   "pet_id_u": "3180",
+   "pet_id": 3180,
+   "no": "293",
+   "season": 1,
+   "stage": 1,
+   "has_shiny": true,
+   "ride": true,
+   "groups": [
+    "未发现"
+   ],
+   "types": [
+    "恶"
+   ],
+   "quality": 2
+  },
+  {
+   "name": "帕尔萨斯",
+   "pet_id_u": "3181",
+   "pet_id": 3181,
+   "no": "294",
+   "season": 1,
+   "stage": 2,
+   "has_shiny": true,
+   "ride": true,
+   "groups": [
+    "未发现"
+   ],
+   "types": [
+    "恶"
+   ],
+   "quality": 2
+  },
+  {
+   "name": "龙息帕尔",
+   "pet_id_u": "3182",
+   "pet_id": 3182,
+   "no": "295",
+   "season": 1,
+   "stage": 3,
+   "has_shiny": true,
+   "ride": true,
+   "groups": [
+    "未发现"
+   ],
+   "types": [
+    "恶"
+   ],
+   "quality": 2
+  },
+  {
+   "name": "绒绒",
+   "pet_id_u": "3244",
+   "pet_id": 3244,
+   "no": "307",
+   "season": 1,
+   "stage": 1,
+   "has_shiny": true,
+   "ride": true,
+   "groups": [
+    "未发现"
+   ],
+   "types": [
+    "光",
+    "虫"
+   ],
+   "quality": 2
+  },
+  {
+   "name": "小绒茧",
+   "pet_id_u": "3245",
+   "pet_id": 3245,
+   "no": "308",
+   "season": 1,
+   "stage": 2,
+   "has_shiny": true,
+   "ride": true,
+   "groups": [
+    "未发现"
+   ],
+   "types": [
+    "光",
+    "虫"
+   ],
+   "quality": 2
+  },
+  {
+   "name": "绒仙子",
+   "pet_id_u": "3246",
+   "pet_id": 3246,
+   "no": "309",
+   "season": 1,
+   "stage": 3,
+   "has_shiny": true,
+   "ride": true,
+   "groups": [
+    "未发现"
+   ],
+   "types": [
+    "光",
+    "虫"
+   ],
+   "quality": 2
+  },
+  {
+   "name": "犀角鸟",
+   "pet_id_u": "3309",
+   "pet_id": 3309,
+   "no": "310",
+   "season": 1,
+   "stage": 1,
+   "has_shiny": true,
+   "ride": true,
+   "groups": [
+    "未发现"
+   ],
+   "types": [
+    "光"
+   ],
+   "quality": 2
+  },
+  {
+   "name": "光纤兽",
+   "pet_id_u": "3310",
+   "pet_id": 3310,
+   "no": "311",
+   "season": 1,
+   "stage": 2,
+   "has_shiny": true,
+   "ride": true,
+   "groups": [
+    "未发现"
+   ],
+   "types": [
+    "光"
+   ],
+   "quality": 2
+  },
+  {
+   "name": "疾光千兽",
+   "pet_id_u": "3311",
+   "pet_id": 3311,
+   "no": "312",
+   "season": 1,
+   "stage": 3,
+   "has_shiny": true,
+   "ride": true,
+   "groups": [
+    "未发现"
+   ],
+   "types": [
+    "光"
+   ],
+   "quality": 2
+  },
+  {
+   "name": "双灯鱼",
+   "pet_id_u": "3382",
+   "pet_id": 3382,
+   "no": "320",
+   "season": 1,
+   "stage": 1,
+   "has_shiny": true,
+   "ride": false,
+   "groups": [
+    "海洋组"
+   ],
+   "types": [
+    "水",
+    "电"
+   ],
+   "quality": 2
+  },
+  {
+   "name": "利灯鱼",
+   "pet_id_u": "3383",
+   "pet_id": 3383,
+   "no": "321",
+   "season": 1,
+   "stage": 2,
+   "has_shiny": true,
+   "ride": false,
+   "groups": [
+    "海洋组"
+   ],
+   "types": [
+    "水",
+    "电"
+   ],
+   "quality": 2
+  },
+  {
+   "name": "月牙雪熊",
+   "pet_id_u": "3457",
+   "pet_id": 3457,
+   "no": "322",
+   "season": 1,
+   "stage": 1,
+   "has_shiny": true,
+   "ride": true,
+   "groups": [
+    "动物组",
+    "巨灵组"
+   ],
+   "types": [
+    "冰",
+    "幻"
+   ],
+   "quality": 2
+  },
+  {
+   "name": "嗜光嗡嗡",
+   "pet_id_u": "3614",
+   "pet_id": 3614,
+   "no": "323",
+   "season": 1,
+   "stage": 1,
+   "has_shiny": true,
+   "ride": false,
+   "groups": [
+    "昆虫组"
+   ],
+   "types": [
+    "恶",
+    "光"
+   ],
+   "quality": 2
+  },
+  {
+   "name": "窃光蚊",
+   "pet_id_u": "3615",
+   "pet_id": 3615,
+   "no": "324",
+   "season": 1,
+   "stage": 2,
+   "has_shiny": true,
+   "ride": false,
+   "groups": [
+    "昆虫组"
+   ],
+   "types": [
+    "恶",
+    "光"
+   ],
+   "quality": 2
+  },
+  {
+   "name": "柴渣虫",
+   "pet_id_u": "3436",
+   "pet_id": 3436,
+   "no": "325",
+   "season": 1,
+   "stage": 1,
+   "has_shiny": true,
+   "ride": false,
+   "groups": [
+    "昆虫组",
+    "植物组"
+   ],
+   "types": [
+    "火",
+    "草"
+   ],
+   "quality": 2
+  },
+  {
+   "name": "燃薪虫",
+   "pet_id_u": "3437",
+   "pet_id": 3437,
+   "no": "326",
+   "season": 1,
+   "stage": 2,
+   "has_shiny": true,
+   "ride": false,
+   "groups": [
+    "昆虫组",
+    "植物组"
+   ],
+   "types": [
+    "火",
+    "草"
+   ],
+   "quality": 2
+  },
+  {
+   "name": "空空颅",
+   "pet_id_u": "3148",
+   "pet_id": 3148,
+   "no": "327",
+   "season": 1,
+   "stage": 1,
+   "has_shiny": true,
+   "ride": true,
+   "groups": [
+    "魔力组",
+    "巨灵组"
+   ],
+   "types": [
+    "幽"
+   ],
+   "quality": 2
+  },
+  {
+   "name": "夜宿颅",
+   "pet_id_u": "3149",
+   "pet_id": 3149,
+   "no": "328",
+   "season": 1,
+   "stage": 2,
+   "has_shiny": true,
+   "ride": true,
+   "groups": [
+    "魔力组",
+    "巨灵组"
+   ],
+   "types": [
+    "幽"
+   ],
+   "quality": 2
+  },
+  {
+   "name": "夜枭",
+   "pet_id_u": "3150",
+   "pet_id": 3150,
+   "no": "329",
+   "season": 1,
+   "stage": 3,
+   "has_shiny": true,
+   "ride": true,
+   "groups": [
+    "魔力组",
+    "巨灵组"
+   ],
+   "types": [
+    "幽"
+   ],
+   "quality": 2
+  },
+  {
+   "name": "暗夜颅主",
+   "pet_id_u": "4104",
+   "pet_id": 4104,
+   "no": "329",
+   "season": 1,
+   "stage": 3,
+   "has_shiny": true,
+   "ride": false,
+   "groups": [],
+   "types": [
+    "幽"
+   ],
+   "quality": 2
+  },
+  {
+   "name": "暗夜颅主",
+   "pet_id_u": "5059",
+   "pet_id": 5059,
+   "no": "329",
+   "season": 1,
+   "stage": 4,
+   "has_shiny": true,
+   "ride": false,
+   "groups": [
+    "魔力组",
+    "巨灵组"
+   ],
+   "types": [
+    "幽"
+   ],
+   "quality": 2
+  },
+  {
+   "name": "粉粉星",
+   "pet_id_u": "3198",
+   "pet_id": 3198,
+   "no": "330",
+   "season": 1,
+   "stage": 1,
+   "has_shiny": true,
+   "ride": false,
+   "groups": [
+    "妖精组",
+    "软体组"
+   ],
+   "types": [
+    "电",
+    "幻"
+   ],
+   "quality": 2
+  },
+  {
+   "name": "小皮球",
+   "pet_id_u": "3199",
+   "pet_id": 3199,
+   "no": "331",
+   "season": 1,
+   "stage": 2,
+   "has_shiny": true,
+   "ride": false,
+   "groups": [
+    "妖精组",
+    "软体组"
+   ],
+   "types": [
+    "电",
+    "幻"
+   ],
+   "quality": 2
+  },
+  {
+   "name": "贝瑟",
+   "pet_id_u": "3203",
+   "pet_id": 3203,
+   "no": "332",
+   "season": 1,
+   "stage": 1,
+   "has_shiny": true,
+   "ride": true,
+   "groups": [
+    "机械组"
+   ],
+   "types": [
+    "机械",
+    "火"
+   ],
+   "quality": 2
+  },
+  {
+   "name": "贝加尔",
+   "pet_id_u": "3204",
+   "pet_id": 3204,
+   "no": "333",
+   "season": 1,
+   "stage": 2,
+   "has_shiny": true,
+   "ride": true,
+   "groups": [
+    "机械组"
+   ],
+   "types": [
+    "机械",
+    "火"
+   ],
+   "quality": 2
+  },
+  {
+   "name": "贝古斯",
+   "pet_id_u": "3205",
+   "pet_id": 3205,
+   "no": "334",
+   "season": 1,
+   "stage": 3,
+   "has_shiny": true,
+   "ride": true,
+   "groups": [
+    "机械组"
+   ],
+   "types": [
+    "机械",
+    "火"
+   ],
+   "quality": 2
+  },
+  {
+   "name": "粉星仔",
+   "pet_id_u": "3319",
+   "pet_id": 3319,
+   "no": "335",
+   "season": 1,
+   "stage": 1,
+   "has_shiny": true,
+   "ride": true,
+   "groups": [
+    "妖精组",
+    "天空组"
+   ],
+   "types": [
+    "幻"
+   ],
+   "quality": 2
+  },
+  {
+   "name": "粉耳星兔",
+   "pet_id_u": "3320",
+   "pet_id": 3320,
+   "no": "336",
+   "season": 1,
+   "stage": 2,
+   "has_shiny": true,
+   "ride": true,
+   "groups": [
+    "妖精组",
+    "天空组"
+   ],
+   "types": [
+    "幻"
+   ],
+   "quality": 2
+  },
+  {
+   "name": "落陨星兔",
+   "pet_id_u": "3485",
+   "pet_id": 3485,
+   "no": "337",
+   "season": 1,
+   "stage": 2,
+   "has_shiny": true,
+   "ride": true,
+   "groups": [
+    "妖精组",
+    "天空组"
+   ],
+   "types": [
+    "幻",
+    "幽"
+   ],
+   "quality": 2
+  },
+  {
+   "name": "恶魔叮",
+   "pet_id_u": "3010",
+   "pet_id": 3010,
+   "no": "030",
+   "season": 2,
+   "stage": 1,
+   "has_shiny": true,
+   "ride": false,
+   "groups": [
+    "妖精组"
+   ],
+   "types": [
+    "恶",
+    "翼"
+   ],
+   "quality": 2
+  },
+  {
+   "name": "叮叮恶魔",
+   "pet_id_u": "3039",
+   "pet_id": 3039,
+   "no": "031",
+   "season": 2,
+   "stage": 2,
+   "has_shiny": true,
+   "ride": false,
+   "groups": [
+    "妖精组"
+   ],
+   "types": [
+    "恶",
+    "翼"
+   ],
+   "quality": 2
+  },
+  {
+   "name": "恶魔男爵",
+   "pet_id_u": "5055",
+   "pet_id": 5055,
+   "no": "031",
+   "season": 2,
+   "stage": 4,
+   "has_shiny": true,
+   "ride": false,
+   "groups": [
+    "妖精组"
+   ],
+   "types": [
+    "恶",
+    "翼"
+   ],
+   "quality": 2
+  },
+  {
+   "name": "幻影荆棘",
+   "pet_id_u": "4064",
+   "pet_id": 4064,
+   "no": "035",
+   "season": 2,
+   "stage": 1,
+   "has_shiny": true,
+   "ride": false,
+   "groups": [],
+   "types": [
+    "幽",
+    "草"
+   ],
+   "quality": 2
+  },
+  {
+   "name": "幻影荆棘",
+   "pet_id_u": "5019",
+   "pet_id": 5019,
+   "no": "035",
+   "season": 2,
+   "stage": 4,
+   "has_shiny": true,
+   "ride": false,
+   "groups": [
+    "植物组",
+    "妖精组"
+   ],
+   "types": [
+    "幽",
+    "草"
+   ],
+   "quality": 2
+  },
+  {
+   "name": "幽影树",
+   "pet_id_u": "3064",
+   "pet_id": 3064,
+   "no": "035",
+   "season": 2,
+   "stage": 1,
+   "has_shiny": true,
+   "ride": false,
+   "groups": [
+    "植物组",
+    "妖精组"
+   ],
+   "types": [
+    "幽",
+    "草"
+   ],
+   "quality": 2
+  },
+  {
+   "name": "幽影树",
+   "pet_id_u": "3777",
+   "pet_id": 3777,
+   "no": "035",
+   "season": 2,
+   "stage": 1,
+   "has_shiny": true,
+   "ride": false,
+   "groups": [
+    "植物组",
+    "妖精组"
+   ],
+   "types": [
+    "幽",
+    "草"
+   ],
+   "quality": 2
+  },
+  {
+   "name": "嘟嘟煲",
+   "pet_id_u": "3367",
+   "pet_id": 3367,
+   "no": "052",
+   "season": 2,
+   "stage": 1,
+   "has_shiny": true,
+   "ride": false,
+   "groups": [
+    "妖精组",
+    "岩石组"
+   ],
+   "types": [
+    "毒"
+   ],
+   "quality": 2
+  },
+  {
+   "name": "嘟嘟锅",
+   "pet_id_u": "3368",
+   "pet_id": 3368,
+   "no": "053",
+   "season": 2,
+   "stage": 2,
+   "has_shiny": true,
+   "ride": false,
+   "groups": [
+    "妖精组",
+    "岩石组"
+   ],
+   "types": [
+    "毒"
+   ],
+   "quality": 2
+  },
+  {
+   "name": "菊花梨",
+   "pet_id_u": "3227",
+   "pet_id": 3227,
+   "no": "079",
+   "season": 2,
+   "stage": 1,
+   "has_shiny": true,
+   "ride": false,
+   "groups": [
+    "植物组"
+   ],
+   "types": [
+    "萌"
+   ],
+   "quality": 2
+  },
+  {
+   "name": "小夜",
+   "pet_id_u": "3142",
+   "pet_id": 3142,
+   "no": "085",
+   "season": 2,
+   "stage": 1,
+   "has_shiny": true,
+   "ride": false,
+   "groups": [
+    "拟人组",
+    "妖精组"
+   ],
+   "types": [
+    "恶"
+   ],
+   "quality": 2
+  },
+  {
+   "name": "紫夜",
+   "pet_id_u": "3143",
+   "pet_id": 3143,
+   "no": "086",
+   "season": 2,
+   "stage": 2,
+   "has_shiny": true,
+   "ride": false,
+   "groups": [
+    "拟人组",
+    "妖精组"
+   ],
+   "types": [
+    "恶"
+   ],
+   "quality": 2
+  },
+  {
+   "name": "朔夜伊芙",
+   "pet_id_u": "3144",
+   "pet_id": 3144,
+   "no": "087",
+   "season": 2,
+   "stage": 3,
+   "has_shiny": true,
+   "ride": false,
+   "groups": [
+    "拟人组",
+    "妖精组"
+   ],
+   "types": [
+    "恶"
+   ],
+   "quality": 2
+  },
+  {
+   "name": "小独角兽",
+   "pet_id_u": "3062",
+   "pet_id": 3062,
+   "no": "116",
+   "season": 2,
+   "stage": 1,
+   "has_shiny": true,
+   "ride": true,
+   "groups": [
+    "动物组",
+    "巨灵组"
+   ],
+   "types": [
+    "光"
+   ],
+   "quality": 2
+  },
+  {
+   "name": "伊里斯",
+   "pet_id_u": "4076",
+   "pet_id": 4076,
+   "no": "117",
+   "season": 2,
+   "stage": 1,
+   "has_shiny": true,
+   "ride": false,
+   "groups": [],
+   "types": [
+    "光",
+    "翼"
+   ],
+   "quality": 2
+  },
+  {
+   "name": "彩虹独角兽",
+   "pet_id_u": "5002",
+   "pet_id": 5002,
+   "no": "117",
+   "season": 2,
+   "stage": 4,
+   "has_shiny": true,
+   "ride": false,
+   "groups": [
+    "动物组",
+    "巨灵组"
+   ],
+   "types": [
+    "光"
+   ],
+   "quality": 2
+  },
+  {
+   "name": "白金独角兽",
+   "pet_id_u": "3063",
+   "pet_id": 3063,
+   "no": "117",
+   "season": 2,
+   "stage": 2,
+   "has_shiny": true,
+   "ride": true,
+   "groups": [
+    "动物组",
+    "巨灵组"
+   ],
+   "types": [
+    "光"
+   ],
+   "quality": 2
+  },
+  {
+   "name": "灵狐",
+   "pet_id_u": "3075",
+   "pet_id": 3075,
+   "no": "147",
+   "season": 2,
+   "stage": 1,
+   "has_shiny": true,
+   "ride": false,
+   "groups": [
+    "动物组"
+   ],
+   "types": [
+    "火",
+    "冰"
+   ],
+   "quality": 2
+  },
+  {
+   "name": "九尾狐",
+   "pet_id_u": "3076",
+   "pet_id": 3076,
+   "no": "148",
+   "season": 2,
+   "stage": 2,
+   "has_shiny": true,
+   "ride": false,
+   "groups": [
+    "动物组"
+   ],
+   "types": [
+    "火",
+    "冰"
+   ],
+   "quality": 2
+  },
+  {
+   "name": "尖嘴狐仙",
+   "pet_id_u": "3077",
+   "pet_id": 3077,
+   "no": "149",
+   "season": 2,
+   "stage": 3,
+   "has_shiny": true,
+   "ride": false,
+   "groups": [
+    "动物组"
+   ],
+   "types": [
+    "火",
+    "冰"
+   ],
+   "quality": 2
+  },
+  {
+   "name": "公平鸽",
+   "pet_id_u": "3499",
+   "pet_id": 3499,
+   "no": "162",
+   "season": 2,
+   "stage": 1,
+   "has_shiny": true,
+   "ride": false,
+   "groups": [
+    "天空组"
+   ],
+   "types": [
+    "普通"
+   ],
+   "quality": 2
+  },
+  {
+   "name": "钨丝贝贝",
+   "pet_id_u": "3733",
+   "pet_id": 3733,
+   "no": "348",
+   "season": 2,
+   "stage": 1,
+   "has_shiny": true,
+   "ride": true,
+   "groups": [
+    "未发现"
+   ],
+   "types": [
+    "机械"
+   ],
+   "quality": 2
+  },
+  {
+   "name": "辉光幕机",
+   "pet_id_u": "3734",
+   "pet_id": 3734,
+   "no": "349",
+   "season": 2,
+   "stage": 2,
+   "has_shiny": true,
+   "ride": true,
+   "groups": [
+    "未发现"
+   ],
+   "types": [
+    "机械"
+   ],
+   "quality": 2
+  },
+  {
+   "name": "机幕方舟",
+   "pet_id_u": "3735",
+   "pet_id": 3735,
+   "no": "350",
+   "season": 2,
+   "stage": 3,
+   "has_shiny": true,
+   "ride": true,
+   "groups": [
+    "未发现"
+   ],
+   "types": [
+    "机械"
+   ],
+   "quality": 2
+  },
+  {
+   "name": "小雪人",
+   "pet_id_u": "3531",
+   "pet_id": 3531,
+   "no": "354",
+   "season": 2,
+   "stage": 1,
+   "has_shiny": true,
+   "ride": true,
+   "groups": [
+    "未发现"
+   ],
+   "types": [
+    "冰"
+   ],
+   "quality": 2
+  },
+  {
+   "name": "雪怪",
+   "pet_id_u": "3532",
+   "pet_id": 3532,
+   "no": "355",
+   "season": 2,
+   "stage": 2,
+   "has_shiny": true,
+   "ride": true,
+   "groups": [
+    "未发现"
+   ],
+   "types": [
+    "冰"
+   ],
+   "quality": 2
+  },
+  {
+   "name": "爆焰仔",
+   "pet_id_u": "3572",
+   "pet_id": 3572,
+   "no": "356",
+   "season": 2,
+   "stage": 1,
+   "has_shiny": true,
+   "ride": false,
+   "groups": [
+    "未发现"
+   ],
+   "types": [
+    "火",
+    "龙"
+   ],
+   "quality": 2
+  },
+  {
+   "name": "爆焰喷喷",
+   "pet_id_u": "3573",
+   "pet_id": 3573,
+   "no": "357",
+   "season": 2,
+   "stage": 2,
+   "has_shiny": true,
+   "ride": false,
+   "groups": [
+    "未发现"
+   ],
+   "types": [
+    "火",
+    "龙"
+   ],
+   "quality": 2
+  },
+  {
+   "name": "猴麦仔",
+   "pet_id_u": "3729",
+   "pet_id": 3729,
+   "no": "358",
+   "season": 2,
+   "stage": 1,
+   "has_shiny": true,
+   "ride": false,
+   "groups": [
+    "动物组",
+    "机械组"
+   ],
+   "types": [
+    "普通",
+    "机械"
+   ],
+   "quality": 2
+  },
+  {
+   "name": "音碟吼",
+   "pet_id_u": "3730",
+   "pet_id": 3730,
+   "no": "359",
+   "season": 2,
+   "stage": 2,
+   "has_shiny": true,
+   "ride": false,
+   "groups": [
+    "动物组",
+    "机械组"
+   ],
+   "types": [
+    "普通",
+    "机械"
+   ],
+   "quality": 2
+  },
+  {
+   "name": "加油海葵",
+   "pet_id_u": "3659",
+   "pet_id": 3659,
+   "no": "360",
+   "season": 2,
+   "stage": 1,
+   "has_shiny": true,
+   "ride": false,
+   "groups": [
+    "妖精组",
+    "两栖组"
+   ],
+   "types": [
+    "水",
+    "萌"
+   ],
+   "quality": 2
+  },
+  {
+   "name": "加油蟹",
+   "pet_id_u": "3660",
+   "pet_id": 3660,
+   "no": "361",
+   "season": 2,
+   "stage": 2,
+   "has_shiny": true,
+   "ride": false,
+   "groups": [
+    "妖精组",
+    "两栖组"
+   ],
+   "types": [
+    "水",
+    "萌"
+   ],
+   "quality": 2
+  },
+  {
+   "name": "加油蟹",
+   "pet_id_u": "3743",
+   "pet_id": 3743,
+   "no": "361",
+   "season": 2,
+   "stage": 2,
+   "has_shiny": true,
+   "ride": false,
+   "groups": [
+    "妖精组",
+    "两栖组"
+   ],
+   "types": [
+    "水",
+    "萌"
+   ],
+   "quality": 2
+  },
+  {
+   "name": "小丑豆豆",
+   "pet_id_u": "3487",
+   "pet_id": 3487,
+   "no": "362",
+   "season": 2,
+   "stage": 1,
+   "has_shiny": true,
+   "ride": false,
+   "groups": [
+    "妖精组",
+    "拟人组"
+   ],
+   "types": [
+    "恶"
+   ],
+   "quality": 2
+  },
+  {
+   "name": "小丑兔",
+   "pet_id_u": "3488",
+   "pet_id": 3488,
+   "no": "363",
+   "season": 2,
+   "stage": 2,
+   "has_shiny": true,
+   "ride": false,
+   "groups": [
+    "妖精组",
+    "拟人组"
+   ],
+   "types": [
+    "恶"
+   ],
+   "quality": 2
+  },
+  {
+   "name": "小丑公爵",
+   "pet_id_u": "3489",
+   "pet_id": 3489,
+   "no": "364",
+   "season": 2,
+   "stage": 3,
+   "has_shiny": true,
+   "ride": false,
+   "groups": [
+    "妖精组",
+    "拟人组"
+   ],
+   "types": [
+    "恶"
+   ],
+   "quality": 2
+  },
+  {
+   "name": "烟花团",
+   "pet_id_u": "3677",
+   "pet_id": 3677,
+   "no": "365",
+   "season": 2,
+   "stage": 1,
+   "has_shiny": true,
+   "ride": false,
+   "groups": [
+    "机械组",
+    "魔力组"
+   ],
+   "types": [
+    "火",
+    "毒"
+   ],
+   "quality": 2
+  },
+  {
+   "name": "烟花伯爵",
+   "pet_id_u": "3678",
+   "pet_id": 3678,
+   "no": "366",
+   "season": 2,
+   "stage": 2,
+   "has_shiny": true,
+   "ride": false,
+   "groups": [
+    "机械组",
+    "魔力组"
+   ],
+   "types": [
+    "火",
+    "毒"
+   ],
+   "quality": 2
+  },
+  {
+   "name": "咕咕帽",
+   "pet_id_u": "3683",
+   "pet_id": 3683,
+   "no": "367",
+   "season": 2,
+   "stage": 1,
+   "has_shiny": true,
+   "ride": false,
+   "groups": [
+    "妖精组"
+   ],
+   "types": [
+    "幽"
+   ],
+   "quality": 2
+  },
+  {
+   "name": "咕德帽帽",
+   "pet_id_u": "3684",
+   "pet_id": 3684,
+   "no": "368",
+   "season": 2,
+   "stage": 2,
+   "has_shiny": true,
+   "ride": false,
+   "groups": [
+    "妖精组"
+   ],
+   "types": [
+    "幽"
+   ],
+   "quality": 2
+  },
+  {
+   "name": "炫光迪迪",
+   "pet_id_u": "3736",
+   "pet_id": 3736,
+   "no": "369",
+   "season": 2,
+   "stage": 1,
+   "has_shiny": true,
+   "ride": false,
+   "groups": [
+    "动物组",
+    "岩石组"
+   ],
+   "types": [
+    "电",
+    "光"
+   ],
+   "quality": 2
+  },
+  {
+   "name": "霹雳迪迪",
+   "pet_id_u": "3737",
+   "pet_id": 3737,
+   "no": "370",
+   "season": 2,
+   "stage": 2,
+   "has_shiny": true,
+   "ride": false,
+   "groups": [
+    "动物组",
+    "岩石组"
+   ],
+   "types": [
+    "电",
+    "光"
+   ],
+   "quality": 2
+  },
+  {
+   "name": "小鼓象",
+   "pet_id_u": "3708",
+   "pet_id": 3708,
+   "no": "371",
+   "season": 2,
+   "stage": 1,
+   "has_shiny": true,
+   "ride": true,
+   "groups": [
+    "动物组",
+    "机械组"
+   ],
+   "types": [
+    "机械"
+   ],
+   "quality": 2
+  },
+  {
+   "name": "巨鼓象",
+   "pet_id_u": "3709",
+   "pet_id": 3709,
+   "no": "372",
+   "season": 2,
+   "stage": 2,
+   "has_shiny": true,
+   "ride": true,
+   "groups": [
+    "动物组",
+    "机械组"
+   ],
+   "types": [
+    "机械"
+   ],
+   "quality": 2
+  },
+  {
+   "name": "牵线木偶",
+   "pet_id_u": "3234",
+   "pet_id": 3234,
+   "no": "373",
+   "season": 2,
+   "stage": 1,
+   "has_shiny": true,
+   "ride": true,
+   "groups": [
+    "妖精组",
+    "拟人组"
+   ],
+   "types": [
+    "幻"
+   ],
+   "quality": 2
+  },
+  {
+   "name": "帅帅魔偶",
+   "pet_id_u": "3235",
+   "pet_id": 3235,
+   "no": "374",
+   "season": 2,
+   "stage": 2,
+   "has_shiny": true,
+   "ride": true,
+   "groups": [
+    "妖精组",
+    "拟人组"
+   ],
+   "types": [
+    "幻"
+   ],
+   "quality": 2
+  },
+  {
+   "name": "伊贝儿",
+   "pet_id_u": "3043",
+   "pet_id": 3043,
+   "no": "071",
+   "season": 3,
+   "stage": 1,
+   "has_shiny": true,
+   "ride": false,
+   "groups": [
+    "植物组",
+    "软体组"
+   ],
+   "types": [
+    "草"
+   ],
+   "quality": 2
+  },
+  {
+   "name": "伊贝粉粉",
+   "pet_id_u": "3044",
+   "pet_id": 3044,
+   "no": "072",
+   "season": 3,
+   "stage": 2,
+   "has_shiny": true,
+   "ride": false,
+   "groups": [
+    "植物组",
+    "软体组"
+   ],
+   "types": [
+    "草"
+   ],
+   "quality": 2
+  },
+  {
+   "name": "海盔虫",
+   "pet_id_u": "3330",
+   "pet_id": 3330,
+   "no": "076",
+   "season": 3,
+   "stage": 1,
+   "has_shiny": true,
+   "ride": false,
+   "groups": [
+    "海洋组",
+    "巨灵组"
+   ],
+   "types": [
+    "水",
+    "毒"
+   ],
+   "quality": 2
+  },
+  {
+   "name": "海盔虫",
+   "pet_id_u": "3475",
+   "pet_id": 3475,
+   "no": "076",
+   "season": 3,
+   "stage": 1,
+   "has_shiny": true,
+   "ride": false,
+   "groups": [
+    "海洋组",
+    "巨灵组"
+   ],
+   "types": [
+    "水",
+    "毒"
+   ],
+   "quality": 2
+  },
+  {
+   "name": "刺盔虫",
+   "pet_id_u": "3331",
+   "pet_id": 3331,
+   "no": "077",
+   "season": 3,
+   "stage": 2,
+   "has_shiny": true,
+   "ride": false,
+   "groups": [
+    "海洋组",
+    "巨灵组"
+   ],
+   "types": [
+    "水",
+    "毒"
+   ],
+   "quality": 2
+  },
+  {
+   "name": "刺盔虫",
+   "pet_id_u": "3476",
+   "pet_id": 3476,
+   "no": "077",
+   "season": 3,
+   "stage": 2,
+   "has_shiny": true,
+   "ride": false,
+   "groups": [
+    "海洋组",
+    "巨灵组"
+   ],
+   "types": [
+    "水",
+    "毒"
+   ],
+   "quality": 2
+  },
+  {
+   "name": "千棘海针",
+   "pet_id_u": "4020",
+   "pet_id": 4020,
+   "no": "078",
+   "season": 3,
+   "stage": 3,
+   "has_shiny": true,
+   "ride": false,
+   "groups": [],
+   "types": [
+    "水",
+    "毒"
+   ],
+   "quality": 3
+  },
+  {
+   "name": "千棘海针",
+   "pet_id_u": "5012",
+   "pet_id": 5012,
+   "no": "078",
+   "season": 3,
+   "stage": 4,
+   "has_shiny": true,
+   "ride": false,
+   "groups": [
+    "海洋组",
+    "巨灵组"
+   ],
+   "types": [
+    "水",
+    "毒"
+   ],
+   "quality": 2
+  },
+  {
+   "name": "千棘海针",
+   "pet_id_u": "5029",
+   "pet_id": 5029,
+   "no": "078",
+   "season": 3,
+   "stage": 4,
+   "has_shiny": true,
+   "ride": false,
+   "groups": [
+    "海洋组",
+    "巨灵组"
+   ],
+   "types": [
+    "水",
+    "毒"
+   ],
+   "quality": 2
+  },
+  {
+   "name": "千棘盔",
+   "pet_id_u": "3332",
+   "pet_id": 3332,
+   "no": "078",
+   "season": 3,
+   "stage": 3,
+   "has_shiny": true,
+   "ride": false,
+   "groups": [
+    "海洋组",
+    "巨灵组"
+   ],
+   "types": [
+    "水",
+    "毒"
+   ],
+   "quality": 2
+  },
+  {
+   "name": "千棘盔",
+   "pet_id_u": "3477",
+   "pet_id": 3477,
+   "no": "078",
+   "season": 3,
+   "stage": 3,
+   "has_shiny": true,
+   "ride": false,
+   "groups": [
+    "海洋组",
+    "巨灵组"
+   ],
+   "types": [
+    "水",
+    "毒"
+   ],
+   "quality": 2
+  },
+  {
+   "name": "小草虫",
+   "pet_id_u": "3139",
+   "pet_id": 3139,
+   "no": "099",
+   "season": 3,
+   "stage": 1,
+   "has_shiny": true,
+   "ride": false,
+   "groups": [
+    "昆虫组",
+    "拟人组"
+   ],
+   "types": [
+    "虫",
+    "草"
+   ],
+   "quality": 2
+  },
+  {
+   "name": "草衣虫",
+   "pet_id_u": "3140",
+   "pet_id": 3140,
+   "no": "100",
+   "season": 3,
+   "stage": 2,
+   "has_shiny": true,
+   "ride": false,
+   "groups": [
+    "昆虫组",
+    "拟人组"
+   ],
+   "types": [
+    "虫",
+    "草"
+   ],
+   "quality": 2
+  },
+  {
+   "name": "花衣蝶",
+   "pet_id_u": "3141",
+   "pet_id": 3141,
+   "no": "101",
+   "season": 3,
+   "stage": 3,
+   "has_shiny": true,
+   "ride": false,
+   "groups": [
+    "昆虫组",
+    "拟人组"
+   ],
+   "types": [
+    "虫",
+    "草"
+   ],
+   "quality": 2
+  },
+  {
+   "name": "斑斑",
+   "pet_id_u": "3534",
+   "pet_id": 3534,
+   "no": "177",
+   "season": 3,
+   "stage": 1,
+   "has_shiny": true,
+   "ride": false,
+   "groups": [
+    "天空组"
+   ],
+   "types": [
+    "翼"
+   ],
+   "quality": 2
+  },
+  {
+   "name": "斑枭",
+   "pet_id_u": "3535",
+   "pet_id": 3535,
+   "no": "178",
+   "season": 3,
+   "stage": 2,
+   "has_shiny": true,
+   "ride": false,
+   "groups": [
+    "天空组"
+   ],
+   "types": [
+    "翼"
+   ],
+   "quality": 2
+  },
+  {
+   "name": "小鹬",
+   "pet_id_u": "3250",
+   "pet_id": 3250,
+   "no": "231",
+   "season": 3,
+   "stage": 1,
+   "has_shiny": true,
+   "ride": false,
+   "groups": [
+    "天空组"
+   ],
+   "types": [
+    "翼"
+   ],
+   "quality": 2
+  },
+  {
+   "name": "鄙目鹬",
+   "pet_id_u": "3251",
+   "pet_id": 3251,
+   "no": "232",
+   "season": 3,
+   "stage": 2,
+   "has_shiny": true,
+   "ride": false,
+   "groups": [
+    "天空组"
+   ],
+   "types": [
+    "翼"
+   ],
+   "quality": 2
+  },
+  {
+   "name": "高帽鹬者",
+   "pet_id_u": "5054",
+   "pet_id": 5054,
+   "no": "233",
+   "season": 3,
+   "stage": 4,
+   "has_shiny": true,
+   "ride": false,
+   "groups": [
+    "天空组"
+   ],
+   "types": [
+    "翼"
+   ],
+   "quality": 2
+  },
+  {
+   "name": "高脚鹬",
+   "pet_id_u": "3252",
+   "pet_id": 3252,
+   "no": "233",
+   "season": 3,
+   "stage": 3,
+   "has_shiny": true,
+   "ride": false,
+   "groups": [
+    "天空组"
+   ],
+   "types": [
+    "翼"
+   ],
+   "quality": 2
+  },
+  {
+   "name": "豆丁鱼",
+   "pet_id_u": "3384",
+   "pet_id": 3384,
+   "no": "239",
+   "season": 3,
+   "stage": 1,
+   "has_shiny": true,
+   "ride": true,
+   "groups": [
+    "海洋组",
+    "巨龙组"
+   ],
+   "types": [
+    "水",
+    "龙"
+   ],
+   "quality": 2
+  },
+  {
+   "name": "快鳍鱼",
+   "pet_id_u": "3385",
+   "pet_id": 3385,
+   "no": "240",
+   "season": 3,
+   "stage": 2,
+   "has_shiny": true,
+   "ride": true,
+   "groups": [
+    "海洋组",
+    "巨龙组"
+   ],
+   "types": [
+    "水",
+    "龙"
+   ],
+   "quality": 2
+  },
+  {
+   "name": "龙鱼",
+   "pet_id_u": "3386",
+   "pet_id": 3386,
+   "no": "241",
+   "season": 3,
+   "stage": 3,
+   "has_shiny": true,
+   "ride": true,
+   "groups": [
+    "海洋组",
+    "巨龙组"
+   ],
+   "types": [
+    "水",
+    "龙"
+   ],
+   "quality": 2
+  },
+  {
+   "name": "可立鸡",
+   "pet_id_u": "3086",
+   "pet_id": 3086,
+   "no": "266",
+   "season": 3,
+   "stage": 1,
+   "has_shiny": true,
+   "ride": true,
+   "groups": [
+    "天空组",
+    "拟人组"
+   ],
+   "types": [
+    "火"
+   ],
+   "quality": 2
+  },
+  {
+   "name": "晕晕鸡",
+   "pet_id_u": "3087",
+   "pet_id": 3087,
+   "no": "267",
+   "season": 3,
+   "stage": 2,
+   "has_shiny": true,
+   "ride": true,
+   "groups": [
+    "天空组",
+    "拟人组"
+   ],
+   "types": [
+    "火"
+   ],
+   "quality": 2
+  },
+  {
+   "name": "绅士鸡",
+   "pet_id_u": "3088",
+   "pet_id": 3088,
+   "no": "268",
+   "season": 3,
+   "stage": 3,
+   "has_shiny": true,
+   "ride": true,
+   "groups": [
+    "天空组",
+    "拟人组"
+   ],
+   "types": [
+    "火",
+    "武"
+   ],
+   "quality": 2
+  },
+  {
+   "name": "武者鸡",
+   "pet_id_u": "3089",
+   "pet_id": 3089,
+   "no": "269",
+   "season": 3,
+   "stage": 3,
+   "has_shiny": true,
+   "ride": true,
+   "groups": [
+    "天空组",
+    "拟人组"
+   ],
+   "types": [
+    "火",
+    "武"
+   ],
+   "quality": 2
+  },
+  {
+   "name": "地鼠",
+   "pet_id_u": "3020",
+   "pet_id": 3020,
+   "no": "277",
+   "season": 3,
+   "stage": 1,
+   "has_shiny": true,
+   "ride": false,
+   "groups": [
+    "动物组"
+   ],
+   "types": [
+    "地"
+   ],
+   "quality": 2
+  },
+  {
+   "name": "地鼠",
+   "pet_id_u": "3454",
+   "pet_id": 3454,
+   "no": "277",
+   "season": 3,
+   "stage": 1,
+   "has_shiny": true,
+   "ride": false,
+   "groups": [
+    "动物组"
+   ],
+   "types": [
+    "地"
+   ],
+   "quality": 2
+  },
+  {
+   "name": "遁鼠",
+   "pet_id_u": "3021",
+   "pet_id": 3021,
+   "no": "278",
+   "season": 3,
+   "stage": 2,
+   "has_shiny": true,
+   "ride": false,
+   "groups": [
+    "动物组"
+   ],
+   "types": [
+    "地"
+   ],
+   "quality": 2
+  },
+  {
+   "name": "遁鼠",
+   "pet_id_u": "3455",
+   "pet_id": 3455,
+   "no": "278",
+   "season": 3,
+   "stage": 2,
+   "has_shiny": true,
+   "ride": false,
+   "groups": [
+    "动物组"
+   ],
+   "types": [
+    "地"
+   ],
+   "quality": 2
+  },
+  {
+   "name": "遁地鼠",
+   "pet_id_u": "3022",
+   "pet_id": 3022,
+   "no": "279",
+   "season": 3,
+   "stage": 3,
+   "has_shiny": true,
+   "ride": false,
+   "groups": [
+    "动物组"
+   ],
+   "types": [
+    "地"
+   ],
+   "quality": 2
+  },
+  {
+   "name": "遁地鼠",
+   "pet_id_u": "3456",
+   "pet_id": 3456,
+   "no": "279",
+   "season": 3,
+   "stage": 3,
+   "has_shiny": true,
+   "ride": false,
+   "groups": [
+    "动物组"
+   ],
+   "types": [
+    "地"
+   ],
+   "quality": 2
+  },
+  {
+   "name": "加灵",
+   "pet_id_u": "3230",
+   "pet_id": 3230,
+   "no": "414",
+   "season": 3,
+   "stage": 1,
+   "has_shiny": false,
+   "ride": false,
+   "groups": [
+    "未发现"
+   ],
+   "types": [
+    "普通",
+    "萌"
+   ],
+   "quality": 3
+  },
+  {
+   "name": "加益",
+   "pet_id_u": "3231",
+   "pet_id": 3231,
+   "no": "415",
+   "season": 3,
+   "stage": 2,
+   "has_shiny": false,
+   "ride": false,
+   "groups": [
+    "未发现"
+   ],
+   "types": [
+    "普通",
+    "萌"
+   ],
+   "quality": 3
+  },
+  {
+   "name": "加尔",
+   "pet_id_u": "3232",
+   "pet_id": 3232,
+   "no": "416",
+   "season": 3,
+   "stage": 3,
+   "has_shiny": false,
+   "ride": false,
+   "groups": [
+    "未发现"
+   ],
+   "types": [
+    "普通",
+    "萌"
+   ],
+   "quality": 3
+  },
+  {
+   "name": "黑化加尔",
+   "pet_id_u": "3233",
+   "pet_id": 3233,
+   "no": "417",
+   "season": 3,
+   "stage": 3,
+   "has_shiny": false,
+   "ride": false,
+   "groups": [
+    "未发现"
+   ],
+   "types": [
+    "普通",
+    "幽"
+   ],
+   "quality": 3
+  },
+  {
+   "name": "咬咬小子",
+   "pet_id_u": "3710",
+   "pet_id": 3710,
+   "no": "418",
+   "season": 3,
+   "stage": 1,
+   "has_shiny": true,
+   "ride": false,
+   "groups": [
+    "未发现"
+   ],
+   "types": [
+    "机械"
+   ],
+   "quality": 2
+  },
+  {
+   "name": "胡桃王子",
+   "pet_id_u": "3711",
+   "pet_id": 3711,
+   "no": "419",
+   "season": 3,
+   "stage": 2,
+   "has_shiny": true,
+   "ride": false,
+   "groups": [
+    "未发现"
+   ],
+   "types": [
+    "机械"
+   ],
+   "quality": 2
+  },
+  {
+   "name": "足尖元件",
+   "pet_id_u": "3718",
+   "pet_id": 3718,
+   "no": "420",
+   "season": 3,
+   "stage": 1,
+   "has_shiny": true,
+   "ride": false,
+   "groups": [
+    "未发现"
+   ],
+   "types": [
+    "幻",
+    "机械"
+   ],
+   "quality": 2
+  },
+  {
+   "name": "离心舞者",
+   "pet_id_u": "3719",
+   "pet_id": 3719,
+   "no": "421",
+   "season": 3,
+   "stage": 2,
+   "has_shiny": true,
+   "ride": false,
+   "groups": [
+    "未发现"
+   ],
+   "types": [
+    "幻",
+    "机械"
+   ],
+   "quality": 2
+  },
+  {
+   "name": "蝴蝶陶陶",
+   "pet_id_u": "3360",
+   "pet_id": 3360,
+   "no": "422",
+   "season": 3,
+   "stage": 1,
+   "has_shiny": true,
+   "ride": true,
+   "groups": [
+    "动物组",
+    "拟人组"
+   ],
+   "types": [
+    "萌"
+   ],
+   "quality": 2
+  },
+  {
+   "name": "铆钉毛毛",
+   "pet_id_u": "3361",
+   "pet_id": 3361,
+   "no": "423",
+   "season": 3,
+   "stage": 2,
+   "has_shiny": true,
+   "ride": true,
+   "groups": [
+    "动物组",
+    "拟人组"
+   ],
+   "types": [
+    "萌",
+    "毒"
+   ],
+   "quality": 2
+  },
+  {
+   "name": "徘徊爪爪",
+   "pet_id_u": "3362",
+   "pet_id": 3362,
+   "no": "424",
+   "season": 3,
+   "stage": 3,
+   "has_shiny": true,
+   "ride": true,
+   "groups": [
+    "动物组",
+    "拟人组"
+   ],
+   "types": [
+    "萌",
+    "毒"
+   ],
+   "quality": 2
+  },
+  {
+   "name": "苞米仔",
+   "pet_id_u": "3759",
+   "pet_id": 3759,
+   "no": "425",
+   "season": 3,
+   "stage": 1,
+   "has_shiny": true,
+   "ride": false,
+   "groups": [
+    "植物组",
+    "拟人组"
+   ],
+   "types": [
+    "草",
+    "火"
+   ],
+   "quality": 2
+  },
+  {
+   "name": "炮米花",
+   "pet_id_u": "3760",
+   "pet_id": 3760,
+   "no": "426",
+   "season": 3,
+   "stage": 2,
+   "has_shiny": true,
+   "ride": false,
+   "groups": [
+    "植物组",
+    "拟人组"
+   ],
+   "types": [
+    "草",
+    "火"
+   ],
+   "quality": 2
+  },
+  {
+   "name": "十字蝌蚪",
+   "pet_id_u": "3591",
+   "pet_id": 3591,
+   "no": "427",
+   "season": 3,
+   "stage": 1,
+   "has_shiny": true,
+   "ride": false,
+   "groups": [
+    "两栖组",
+    "拟人组"
+   ],
+   "types": [
+    "水"
+   ],
+   "quality": 2
+  },
+  {
+   "name": "十字蛙",
+   "pet_id_u": "3592",
+   "pet_id": 3592,
+   "no": "428",
+   "season": 3,
+   "stage": 2,
+   "has_shiny": true,
+   "ride": false,
+   "groups": [
+    "两栖组",
+    "拟人组"
+   ],
+   "types": [
+    "水"
+   ],
+   "quality": 2
+  },
+  {
+   "name": "深渊蛙",
+   "pet_id_u": "3593",
+   "pet_id": 3593,
+   "no": "429",
+   "season": 3,
+   "stage": 3,
+   "has_shiny": true,
+   "ride": false,
+   "groups": [
+    "两栖组",
+    "拟人组"
+   ],
+   "types": [
+    "水",
+    "武"
+   ],
+   "quality": 2
+  },
+  {
+   "name": "卡波",
+   "pet_id_u": "3264",
+   "pet_id": 3264,
+   "no": "430",
+   "season": 3,
+   "stage": 1,
+   "has_shiny": true,
+   "ride": false,
+   "groups": [
+    "妖精组"
+   ],
+   "types": [
+    "恶"
+   ],
+   "quality": 2
+  },
+  {
+   "name": "卡拉波斯",
+   "pet_id_u": "3265",
+   "pet_id": 3265,
+   "no": "431",
+   "season": 3,
+   "stage": 2,
+   "has_shiny": true,
+   "ride": false,
+   "groups": [
+    "妖精组"
+   ],
+   "types": [
+    "恶"
+   ],
+   "quality": 2
+  },
+  {
+   "name": "守夜烛",
+   "pet_id_u": "3675",
+   "pet_id": 3675,
+   "no": "432",
+   "season": 3,
+   "stage": 1,
+   "has_shiny": true,
+   "ride": false,
+   "groups": [
+    "妖精组"
+   ],
+   "types": [
+    "火",
+    "光"
+   ],
+   "quality": 2
+  },
+  {
+   "name": "流明坎德拉",
+   "pet_id_u": "3676",
+   "pet_id": 3676,
+   "no": "433",
+   "season": 3,
+   "stage": 2,
+   "has_shiny": true,
+   "ride": false,
+   "groups": [
+    "妖精组"
+   ],
+   "types": [
+    "火",
+    "光"
+   ],
+   "quality": 2
+  },
+  {
+   "name": "蜜果骸",
+   "pet_id_u": "3706",
+   "pet_id": 3706,
+   "no": "434",
+   "season": 3,
+   "stage": 1,
+   "has_shiny": true,
+   "ride": false,
+   "groups": [
+    "妖精组",
+    "植物组"
+   ],
+   "types": [
+    "幽",
+    "草"
+   ],
+   "quality": 2
+  },
+  {
+   "name": "半朽蜜果灵",
+   "pet_id_u": "3707",
+   "pet_id": 3707,
+   "no": "435",
+   "season": 3,
+   "stage": 2,
+   "has_shiny": true,
+   "ride": false,
+   "groups": [
+    "妖精组",
+    "植物组"
+   ],
+   "types": [
+    "幽",
+    "草"
+   ],
+   "quality": 2
+  },
+  {
+   "name": "稻草人",
+   "pet_id_u": "3697",
+   "pet_id": 3697,
+   "no": "436",
+   "season": 3,
+   "stage": 1,
+   "has_shiny": true,
+   "ride": false,
+   "groups": [
+    "妖精组"
+   ],
+   "types": [
+    "萌",
+    "武"
+   ],
+   "quality": 2
+  },
+  {
+   "name": "稻草守护者",
+   "pet_id_u": "3698",
+   "pet_id": 3698,
+   "no": "437",
+   "season": 3,
+   "stage": 2,
+   "has_shiny": true,
+   "ride": false,
+   "groups": [
+    "妖精组"
+   ],
+   "types": [
+    "萌",
+    "武"
+   ],
+   "quality": 2
+  },
+  {
+   "name": "栗鼠",
+   "pet_id_u": "3565",
+   "pet_id": 3565,
+   "no": "438",
+   "season": 3,
+   "stage": 1,
+   "has_shiny": true,
+   "ride": false,
+   "groups": [
+    "动物组"
+   ],
+   "types": [
+    "毒",
+    "普通"
+   ],
+   "quality": 2
+  },
+  {
+   "name": "壳栗丝鼠",
+   "pet_id_u": "3566",
+   "pet_id": 3566,
+   "no": "439",
+   "season": 3,
+   "stage": 2,
+   "has_shiny": true,
+   "ride": false,
+   "groups": [
+    "动物组"
+   ],
+   "types": [
+    "毒",
+    "普通"
+   ],
+   "quality": 2
+  },
+  {
+   "name": "小灵菇",
+   "pet_id_u": "3145",
+   "pet_id": 3145,
+   "no": "021",
+   "season": 4,
+   "stage": 1,
+   "has_shiny": true,
+   "ride": false,
+   "groups": [
+    "植物组",
+    "魔力组"
+   ],
+   "types": [
+    "幽"
+   ],
+   "quality": 2
+  },
+  {
+   "name": "幻灵菇",
+   "pet_id_u": "3146",
+   "pet_id": 3146,
+   "no": "022",
+   "season": 4,
+   "stage": 2,
+   "has_shiny": true,
+   "ride": false,
+   "groups": [
+    "植物组",
+    "魔力组"
+   ],
+   "types": [
+    "幽",
+    "草"
+   ],
+   "quality": 2
+  },
+  {
+   "name": "幻影灵菇",
+   "pet_id_u": "3147",
+   "pet_id": 3147,
+   "no": "023",
+   "season": 4,
+   "stage": 3,
+   "has_shiny": true,
+   "ride": false,
+   "groups": [
+    "植物组",
+    "魔力组"
+   ],
+   "types": [
+    "幽",
+    "草"
+   ],
+   "quality": 2
+  },
+  {
+   "name": "小黑猫",
+   "pet_id_u": "3568",
+   "pet_id": 3568,
+   "no": "121",
+   "season": 4,
+   "stage": 1,
+   "has_shiny": true,
+   "ride": false,
+   "groups": [
+    "动物组",
+    "妖精组"
+   ],
+   "types": [
+    "普通"
+   ],
+   "quality": 2
+  },
+  {
+   "name": "黑猫密探",
+   "pet_id_u": "4083",
+   "pet_id": 4083,
+   "no": "122",
+   "season": 4,
+   "stage": 3,
+   "has_shiny": true,
+   "ride": false,
+   "groups": [],
+   "types": [
+    "普通"
+   ],
+   "quality": 2
+  },
+  {
+   "name": "黑猫密探",
+   "pet_id_u": "5007",
+   "pet_id": 5007,
+   "no": "122",
+   "season": 4,
+   "stage": 4,
+   "has_shiny": true,
+   "ride": false,
+   "groups": [
+    "动物组",
+    "妖精组"
+   ],
+   "types": [
+    "普通"
+   ],
+   "quality": 3
+  },
+  {
+   "name": "黑猫巫师",
+   "pet_id_u": "3569",
+   "pet_id": 3569,
+   "no": "122",
+   "season": 4,
+   "stage": 2,
+   "has_shiny": true,
+   "ride": false,
+   "groups": [
+    "动物组",
+    "妖精组"
+   ],
+   "types": [
+    "普通"
+   ],
+   "quality": 2
+  },
+  {
+   "name": "逗逗",
+   "pet_id_u": "3373",
+   "pet_id": 3373,
+   "no": "198",
+   "season": 4,
+   "stage": 1,
+   "has_shiny": true,
+   "ride": true,
+   "groups": [
+    "动物组",
+    "巨灵组"
+   ],
+   "types": [
+    "萌"
+   ],
+   "quality": 2
+  },
+  {
+   "name": "气球猫",
+   "pet_id_u": "3374",
+   "pet_id": 3374,
+   "no": "199",
+   "season": 4,
+   "stage": 2,
+   "has_shiny": true,
+   "ride": true,
+   "groups": [
+    "动物组",
+    "巨灵组"
+   ],
+   "types": [
+    "萌"
+   ],
+   "quality": 2
+  },
+  {
+   "name": "奇梦咪",
+   "pet_id_u": "4087",
+   "pet_id": 4087,
+   "no": "200",
+   "season": 4,
+   "stage": 3,
+   "has_shiny": true,
+   "ride": false,
+   "groups": [],
+   "types": [
+    "萌"
+   ],
+   "quality": 2
+  },
+  {
+   "name": "奇梦咪",
+   "pet_id_u": "5024",
+   "pet_id": 5024,
+   "no": "200",
+   "season": 4,
+   "stage": 4,
+   "has_shiny": true,
+   "ride": false,
+   "groups": [
+    "动物组",
+    "巨灵组"
+   ],
+   "types": [
+    "萌"
+   ],
+   "quality": 2
+  },
+  {
+   "name": "梦想三三",
+   "pet_id_u": "3375",
+   "pet_id": 3375,
+   "no": "200",
+   "season": 4,
+   "stage": 3,
+   "has_shiny": true,
+   "ride": true,
+   "groups": [
+    "动物组",
+    "巨灵组"
+   ],
+   "types": [
+    "萌"
+   ],
+   "quality": 2
+  },
+  {
+   "name": "刺轮砣",
+   "pet_id_u": "3582",
+   "pet_id": 3582,
+   "no": "237",
+   "season": 4,
+   "stage": 1,
+   "has_shiny": true,
+   "ride": true,
+   "groups": [
+    "海洋组"
+   ],
+   "types": [
+    "毒",
+    "萌"
+   ],
+   "quality": 2
+  },
+  {
+   "name": "刺轮砣",
+   "pet_id_u": "3584",
+   "pet_id": 3584,
+   "no": "237",
+   "season": 4,
+   "stage": 1,
+   "has_shiny": true,
+   "ride": true,
+   "groups": [
+    "海洋组"
+   ],
+   "types": [
+    "毒",
+    "萌"
+   ],
+   "quality": 2
+  },
+  {
+   "name": "月亮砣",
+   "pet_id_u": "3583",
+   "pet_id": 3583,
+   "no": "238",
+   "season": 4,
+   "stage": 2,
+   "has_shiny": true,
+   "ride": true,
+   "groups": [
+    "海洋组"
+   ],
+   "types": [
+    "毒",
+    "萌"
+   ],
+   "quality": 2
+  },
+  {
+   "name": "月亮砣",
+   "pet_id_u": "3585",
+   "pet_id": 3585,
+   "no": "238",
+   "season": 4,
+   "stage": 2,
+   "has_shiny": true,
+   "ride": true,
+   "groups": [
+    "海洋组"
+   ],
+   "types": [
+    "毒",
+    "萌"
+   ],
+   "quality": 2
+  },
+  {
+   "name": "满月砣",
+   "pet_id_u": "5064",
+   "pet_id": 5064,
+   "no": "238",
+   "season": 4,
+   "stage": 4,
+   "has_shiny": true,
+   "ride": false,
+   "groups": [
+    "海洋组"
+   ],
+   "types": [
+    "毒",
+    "萌"
+   ],
+   "quality": 2
+  },
+  {
+   "name": "满月砣",
+   "pet_id_u": "5065",
+   "pet_id": 5065,
+   "no": "238",
+   "season": 4,
+   "stage": 4,
+   "has_shiny": true,
+   "ride": false,
+   "groups": [
+    "海洋组"
+   ],
+   "types": [
+    "毒",
+    "萌"
+   ],
+   "quality": 2
+  },
+  {
+   "name": "叮叮卯",
+   "pet_id_u": "3752",
+   "pet_id": 3752,
+   "no": "379",
+   "season": 4,
+   "stage": 1,
+   "has_shiny": true,
+   "ride": false,
+   "groups": [
+    "昆虫组",
+    "机械组"
+   ],
+   "types": [
+    "机械",
+    "虫"
+   ],
+   "quality": 2
+  },
+  {
+   "name": "飞飞钥",
+   "pet_id_u": "3753",
+   "pet_id": 3753,
+   "no": "380",
+   "season": 4,
+   "stage": 2,
+   "has_shiny": true,
+   "ride": false,
+   "groups": [
+    "昆虫组",
+    "机械组"
+   ],
+   "types": [
+    "机械",
+    "虫"
+   ],
+   "quality": 2
+  },
+  {
+   "name": "瑰眼仔",
+   "pet_id_u": "3183",
+   "pet_id": 3183,
+   "no": "400",
+   "season": 4,
+   "stage": 1,
+   "has_shiny": true,
+   "ride": false,
+   "groups": [
+    "巨灵组",
+    "昆虫组"
+   ],
+   "types": [
+    "恶",
+    "虫"
+   ],
+   "quality": 2
+  },
+  {
+   "name": "耳翎瑰魅",
+   "pet_id_u": "3184",
+   "pet_id": 3184,
+   "no": "401",
+   "season": 4,
+   "stage": 2,
+   "has_shiny": true,
+   "ride": false,
+   "groups": [
+    "巨灵组",
+    "昆虫组"
+   ],
+   "types": [
+    "恶",
+    "虫"
+   ],
+   "quality": 2
+  },
+  {
+   "name": "邪眼巨魔",
+   "pet_id_u": "3185",
+   "pet_id": 3185,
+   "no": "402",
+   "season": 4,
+   "stage": 3,
+   "has_shiny": true,
+   "ride": false,
+   "groups": [
+    "巨灵组",
+    "昆虫组"
+   ],
+   "types": [
+    "恶",
+    "虫"
+   ],
+   "quality": 2
+  },
+  {
+   "name": "觅觅蝠",
+   "pet_id_u": "3321",
+   "pet_id": 3321,
+   "no": "403",
+   "season": 4,
+   "stage": 1,
+   "has_shiny": true,
+   "ride": true,
+   "groups": [
+    "巨灵组",
+    "天空组"
+   ],
+   "types": [
+    "翼"
+   ],
+   "quality": 2
+  },
+  {
+   "name": "翻翻蝠",
+   "pet_id_u": "3322",
+   "pet_id": 3322,
+   "no": "404",
+   "season": 4,
+   "stage": 2,
+   "has_shiny": true,
+   "ride": true,
+   "groups": [
+    "巨灵组",
+    "天空组"
+   ],
+   "types": [
+    "翼"
+   ],
+   "quality": 2
+  },
+  {
+   "name": "夜游魔",
+   "pet_id_u": "3323",
+   "pet_id": 3323,
+   "no": "405",
+   "season": 4,
+   "stage": 3,
+   "has_shiny": true,
+   "ride": true,
+   "groups": [
+    "巨灵组",
+    "天空组"
+   ],
+   "types": [
+    "翼",
+    "恶"
+   ],
+   "quality": 2
+  },
+  {
+   "name": "芽眼魔",
+   "pet_id_u": "3347",
+   "pet_id": 3347,
+   "no": "406",
+   "season": 4,
+   "stage": 1,
+   "has_shiny": true,
+   "ride": true,
+   "groups": [
+    "巨灵组",
+    "妖精组"
+   ],
+   "types": [
+    "恶",
+    "水"
+   ],
+   "quality": 2
+  },
+  {
+   "name": "叶眼魔",
+   "pet_id_u": "3348",
+   "pet_id": 3348,
+   "no": "407",
+   "season": 4,
+   "stage": 2,
+   "has_shiny": true,
+   "ride": true,
+   "groups": [
+    "巨灵组",
+    "妖精组"
+   ],
+   "types": [
+    "恶",
+    "水"
+   ],
+   "quality": 2
+  },
+  {
+   "name": "障眼魔",
+   "pet_id_u": "3349",
+   "pet_id": 3349,
+   "no": "408",
+   "season": 4,
+   "stage": 3,
+   "has_shiny": true,
+   "ride": true,
+   "groups": [
+    "巨灵组",
+    "妖精组"
+   ],
+   "types": [
+    "恶",
+    "水"
+   ],
+   "quality": 2
+  },
+  {
+   "name": "诅咒狼灵",
+   "pet_id_u": "3761",
+   "pet_id": 3761,
+   "no": "443",
+   "season": 4,
+   "stage": 1,
+   "has_shiny": false,
+   "ride": false,
+   "groups": [
+    "未发现"
+   ],
+   "types": [
+    "幽",
+    "幻"
+   ],
+   "quality": 2
+  },
+  {
+   "name": "新月狼灵",
+   "pet_id_u": "3762",
+   "pet_id": 3762,
+   "no": "444",
+   "season": 4,
+   "stage": 2,
+   "has_shiny": false,
+   "ride": false,
+   "groups": [
+    "未发现"
+   ],
+   "types": [
+    "幽",
+    "幻"
+   ],
+   "quality": 2
+  },
+  {
+   "name": "银月狼王",
+   "pet_id_u": "3763",
+   "pet_id": 3763,
+   "no": "445",
+   "season": 4,
+   "stage": 3,
+   "has_shiny": false,
+   "ride": false,
+   "groups": [
+    "未发现"
+   ],
+   "types": [
+    "幽",
+    "幻"
+   ],
+   "quality": 2
+  },
+  {
+   "name": "新月鹭",
+   "pet_id_u": "3764",
+   "pet_id": 3764,
+   "no": "446",
+   "season": 4,
+   "stage": 1,
+   "has_shiny": true,
+   "ride": false,
+   "groups": [
+    "未发现"
+   ],
+   "types": [
+    "翼",
+    "冰"
+   ],
+   "quality": 2
+  },
+  {
+   "name": "月辉鹭",
+   "pet_id_u": "3765",
+   "pet_id": 3765,
+   "no": "447",
+   "season": 4,
+   "stage": 2,
+   "has_shiny": true,
+   "ride": false,
+   "groups": [
+    "未发现"
+   ],
+   "types": [
+    "翼",
+    "冰"
+   ],
+   "quality": 2
+  },
+  {
+   "name": "月使鹭纳",
+   "pet_id_u": "3766",
+   "pet_id": 3766,
+   "no": "448",
+   "season": 4,
+   "stage": 3,
+   "has_shiny": true,
+   "ride": false,
+   "groups": [
+    "未发现"
+   ],
+   "types": [
+    "翼",
+    "冰"
+   ],
+   "quality": 2
+  },
+  {
+   "name": "热团团",
+   "pet_id_u": "3574",
+   "pet_id": 3574,
+   "no": "449",
+   "season": 4,
+   "stage": 1,
+   "has_shiny": true,
+   "ride": false,
+   "groups": [
+    "未发现"
+   ],
+   "types": [
+    "火",
+    "虫"
+   ],
+   "quality": 2
+  },
+  {
+   "name": "焰米龙",
+   "pet_id_u": "3575",
+   "pet_id": 3575,
+   "no": "450",
+   "season": 4,
+   "stage": 2,
+   "has_shiny": true,
+   "ride": false,
+   "groups": [
+    "未发现"
+   ],
+   "types": [
+    "火",
+    "虫"
+   ],
+   "quality": 2
+  },
+  {
+   "name": "圣凯布米龙",
+   "pet_id_u": "3576",
+   "pet_id": 3576,
+   "no": "451",
+   "season": 4,
+   "stage": 3,
+   "has_shiny": true,
+   "ride": false,
+   "groups": [
+    "未发现"
+   ],
+   "types": [
+    "火",
+    "虫"
+   ],
+   "quality": 2
+  },
+  {
+   "name": "章脑丸",
+   "pet_id_u": "3767",
+   "pet_id": 3767,
+   "no": "452",
+   "season": 4,
+   "stage": 1,
+   "has_shiny": true,
+   "ride": false,
+   "groups": [
+    "妖精组",
+    "软体组"
+   ],
+   "types": [
+    "光",
+    "水"
+   ],
+   "quality": 2
+  },
+  {
+   "name": "智辉章脑",
+   "pet_id_u": "3768",
+   "pet_id": 3768,
+   "no": "453",
+   "season": 4,
+   "stage": 2,
+   "has_shiny": true,
+   "ride": false,
+   "groups": [
+    "妖精组",
+    "软体组"
+   ],
+   "types": [
+    "光",
+    "水"
+   ],
+   "quality": 2
+  },
+  {
+   "name": "未完虫",
+   "pet_id_u": "3542",
+   "pet_id": 3542,
+   "no": "454",
+   "season": 4,
+   "stage": 1,
+   "has_shiny": true,
+   "ride": false,
+   "groups": [
+    "昆虫组",
+    "魔力组"
+   ],
+   "types": [
+    "幽",
+    "虫"
+   ],
+   "quality": 2
+  },
+  {
+   "name": "玳龟",
+   "pet_id_u": "3589",
+   "pet_id": 3589,
+   "no": "455",
+   "season": 4,
+   "stage": 1,
+   "has_shiny": true,
+   "ride": false,
+   "groups": [
+    "巨灵组",
+    "两栖组"
+   ],
+   "types": [
+    "幻"
+   ],
+   "quality": 2
+  },
+  {
+   "name": "玳塔",
+   "pet_id_u": "3590",
+   "pet_id": 3590,
+   "no": "456",
+   "season": 4,
+   "stage": 2,
+   "has_shiny": true,
+   "ride": false,
+   "groups": [
+    "巨灵组",
+    "两栖组"
+   ],
+   "types": [
+    "幻"
+   ],
+   "quality": 2
+  },
+  {
+   "name": "量风碗",
+   "pet_id_u": "3663",
+   "pet_id": 3663,
+   "no": "457",
+   "season": 4,
+   "stage": 1,
+   "has_shiny": true,
+   "ride": false,
+   "groups": [
+    "昆虫组",
+    "机械组"
+   ],
+   "types": [
+    "翼",
+    "机械"
+   ],
+   "quality": 2
+  },
+  {
+   "name": "测风蝉",
+   "pet_id_u": "3664",
+   "pet_id": 3664,
+   "no": "458",
+   "season": 4,
+   "stage": 2,
+   "has_shiny": true,
+   "ride": false,
+   "groups": [
+    "昆虫组",
+    "机械组"
+   ],
+   "types": [
+    "翼",
+    "机械"
+   ],
+   "quality": 2
+  },
+  {
+   "name": "小浣蛋",
+   "pet_id_u": "3771",
+   "pet_id": 3771,
+   "no": "459",
+   "season": 4,
+   "stage": 1,
+   "has_shiny": true,
+   "ride": false,
+   "groups": [
+    "动物组",
+    "拟人组"
+   ],
+   "types": [
+    "恶"
+   ],
+   "quality": 2
+  },
+  {
+   "name": "黑手浣熊",
+   "pet_id_u": "3772",
+   "pet_id": 3772,
+   "no": "460",
+   "season": 4,
+   "stage": 2,
+   "has_shiny": true,
+   "ride": false,
+   "groups": [
+    "动物组",
+    "拟人组"
+   ],
+   "types": [
+    "恶"
+   ],
+   "quality": 2
+  },
+  {
+   "name": "幽铃",
+   "pet_id_u": "3773",
+   "pet_id": 3773,
+   "no": "461",
+   "season": 4,
+   "stage": 1,
+   "has_shiny": true,
+   "ride": false,
+   "groups": [
+    "妖精组",
+    "魔力组"
+   ],
+   "types": [
+    "幽"
+   ],
+   "quality": 2
+  },
+  {
+   "name": "摇铃魔偶",
+   "pet_id_u": "3774",
+   "pet_id": 3774,
+   "no": "462",
+   "season": 4,
+   "stage": 2,
+   "has_shiny": true,
+   "ride": false,
+   "groups": [
+    "妖精组",
+    "魔力组"
+   ],
+   "types": [
+    "幽"
+   ],
+   "quality": 2
+  },
+  {
+   "name": "星星眼",
+   "pet_id_u": "3236",
+   "pet_id": 3236,
+   "no": "463",
+   "season": 4,
+   "stage": 1,
+   "has_shiny": true,
+   "ride": false,
+   "groups": [
+    "天空组",
+    "岩石组"
+   ],
+   "types": [
+    "幻"
+   ],
+   "quality": 2
+  },
+  {
+   "name": "布灵",
+   "pet_id_u": "3775",
+   "pet_id": 3775,
+   "no": "464",
+   "season": 4,
+   "stage": 1,
+   "has_shiny": true,
+   "ride": false,
+   "groups": [
+    "妖精组"
+   ],
+   "types": [
+    "幻",
+    "光"
+   ],
+   "quality": 2
+  },
+  {
+   "name": "布灵布灵",
+   "pet_id_u": "3776",
+   "pet_id": 3776,
+   "no": "465",
+   "season": 4,
+   "stage": 2,
+   "has_shiny": true,
+   "ride": false,
+   "groups": [
+    "妖精组"
+   ],
+   "types": [
+    "幻",
+    "光"
+   ],
+   "quality": 2
+  },
+  {
+   "name": "锤头鹳",
+   "pet_id_u": "3069",
+   "pet_id": 3069,
+   "no": "092",
+   "season": 5,
+   "stage": 1,
+   "has_shiny": true,
+   "ride": false,
+   "groups": [
+    "天空组",
+    "两栖组"
+   ],
+   "types": [
+    "翼",
+    "水"
+   ],
+   "quality": 2
+  },
+  {
+   "name": "花怨鳗",
+   "pet_id_u": "3506",
+   "pet_id": 3506,
+   "no": "201",
+   "season": 5,
+   "stage": 1,
+   "has_shiny": true,
+   "ride": true,
+   "groups": [
+    "海洋组",
+    "两栖组"
+   ],
+   "types": [
+    "地",
+    "草"
+   ],
+   "quality": 2
+  },
+  {
+   "name": "鳗尾兽",
+   "pet_id_u": "3507",
+   "pet_id": 3507,
+   "no": "202",
+   "season": 5,
+   "stage": 2,
+   "has_shiny": true,
+   "ride": true,
+   "groups": [
+    "海洋组",
+    "两栖组"
+   ],
+   "types": [
+    "地",
+    "草"
+   ],
+   "quality": 2
+  },
+  {
+   "name": "伊雷龙",
+   "pet_id_u": "3211",
+   "pet_id": 3211,
+   "no": "203",
+   "season": 5,
+   "stage": 1,
+   "has_shiny": true,
+   "ride": false,
+   "groups": [
+    "巨龙组"
+   ],
+   "types": [
+    "龙"
+   ],
+   "quality": 2
+  },
+  {
+   "name": "伊兰亚龙",
+   "pet_id_u": "3412",
+   "pet_id": 3412,
+   "no": "204",
+   "season": 5,
+   "stage": 2,
+   "has_shiny": true,
+   "ride": false,
+   "groups": [
+    "巨龙组"
+   ],
+   "types": [
+    "龙"
+   ],
+   "quality": 2
+  },
+  {
+   "name": "伊兰龙",
+   "pet_id_u": "4090",
+   "pet_id": 4090,
+   "no": "204",
+   "season": 5,
+   "stage": 2,
+   "has_shiny": true,
+   "ride": false,
+   "groups": [],
+   "types": [
+    "龙"
+   ],
+   "quality": 2
+  },
+  {
+   "name": "伊兰龙",
+   "pet_id_u": "5022",
+   "pet_id": 5022,
+   "no": "204",
+   "season": 5,
+   "stage": 4,
+   "has_shiny": true,
+   "ride": false,
+   "groups": [
+    "巨龙组"
+   ],
+   "types": [
+    "龙"
+   ],
+   "quality": 2
+  },
+  {
+   "name": "小翼龙",
+   "pet_id_u": "3209",
+   "pet_id": 3209,
+   "no": "224",
+   "season": 5,
+   "stage": 1,
+   "has_shiny": true,
+   "ride": true,
+   "groups": [
+    "天空组",
+    "巨龙组"
+   ],
+   "types": [
+    "龙",
+    "翼"
+   ],
+   "quality": 2
+  },
+  {
+   "name": "翼龙",
+   "pet_id_u": "3210",
+   "pet_id": 3210,
+   "no": "225",
+   "season": 5,
+   "stage": 2,
+   "has_shiny": true,
+   "ride": true,
+   "groups": [
+    "天空组",
+    "巨龙组"
+   ],
+   "types": [
+    "龙",
+    "翼"
+   ],
+   "quality": 2
+  },
+  {
+   "name": "缇塔",
+   "pet_id_u": "3406",
+   "pet_id": 3406,
+   "no": "229",
+   "season": 5,
+   "stage": 1,
+   "has_shiny": true,
+   "ride": false,
+   "groups": [
+    "机械组"
+   ],
+   "types": [
+    "机械"
+   ],
+   "quality": 2
+  },
+  {
+   "name": "声波缇塔",
+   "pet_id_u": "3407",
+   "pet_id": 3407,
+   "no": "230",
+   "season": 5,
+   "stage": 2,
+   "has_shiny": true,
+   "ride": false,
+   "groups": [
+    "机械组"
+   ],
+   "types": [
+    "机械"
+   ],
+   "quality": 2
+  },
+  {
+   "name": "可爱猿",
+   "pet_id_u": "3083",
+   "pet_id": 3083,
+   "no": "249",
+   "season": 5,
+   "stage": 1,
+   "has_shiny": true,
+   "ride": true,
+   "groups": [
+    "巨灵组",
+    "拟人组"
+   ],
+   "types": [
+    "火"
+   ],
+   "quality": 2
+  },
+  {
+   "name": "炽热猿",
+   "pet_id_u": "3084",
+   "pet_id": 3084,
+   "no": "250",
+   "season": 5,
+   "stage": 2,
+   "has_shiny": true,
+   "ride": true,
+   "groups": [
+    "巨灵组",
+    "拟人组"
+   ],
+   "types": [
+    "火"
+   ],
+   "quality": 2
+  },
+  {
+   "name": "火焰猿",
+   "pet_id_u": "3085",
+   "pet_id": 3085,
+   "no": "251",
+   "season": 5,
+   "stage": 3,
+   "has_shiny": true,
+   "ride": true,
+   "groups": [
+    "巨灵组",
+    "拟人组"
+   ],
+   "types": [
+    "火"
+   ],
+   "quality": 2
+  },
+  {
+   "name": "深蓝鲸",
+   "pet_id_u": "3381",
+   "pet_id": 3381,
+   "no": "273",
+   "season": 5,
+   "stage": 1,
+   "has_shiny": true,
+   "ride": true,
+   "groups": [
+    "海洋组",
+    "巨灵组"
+   ],
+   "types": [
+    "水"
+   ],
+   "quality": 2
+  },
+  {
+   "name": "吸泥鸥",
+   "pet_id_u": "3490",
+   "pet_id": 3490,
+   "no": "287",
+   "season": 5,
+   "stage": 1,
+   "has_shiny": true,
+   "ride": false,
+   "groups": [
+    "天空组",
+    "两栖组"
+   ],
+   "types": [
+    "地",
+    "翼"
+   ],
+   "quality": 2
+  },
+  {
+   "name": "泥吼牙",
+   "pet_id_u": "3491",
+   "pet_id": 3491,
+   "no": "288",
+   "season": 5,
+   "stage": 2,
+   "has_shiny": true,
+   "ride": false,
+   "groups": [
+    "天空组",
+    "两栖组"
+   ],
+   "types": [
+    "地",
+    "翼"
+   ],
+   "quality": 2
+  },
+  {
+   "name": "淤泥乌泽",
+   "pet_id_u": "4102",
+   "pet_id": 4102,
+   "no": "288",
+   "season": 5,
+   "stage": 3,
+   "has_shiny": true,
+   "ride": false,
+   "groups": [],
+   "types": [
+    "地",
+    "翼"
+   ],
+   "quality": 2
+  },
+  {
+   "name": "淤泥乌泽",
+   "pet_id_u": "5057",
+   "pet_id": 5057,
+   "no": "288",
+   "season": 5,
+   "stage": 4,
+   "has_shiny": true,
+   "ride": false,
+   "groups": [
+    "天空组",
+    "两栖组"
+   ],
+   "types": [
+    "地",
+    "翼"
+   ],
+   "quality": 2
+  },
+  {
+   "name": "小冥龙",
+   "pet_id_u": "3797",
+   "pet_id": 3797,
+   "no": "469",
+   "season": 5,
+   "stage": 1,
+   "has_shiny": false,
+   "ride": false,
+   "groups": [
+    "未发现"
+   ],
+   "types": [
+    "幽",
+    "龙"
+   ],
+   "quality": 2
+  },
+  {
+   "name": "冥古龙",
+   "pet_id_u": "3798",
+   "pet_id": 3798,
+   "no": "470",
+   "season": 5,
+   "stage": 2,
+   "has_shiny": false,
+   "ride": false,
+   "groups": [
+    "未发现"
+   ],
+   "types": [
+    "幽",
+    "龙"
+   ],
+   "quality": 2
+  },
+  {
+   "name": "地银链",
+   "pet_id_u": "3799",
+   "pet_id": 3799,
+   "no": "471",
+   "season": 5,
+   "stage": 1,
+   "has_shiny": true,
+   "ride": false,
+   "groups": [
+    "未发现"
+   ],
+   "types": [
+    "地"
+   ],
+   "quality": 2
+  },
+  {
+   "name": "地底银鳞",
+   "pet_id_u": "3800",
+   "pet_id": 3800,
+   "no": "472",
+   "season": 5,
+   "stage": 2,
+   "has_shiny": true,
+   "ride": false,
+   "groups": [
+    "未发现"
+   ],
+   "types": [
+    "地"
+   ],
+   "quality": 2
+  },
+  {
+   "name": "地绡银龙",
+   "pet_id_u": "3801",
+   "pet_id": 3801,
+   "no": "473",
+   "season": 5,
+   "stage": 3,
+   "has_shiny": true,
+   "ride": false,
+   "groups": [
+    "未发现"
+   ],
+   "types": [
+    "地"
+   ],
+   "quality": 2
+  },
+  {
+   "name": "沉金兽",
+   "pet_id_u": "3802",
+   "pet_id": 3802,
+   "no": "474",
+   "season": 5,
+   "stage": 1,
+   "has_shiny": true,
+   "ride": false,
+   "groups": [
+    "未发现"
+   ],
+   "types": [
+    "电"
+   ],
+   "quality": 2
+  },
+  {
+   "name": "龙头金",
+   "pet_id_u": "3803",
+   "pet_id": 3803,
+   "no": "475",
+   "season": 5,
+   "stage": 2,
+   "has_shiny": true,
+   "ride": false,
+   "groups": [
+    "未发现"
+   ],
+   "types": [
+    "电"
+   ],
+   "quality": 2
+  },
+  {
+   "name": "龙嵴金脉",
+   "pet_id_u": "3804",
+   "pet_id": 3804,
+   "no": "476",
+   "season": 5,
+   "stage": 3,
+   "has_shiny": true,
+   "ride": false,
+   "groups": [
+    "未发现"
+   ],
+   "types": [
+    "电"
+   ],
+   "quality": 2
+  },
+  {
+   "name": "乐乐鲨",
+   "pet_id_u": "3805",
+   "pet_id": 3805,
+   "no": "477",
+   "season": 5,
+   "stage": 1,
+   "has_shiny": true,
+   "ride": false,
+   "groups": [
+    "海洋组"
+   ],
+   "types": [
+    "水"
+   ],
+   "quality": 2
+  },
+  {
+   "name": "阿瓦鲨",
+   "pet_id_u": "3806",
+   "pet_id": 3806,
+   "no": "478",
+   "season": 5,
+   "stage": 2,
+   "has_shiny": true,
+   "ride": false,
+   "groups": [
+    "海洋组"
+   ],
+   "types": [
+    "水"
+   ],
+   "quality": 2
+  },
+  {
+   "name": "阿瓦鲨",
+   "pet_id_u": "3807",
+   "pet_id": 3807,
+   "no": "478",
+   "season": 5,
+   "stage": 2,
+   "has_shiny": true,
+   "ride": false,
+   "groups": [
+    "海洋组"
+   ],
+   "types": [
+    "水"
+   ],
+   "quality": 2
+  },
+  {
+   "name": "蛋包蛋",
+   "pet_id_u": "3808",
+   "pet_id": 3808,
+   "no": "479",
+   "season": 5,
+   "stage": 1,
+   "has_shiny": true,
+   "ride": false,
+   "groups": [
+    "动物组",
+    "天空组"
+   ],
+   "types": [
+    "普通",
+    "萌"
+   ],
+   "quality": 2
+  },
+  {
+   "name": "鸡麻麻",
+   "pet_id_u": "3809",
+   "pet_id": 3809,
+   "no": "480",
+   "season": 5,
+   "stage": 2,
+   "has_shiny": true,
+   "ride": false,
+   "groups": [
+    "动物组",
+    "天空组"
+   ],
+   "types": [
+    "普通",
+    "萌"
+   ],
+   "quality": 2
+  },
+  {
+   "name": "蟹蟹椰",
+   "pet_id_u": "3810",
+   "pet_id": 3810,
+   "no": "481",
+   "season": 5,
+   "stage": 1,
+   "has_shiny": true,
+   "ride": false,
+   "groups": [
+    "妖精组",
+    "两栖组"
+   ],
+   "types": [
+    "水",
+    "草"
+   ],
+   "quality": 2
+  },
+  {
+   "name": "沙咔蟹",
+   "pet_id_u": "3811",
+   "pet_id": 3811,
+   "no": "482",
+   "season": 5,
+   "stage": 2,
+   "has_shiny": true,
+   "ride": false,
+   "groups": [
+    "妖精组",
+    "两栖组"
+   ],
+   "types": [
+    "水",
+    "草"
+   ],
+   "quality": 2
+  },
+  {
+   "name": "鲸羽",
+   "pet_id_u": "3812",
+   "pet_id": 3812,
+   "no": "483",
+   "season": 5,
+   "stage": 1,
+   "has_shiny": true,
+   "ride": false,
+   "groups": [
+    "海洋组",
+    "妖精组"
+   ],
+   "types": [
+    "幻",
+    "冰"
+   ],
+   "quality": 2
+  },
+  {
+   "name": "圆环鲸羽",
+   "pet_id_u": "3813",
+   "pet_id": 3813,
+   "no": "484",
+   "season": 5,
+   "stage": 2,
+   "has_shiny": true,
+   "ride": false,
+   "groups": [
+    "海洋组",
+    "妖精组"
+   ],
+   "types": [
+    "幻",
+    "冰"
+   ],
+   "quality": 2
+  },
+  {
+   "name": "豆粒鹅",
+   "pet_id_u": "3814",
+   "pet_id": 3814,
+   "no": "485",
+   "season": 5,
+   "stage": 1,
+   "has_shiny": true,
+   "ride": false,
+   "groups": [
+    "动物组",
+    "天空组"
+   ],
+   "types": [
+    "冰"
+   ],
+   "quality": 2
+  },
+  {
+   "name": "刨雪鹅",
+   "pet_id_u": "3815",
+   "pet_id": 3815,
+   "no": "486",
+   "season": 5,
+   "stage": 2,
+   "has_shiny": true,
+   "ride": false,
+   "groups": [
+    "动物组",
+    "天空组"
+   ],
+   "types": [
+    "冰"
+   ],
+   "quality": 2
+  },
+  {
+   "name": "西瓜虫",
+   "pet_id_u": "3816",
+   "pet_id": 3816,
+   "no": "487",
+   "season": 5,
+   "stage": 1,
+   "has_shiny": true,
+   "ride": false,
+   "groups": [
+    "昆虫组",
+    "植物组"
+   ],
+   "types": [
+    "虫",
+    "草"
+   ],
+   "quality": 2
+  },
+  {
+   "name": "冬虫夏瓜",
+   "pet_id_u": "3817",
+   "pet_id": 3817,
+   "no": "488",
+   "season": 5,
+   "stage": 2,
+   "has_shiny": true,
+   "ride": false,
+   "groups": [
+    "昆虫组",
+    "植物组"
+   ],
+   "types": [
+    "虫",
+    "草"
+   ],
+   "quality": 2
+  },
+  {
+   "name": "小剪影",
+   "pet_id_u": "3818",
+   "pet_id": 3818,
+   "no": "489",
+   "season": 5,
+   "stage": 1,
+   "has_shiny": true,
+   "ride": false,
+   "groups": [
+    "妖精组",
+    "魔力组"
+   ],
+   "types": [
+    "幽"
+   ],
+   "quality": 2
+  },
+  {
+   "name": "影子剪纸",
+   "pet_id_u": "3819",
+   "pet_id": 3819,
+   "no": "490",
+   "season": 5,
+   "stage": 2,
+   "has_shiny": true,
+   "ride": false,
+   "groups": [
+    "妖精组",
+    "魔力组"
+   ],
+   "types": [
+    "幽"
+   ],
+   "quality": 2
+  },
+  {
+   "name": "滴溜豚",
+   "pet_id_u": "3820",
+   "pet_id": 3820,
+   "no": "491",
+   "season": 5,
+   "stage": 1,
+   "has_shiny": true,
+   "ride": false,
+   "groups": [
+    "海洋组"
+   ],
+   "types": [
+    "毒",
+    "幻"
+   ],
+   "quality": 2
+  },
+  {
+   "name": "滴廿豚",
+   "pet_id_u": "3821",
+   "pet_id": 3821,
+   "no": "492",
+   "season": 5,
+   "stage": 2,
+   "has_shiny": true,
+   "ride": false,
+   "groups": [
+    "海洋组"
+   ],
+   "types": [
+    "毒",
+    "幻"
+   ],
+   "quality": 2
+  }
+ ]
+}

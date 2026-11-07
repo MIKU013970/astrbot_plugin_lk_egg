@@ -1,0 +1,211 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<title>{{ header }}</title>
+<style>
+  :root {
+    --bg: {{ color["背景"] }};
+    --paper: {{ color["容器底"] }};
+    --card: {{ color["卡片"] }};
+    --line: {{ color["边框"] }};
+    --dash: {{ color["网格线"] }};
+    --title: {{ color["标题"] }};
+    --text: {{ color["正文"] }};
+    --muted: {{ color["次要"] }};
+    --accent: {{ color["强调"] }};
+    --avatar: {{ color["头像底"] }};
+    --blank: {{ color["空白"] }};
+  }
+  * { box-sizing: border-box; }
+  html, body { margin: 0; padding: 0; }
+  body {
+    width: {{ width }}px;
+    padding: 26px;
+    background: var(--bg);
+    font-family: -apple-system, "PingFang SC", "Microsoft YaHei", "Noto Sans SC", sans-serif;
+    -webkit-font-smoothing: antialiased;
+  }
+
+  /* ---------------- 表头 ---------------- */
+  .head { display: flex; justify-content: space-between; align-items: baseline; }
+  .head h1 { margin: 0; font-size: {{ base + 9 }}px; font-weight: 800; color: var(--title); letter-spacing: .3px; }
+  .head .sub { font-size: {{ base - 4 }}px; color: var(--muted); }
+  .divider { margin: 10px 0 12px; border-bottom: 2px dashed var(--dash); }
+
+  /* ---------------- 虚线大容器 + 分栏 ---------------- */
+  .wrap {
+    padding: 18px;
+    border: 2px dashed var(--dash);
+    border-radius: 18px;
+    background: var(--paper);
+  }
+  .panels { display: flex; align-items: stretch; }
+  .panel { flex: 1 1 0; min-width: 0; }
+  .panel + .panel {
+    margin-left: 34px;
+    padding-left: 34px;
+    border-left: 2px dashed var(--dash);   /* 中间这条竖虚线：常驻 ｜ 奇遇 */
+  }
+  .panel-head {
+    display: flex; align-items: baseline; justify-content: space-between;
+    margin-bottom: 10px; padding-right: 4px;
+  }
+  .panel-head .t { font-size: {{ base }}px; font-weight: 800; display: flex; align-items: center; gap: 6px; }
+  .panel-head .t::before {
+    content: ""; width: 9px; height: 9px; border-radius: 50%; background: currentColor;
+    display: inline-block;
+  }
+  .panel-head .n { font-size: {{ base - 4 }}px; color: var(--muted); }
+  .grid {
+    display: grid;
+    grid-template-columns: repeat({{ per_cols }}, minmax(0, 1fr));
+    gap: 18px;
+  }
+  .empty { padding: 28px 0; text-align: center; color: var(--blank); font-size: {{ base + 2 }}px; }
+
+  /* ---------------- 卡片 ---------------- */
+  .pet {
+    position: relative;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    height: {{ card_h }}px;      /* 和 grid.py 的 card_height() 同款高度，两条引擎版式一致 */
+    padding: 16px 10px;
+    border-radius: 20px;
+    background: var(--card-bg, var(--card));
+    border: 1px solid var(--card-line, var(--line));
+    box-shadow: 0 2px 6px rgba(60, 50, 40, .09);
+    overflow: hidden;
+  }
+  .avatar {
+    position: relative;
+    width: 100px; height: 100px;
+    border-radius: 50%;
+    background: var(--avatar);
+    display: flex; align-items: center; justify-content: center;
+    box-shadow: 0 0 0 3px var(--ring);
+  }
+  .avatar img { width: 82%; height: 82%; object-fit: contain; }
+  .avatar .q { font-size: {{ base + 9 }}px; color: var(--blank); }
+
+  /* 系别章：贴在精灵图左下角 */
+  .elem {
+    position: absolute;
+    left: -14px; bottom: 4px;
+    padding: 1px 7px;
+    border-radius: 999px;
+    font-size: {{ base - 7 }}px; font-weight: 800; line-height: 1.45;
+    color: #fff;
+    box-shadow: 0 0 0 2px var(--card-bg, #fff);
+    white-space: nowrap;
+  }
+
+  /* 环绕头像的四角小徽标 */
+  .sat {
+    position: absolute;
+    width: 34px; height: 34px;
+    border-radius: 50%;
+    background: #fff;
+    display: flex; align-items: center; justify-content: center;
+    box-shadow: 0 0 0 2px var(--ring), 0 2px 4px rgba(0, 0, 0, .13);
+    font-size: 11px; font-weight: 700;
+  }
+  .sat img { width: 72%; height: 72%; object-fit: contain; }
+  .sat.tl { left: -9px;  top: -9px; }
+  .sat.tr { right: -9px; top: -9px; }
+  .sat.bl { left: -9px;  bottom: -9px; }
+  .sat.br { right: -9px; bottom: -9px; }
+
+  .name {
+    margin-top: 12px;
+    font-size: {{ base + 2 }}px; font-weight: 700; color: var(--title);
+    max-width: 100%;
+    white-space: nowrap; overflow: hidden; text-overflow: ellipsis;
+    text-align: center;
+  }
+  .sub {
+    margin-top: 6px; font-size: {{ base - 5 }}px; color: var(--muted);
+    max-width: 100%;
+    white-space: nowrap; overflow: hidden; text-overflow: ellipsis;
+    text-align: center;
+  }
+  .tags {
+    display: flex; flex-wrap: wrap; gap: 6px;
+    justify-content: center; margin-top: 10px;
+    max-width: 100%;
+  }
+  .tag {
+    font-size: {{ base - 6 }}px; line-height: 1.5;
+    padding: 2px 8px; border-radius: 999px;
+    white-space: nowrap;
+  }
+
+  /* ---------------- 页脚 ---------------- */
+  .foot {
+    display: flex; justify-content: space-between; align-items: center;
+    margin-top: 12px; font-size: {{ base - 4 }}px; color: var(--muted);
+  }
+  .foot .pg { color: var(--blank); }
+</style>
+</head>
+<body>
+  <div class="head">
+    <h1>{{ header }}</h1>
+    {% if subtitle %}<div class="sub">{{ subtitle }}</div>{% endif %}
+  </div>
+  <div class="divider"></div>
+
+  <div class="wrap">
+    {% if cards %}
+    <div class="panels">
+      {% for p in panels %}
+      <div class="panel">
+        {% if p.title %}
+        <div class="panel-head">
+          <div class="t" style="color: {{ p.color }};">{{ p.title }}</div>
+          <div class="n">{{ p.count }} 只</div>
+        </div>
+        {% endif %}
+        <div class="grid">
+          {% for c in p.cards %}
+          <div class="pet" style="--card-bg: {{ c.bg }}; --card-line: {{ c.border }};">
+            <div class="avatar" style="--ring: {{ c.ring }};">
+              {% if c.img %}<img src="{{ c.img }}" alt="{{ c.name }}">{% else %}<span class="q">?</span>{% endif %}
+              {% if c.elem %}<span class="elem" style="background: {{ c.elem_color }};">{{ c.elem }}</span>{% endif %}
+              {% for s in c.sats %}
+              <div class="sat {{ ['tl','tr','bl','br'][loop.index0] }}" style="--ring: {{ c.ring }};">
+                {% if s.img %}<img src="{{ s.img }}" alt="">{% elif s.text %}<span style="color: {{ s.color }};">{{ s.text }}</span>{% endif %}
+              </div>
+              {% endfor %}
+            </div>
+
+            <div class="name">{{ c.name }}</div>
+            {% if c.sub %}<div class="sub" style="color: {{ c.sub_fg or 'var(--muted)' }};">{{ c.sub }}</div>{% endif %}
+
+            {% if c.tags %}
+            <div class="tags">
+              {% for t in c.tags %}
+              <span class="tag" style="background: {{ t.bg }}; color: {{ t.fg }}; border: 1px solid {{ t.fg }}33;">{{ t.text }}</span>
+              {% endfor %}
+            </div>
+            {% endif %}
+          </div>
+          {% endfor %}
+        </div>
+      </div>
+      {% endfor %}
+    </div>
+    {% else %}
+    <div class="empty">{{ empty_text }}</div>
+    {% endif %}
+  </div>
+
+  {% if footer or total_pages > 1 %}
+  <div class="foot">
+    <div>{{ footer }}</div>
+    <div class="pg">{{ page }} / {{ total_pages }}</div>
+  </div>
+  {% endif %}
+</body>
+</html>
