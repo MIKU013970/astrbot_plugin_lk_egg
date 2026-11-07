@@ -80,6 +80,20 @@ def main() -> int:
     except Exception as e:
         print("ranges 合并跳过:", type(e).__name__, e)
 
+    # ---- 手工补录（所有自动数据源里都没有的）----
+    # 呆呆铃一链：用户给的官方数值
+    #   蛋 身高 0.17-0.23 / 体重 0.6650-1.5320，大块头 1.51471 / 小不点 0.6823
+    #   区间数 = round((1.5320-0.6650)/0.05)+1 = 18（用 大块头-小不点 也算 18，互相印证）
+    # 跳跳铃 / 铃兰夫人 是同一颗蛋的二三阶段，沿用 18
+    # 伊里斯 = 图鉴 117，与 彩虹独角兽 / 白金独角兽 同链，蛋是「小独角兽蛋」（区间 155）
+    MANUAL = {
+        "呆呆铃": 18, "跳跳铃": 18, "铃兰夫人": 18,
+        "伊里斯": 155, "彩虹独角兽": 155, "白金独角兽": 155,
+    }
+    for k, v in MANUAL.items():
+        out.setdefault(k, v)
+    print(f"手工补录 {len(MANUAL)} 个：{MANUAL}")
+
     OUT.write_text(json.dumps({
         "updated": time.strftime("%Y-%m-%d"),
         "source": "蛋神助手 state/egg_bins.json (bins + families) + ranges.json",
