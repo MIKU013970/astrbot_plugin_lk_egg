@@ -103,7 +103,7 @@ def _strip_emoji(text: str) -> str:
 
 _PLUGIN_DIR = Path(__file__).resolve().parent
 _PLUGIN_NAME = "astrbot_plugin_lk_egg"
-VERSION = "1.99.0"
+VERSION = "1.99.1"
 
 
 def _cand_dirs() -> List[Path]:
@@ -335,7 +335,7 @@ def _hard_save_state(state: Dict[str, Any]) -> None:
     "astrbot_plugin_lk_egg",
     "MIKU013970 & DeepSeek",
     "洛克小肥鱼全功能 + 炫彩花种订阅",
-    "1.99.0",
+    "1.99.1",
 )
 class LkMarketNotify(Star):
     def __init__(self, context: Context, config: AstrBotConfig = None):
@@ -4346,7 +4346,8 @@ class LkMarketNotify(Star):
             n = sum(len(v) for v in grp.values())
             total += n
             lines.append("")
-            lines.append(f"—————— {sid} · {n} 只 ——————")
+            label = "常驻（无赛季）" if sid == "S0" else sid
+            lines.append(f"—————— {label} · {n} 只 ——————")
             for g in sorted(grp, key=lambda x: -len(grp[x])):
                 items = grp[g]
                 lines.append(f"【{g}】{len(items)} 只")
