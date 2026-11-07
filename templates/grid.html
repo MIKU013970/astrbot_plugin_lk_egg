@@ -71,7 +71,7 @@
     flex-direction: column;
     align-items: center;
     height: {{ card_h }}px;      /* 和 grid.py 的 card_height() 同款高度，两条引擎版式一致 */
-    padding: 16px 10px;
+    padding: 16px 10px 20px;
     border-radius: 20px;
     background: var(--card-bg, var(--card));
     border: 1px solid var(--card-line, var(--line));
@@ -133,7 +133,7 @@
   .sat.s4 { left: 67px; top: 76px; }
 
   .name {
-    margin-top: 12px;
+    margin-top: 10px;
     flex: 0 0 auto;
     font-size: {{ base + 2 }}px; font-weight: 700; color: var(--title);
     max-width: 100%;
@@ -141,7 +141,7 @@
     text-align: center;
   }
   .sub {
-    margin-top: 6px; font-size: {{ base - 5 }}px; color: var(--muted);
+    margin-top: 3px; font-size: {{ base - 5 }}px; color: var(--muted);
     flex: 0 0 auto;
     max-width: 100%;
     white-space: nowrap; overflow: hidden; text-overflow: ellipsis;
@@ -149,7 +149,7 @@
   }
   .tags {
     display: flex; flex-wrap: wrap; gap: 6px;
-    justify-content: center; margin-top: 10px;
+    justify-content: center; margin-top: 6px;
     flex: 0 0 auto;
     max-width: 100%;
   }
