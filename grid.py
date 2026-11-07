@@ -678,14 +678,16 @@ def render_grid(
                 f_el = _font(font_path, max(9, fs_tag), bold=True)
                 bh = max(16, fs_tag + 8)
                 bw = int(_tw(draw, elem_txt, f_el) + 12)
-                ecol = accent or th["强调"]
-                ecx = cx - avatar_d * 0.36
-                ecy = ay + avatar_d * 0.86
+                # 章用系别色的**深一档**（主色留给外圈），加粗白边 —— 这样章和外圈
+                # 分得开，不会糊成一坨让人以为头像不圆
+                ecol = _mix(accent or th["强调"], (0, 0, 0), 0.30)
+                ecx = cx - avatar_d * 0.38
+                ecy = ay + avatar_d * 0.92
                 ex0, ey0 = ecx - bw / 2.0, ecy - bh / 2.0
                 draw.rounded_rectangle([ex0, ey0, ex0 + bw, ey0 + bh], radius=bh / 2.0,
                                        fill=ecol,
                                        outline=(card_fill[0], card_fill[1], card_fill[2], 255),
-                                       width=2)
+                                       width=3)
                 etw = _tw(draw, elem_txt, f_el)
                 draw.text((ex0 + (bw - etw) / 2.0, ey0 + bh / 2.0 - fs_tag * 0.66),
                           elem_txt, font=f_el, fill=(255, 255, 255))
@@ -832,9 +834,11 @@ def html_data(
                 line_hex = "#%02X%02X%02X" % th["边框"]
             ring_hex = ("#%02X%02X%02X" % accent) if accent else str(
                 c.get("ring") or RING_PALETTE[0])
+            elem_dark = ("#%02X%02X%02X" % _mix(accent, (0, 0, 0), 0.30)) if accent else ""
             out_cards.append({
                 "name": str(c.get("name") or ""),
                 "sub": str(c.get("sub") or ""),
+                "elem_dark": elem_dark,
                 "sub_fg": str(c.get("sub_fg") or ""),
                 "ring": ring_hex,
                 "bg": bg_hex,

@@ -137,7 +137,7 @@ def _strip_emoji(text: str) -> str:
 
 _PLUGIN_DIR = Path(__file__).resolve().parent
 _PLUGIN_NAME = "astrbot_plugin_lk_egg"
-VERSION = "2.1.0"
+VERSION = "2.1.1"
 
 
 def _cand_dirs() -> List[Path]:
@@ -369,7 +369,7 @@ def _hard_save_state(state: Dict[str, Any]) -> None:
     "astrbot_plugin_lk_egg",
     "MIKU013970 & DeepSeek",
     "洛克小肥鱼全功能 + 炫彩花种订阅",
-    "2.1.0",
+    "2.1.1",
 )
 class LkMarketNotify(Star):
     def __init__(self, context: Context, config: AstrBotConfig = None):
@@ -5128,8 +5128,7 @@ class LkMarketNotify(Star):
     _GRID_DISK_MAX = 192
 
     #: 卡片缓存：蛋组 / 异色的 cards 只算一次（图标路径检查很费磁盘 IO）
-    _GRID_CARDS: "OrderedDict[str, Tuple[List[Dict[str, Any]], List[Dict[str, Any]]]]" = \
-        OrderedDict()
+    _GRID_CARDS: "OrderedDict[str, Any]" = OrderedDict()
     _GRID_CARDS_MAX = 48
 
     def _grid_sig(self) -> str:
@@ -5166,16 +5165,14 @@ class LkMarketNotify(Star):
         while len(cls._GRID_CARDS) > cls._GRID_CARDS_MAX:
             cls._GRID_CARDS.popitem(last=False)
 
-    def _group_cards_pair(self, group: str):
-        """蛋组 → （常驻卡, 奇遇卡）。带缓存，第二次起 0 ms。"""
+    def _group_cards(self, group: str) -> List[Dict[str, Any]]:
+        """蛋组 → 全部卡片（不分常驻/奇遇，一张图装完）。带缓存，第二次起 0 ms。"""
         key = f"g|{group}|{self._grid_sig()}"
         hit = self._grid_cards_cache_get(key)
         if hit is not None:
             return hit
         rows = self._group_rows(group)
-        r_res, r_enc = self._split_resident(rows)
-        val = (self._shiny_grid_cards(sorted(r_res, key=self._grid_sort_key)),
-               self._shiny_grid_cards(sorted(r_enc, key=self._grid_sort_key)))
+        val = self._shiny_grid_cards(sorted(rows, key=self._grid_sort_key))
         self._grid_cards_cache_put(key, val)
         return val
 
@@ -5298,49 +5295,38 @@ class LkMarketNotify(Star):
 
     # ---------------------------------------------------------------- 分页 / 预生成
     def _build_page_panels(self, cards_res: List[Dict[str, Any]],
-                           cards_enc: List[Dict[str, Any]], *,
-                           per: int, res_title: str, enc_title: str
+                           cards_enc: List[Dict[str, Any]], *, per: int
                            ) -> List[List[Dict[str, Any]]]:
-        """把「常驻 / 奇遇」排成每页的 panels。
-
-        第 1 页左常驻 + 右奇遇；剩下的从第 2 页起单栏 4 列接着排。
-        """
-        cap2 = max(2, per // 2)                  # 两栏时每栏最多 10 只
+        """把卡片排成每页的 panels。**不画栏目标题**，两栏之间只留一条竖虚线。"""
+        cap2 = max(2, per // 2)                  # 两栏时每栏最多 per/2 只
         pages: List[List[Dict[str, Any]]] = []
         if cards_res and cards_enc:
-            pages.append([
-                {"title": f"{res_title} · {len(cards_res)} 只", "color": "#4B6A88",
-                 "cards": cards_res[:cap2]},
-                {"title": f"{enc_title} · {len(cards_enc)} 只", "color": "#C25828",
-                 "cards": cards_enc[:cap2]},
-            ])
+            pages.append([{"title": "", "cards": cards_res[:cap2]},
+                          {"title": "", "cards": cards_enc[:cap2]}])
             tail = cards_res[cap2:] + cards_enc[cap2:]
             for i in range(0, len(tail), per):
-                pages.append([{"title": f"{enc_title}（续）· {len(tail)} 只",
-                               "color": "#C25828", "cards": tail[i:i + per]}])
+                pages.append([{"title": "", "cards": tail[i:i + per]}])
         else:
             seq = cards_enc or cards_res
-            title = (f"{enc_title} · {len(seq)} 只" if cards_enc
-                     else f"{res_title} · {len(seq)} 只")
-            color = "#C25828" if cards_enc else "#4B6A88"
             for i in range(0, max(1, len(seq)), per):
-                pages.append([{"title": title, "color": color, "cards": seq[i:i + per]}])
+                pages.append([{"title": "", "cards": seq[i:i + per]}])
         return pages or [[{"title": "", "cards": []}]]
 
     async def _paginate_pngs(self, *, header: str,
                              cards_res: List[Dict[str, Any]],
                              cards_enc: List[Dict[str, Any]],
-                             res_title: str, enc_title: str,
-                             footer: str, flip: str,
+                             per: Optional[int] = None,
                              page: int = 0,
                              max_pages: Optional[int] = None,
                              all_pages: bool = False
                              ) -> Tuple[List[bytes], int, List[int], int]:
-        """排页 + 渲染，返回 (png 列表, 总页数, 实际渲的页码, 总只数)。"""
-        per = self._int_cfg("grid_per_page", 20, 4, 40)
+        """排页 + 渲染，返回 (png 列表, 总页数, 实际渲的页码, 总只数)。
+
+        per 传进来就是「一页最多几张」；传 len(cards) 就强制一张图装完。
+        """
+        per = max(2, int(per if per else self._int_cfg("grid_per_page", 20, 4, 40)))
         total = len(cards_res) + len(cards_enc)
-        pages_panels = self._build_page_panels(
-            cards_res, cards_enc, per=per, res_title=res_title, enc_title=enc_title)
+        pages_panels = self._build_page_panels(cards_res, cards_enc, per=per)
         pages = max(1, len(pages_panels))
         cap = self._int_cfg("grid_max_pages", 3, 0, 12) if max_pages is None else max_pages
         if page and page > 0:
@@ -5352,12 +5338,12 @@ class LkMarketNotify(Star):
 
         pngs: List[bytes] = []
         for p in want:
-            foot = footer + (f" · 翻页：{flip}" if pages > 1 else "")
+            sub = f"第 {p} / {pages} 页 · 共 {total} 只" if pages > 1 else f"共 {total} 只"
+            if cards_res and cards_enc:
+                sub += f"（常驻 {len(cards_res)} + 奇遇 {len(cards_enc)}）"
             png = await self._grid_png(
                 header=header, panels=pages_panels[p - 1],
-                subtitle=(f"第 {p} / {pages} 页 · 共 {total} 只"
-                          f"（常驻 {len(cards_res)} + 奇遇 {len(cards_enc)}）"),
-                footer=foot, page=p, total_pages=pages, total=total)
+                subtitle=sub, footer="", page=p, total_pages=pages, total=total)
             if png:
                 pngs.append(png)
         return pngs, pages, want, total
@@ -5365,32 +5351,27 @@ class LkMarketNotify(Star):
     async def _emit_panels(self, event: Any, *, header: str, text: str,
                            cards_res: List[Dict[str, Any]],
                            cards_enc: List[Dict[str, Any]],
-                           res_title: str, enc_title: str, flip: str,
-                           footer: str, caption_lead: str,
-                           page: int = 0):
-        """网格图统一出口：有常驻有奇遇 → 左常驻 / 右奇遇两栏；只有一边 → 单栏 4 列。"""
+                           caption_lead: str, page: int = 0):
+        """两栏网格图出口（左常驻 / 右奇遇）。页面上不写栏目标题和底部说明。"""
         if not cards_res and not cards_enc:
             return await self._say(event, text)
         pngs, pages, want, total = await self._paginate_pngs(
-            header=header, cards_res=cards_res, cards_enc=cards_enc,
-            res_title=res_title, enc_title=enc_title,
-            footer=footer, flip=flip, page=page)
+            header=header, cards_res=cards_res, cards_enc=cards_enc, page=page)
         if not pngs:
             return await self._say(event, text)
 
-        caption = (f"{caption_lead}｜共 {total} 只"
-                   f"（常驻 {len(cards_res)} · 奇遇 {len(cards_enc)}）")
+        caption = f"{caption_lead}｜共 {total} 只"
+        if cards_res and cards_enc:
+            caption += f"（常驻 {len(cards_res)} · 奇遇 {len(cards_enc)}）"
         if pages > 1:
             caption += f"｜第 {want[0]}-{want[-1]} / {pages} 页"
-            if len(want) < pages:
-                caption += f"（发「{flip.replace('页码', str(want[-1] + 1))}」看下一页）"
         r = self._result_images(event, pngs, caption)
         if r is not None:
             return r
         return event.plain_result(text)
 
-    def _shiny_cards_pair(self, season: str = "") -> Tuple[List[Dict[str, Any]],
-                                                           List[Dict[str, Any]]]:
+    def _shiny_cards_pair(self, season: str = ""
+                          ) -> Tuple[List[Dict[str, Any]], List[Dict[str, Any]]]:
         """异色：常驻 / 奇遇 的卡片（名单以官方异色记录本为准）。带缓存。"""
         key = f"s|{season}|{self._grid_sig()}"
         hit = self._grid_cards_cache_get(key)
@@ -5409,23 +5390,8 @@ class LkMarketNotify(Star):
         self._grid_cards_cache_put(key, (cards_res, cards_enc))
         return cards_res, cards_enc
 
-    def _shiny_panel_args(self, season: str = ""):
-        label = self._season_label(season)
-        return {
-            "header": f"异色精灵 · {label}",
-            "res_title": "常驻（S0）",
-            "enc_title": f"奇遇（{season}）" if season else "奇遇（S1~S5）",
-            "flip": f"异色 {season} 页码" if season else "异色全部 页码",
-            "footer": ("左=常驻（S0）· 右=奇遇 · 头像左下角=系别（底色同系别色）"
-                       " · 标签=精灵组别 + 同乘"),
-            "caption_lead": f"异色精灵 · {label}",
-        }
-
     async def _prewarm_grids(self) -> None:
-        """启动预生成：把所有蛋组、各赛季异色图先渲好（这些内容基本不变）。
-
-        跑在后台任务里，用户发指令时直接命中缓存（内存 → 磁盘）。
-        """
+        """启动预生成：所有蛋组、各赛季异色图先渲好（这些内容基本不变）。"""
         if not bool(self._cfg("grid_prewarm", True)):
             return
         if not (self._grid_enabled() and self._image_reply_on() and _grid() is not None):
@@ -5435,7 +5401,7 @@ class LkMarketNotify(Star):
         done = 0
         failed = 0
 
-        # ① 所有蛋组（查询 xxx组 用的就是这些）
+        # ① 所有蛋组：一张图装完（跟在线查询完全一样，才能命中缓存）
         try:
             groups = sorted(self._all_groups())
         except Exception as e:
@@ -5443,17 +5409,12 @@ class LkMarketNotify(Star):
             logger.warning(f"[网格图] 蛋组列表读取失败: {type(e).__name__}: {e}")
         for grp in groups:
             try:
-                rows = self._group_rows(grp)
-                c_res, c_enc = self._group_cards_pair(grp)
-                pngs, _pages, _want, _total = await self._paginate_pngs(
-                    header=f"蛋组 · {grp} · {len(c_res) + len(c_enc)} 只",
-                    cards_res=c_res, cards_enc=c_enc,
-                    res_title="常驻（S0）", enc_title="奇遇（S1~S5）",
-                    flip=f"{grp} 页码",
-                    footer=("左=常驻 · 右=奇遇 · 头像左下角=系别（底色同系别色）"
-                            " · 标签=精灵组别 + 同乘"),
-                    all_pages=True)
-                done += len(pngs)
+                cards = self._group_cards(grp)
+                if cards:
+                    pngs, _pages, _want, _total = await self._paginate_pngs(
+                        header=f"蛋组 · {grp} · {len(cards)} 只",
+                        cards_res=cards, cards_enc=[], per=len(cards), all_pages=True)
+                    done += len(pngs)
             except Exception as e:
                 failed += 1
                 logger.warning(f"[网格图] 预生成蛋组「{grp}」失败: {type(e).__name__}: {e}")
@@ -5463,11 +5424,9 @@ class LkMarketNotify(Star):
         for season in ("S0", "S1", "S2", "S3", "S4", "S5", ""):
             try:
                 c_res, c_enc = self._shiny_cards_pair(season)
-                a = self._shiny_panel_args(season)
                 pngs, _pages, _want, _total = await self._paginate_pngs(
-                    header=a["header"], cards_res=c_res, cards_enc=c_enc,
-                    res_title=a["res_title"], enc_title=a["enc_title"],
-                    footer=a["footer"], flip=a["flip"], all_pages=True)
+                    header=f"异色精灵 · {self._season_label(season)}",
+                    cards_res=c_res, cards_enc=c_enc, all_pages=True)
                 done += len(pngs)
             except Exception as e:
                 failed += 1
@@ -5521,17 +5480,11 @@ class LkMarketNotify(Star):
         if not (self._grid_enabled() and self._image_reply_on() and _grid() is not None):
             return await self._say(event, text)
 
-        cards_res = self._shiny_grid_cards(sorted(rows_res, key=self._grid_sort_key))
-        cards_enc = self._shiny_grid_cards(sorted(rows_enc, key=self._grid_sort_key))
+        cards_res, cards_enc = self._shiny_cards_pair(season)
         label = self._season_label(season)
         return await self._emit_panels(
             event, header=f"异色精灵 · {label}", text=text,
             cards_res=cards_res, cards_enc=cards_enc,
-            res_title="常驻（S0）",
-            enc_title=f"奇遇（{season}）" if season else "奇遇（S1~S5）",
-            flip=f"异色 {season} 页码" if season else "异色全部 页码",
-            footer=("左=常驻（S0）· 右=奇遇 · 头像左下角=系别（底色同系别色）"
-                    " · 标签=精灵组别 + 同乘"),
             caption_lead=f"异色精灵 · {label}", page=page)
 
     #: 中文数字 → 赛季号
@@ -7061,23 +7014,23 @@ class LkMarketNotify(Star):
         return out
 
     async def _group_reply(self, event: Any, group: str):
-        """查蛋组：两栏网格图（左常驻 / 右奇遇），出不了图就发文字清单。"""
+        """查蛋组：**一张网格图装下这个组的全部精灵**，出不了图就发文字清单。"""
         text = self._group_reply_text(group)
         if not group or not (self._grid_enabled() and self._image_reply_on()
                              and _grid() is not None):
             return await self._say(event, text)
-        rows = self._group_rows(group)
-        if not rows:
+        cards = self._group_cards(group)
+        if not cards:
             return await self._say(event, text)
-        cards_res, cards_enc = self._group_cards_pair(group)
-        return await self._emit_panels(
-            event, header=f"蛋组 · {group} · {len(cards_res) + len(cards_enc)} 只", text=text,
-            cards_res=cards_res, cards_enc=cards_enc,
-            res_title="常驻（S0）", enc_title="奇遇（S1~S5）",
-            flip=f"{group} 页码",
-            footer=("左=常驻 · 右=奇遇 · 头像左下角=系别（底色同系别色）"
-                    " · 标签=精灵组别 + 同乘"),
-            caption_lead=f"蛋组 · {group}")
+        pngs, _pages, _want, total = await self._paginate_pngs(
+            header=f"蛋组 · {group} · {len(cards)} 只",
+            cards_res=cards, cards_enc=[], per=len(cards), all_pages=True)
+        if not pngs:
+            return await self._say(event, text)
+        r = self._result_images(event, pngs, f"蛋组 · {group}｜共 {total} 只")
+        if r is not None:
+            return r
+        return event.plain_result(text)
 
     def _sp_split_mode(self, arg: str):
         """'红绒十字 最近' / '红绒十字历史' → ('红绒十字', 'recent')"""
