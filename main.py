@@ -103,7 +103,7 @@ def _strip_emoji(text: str) -> str:
 
 _PLUGIN_DIR = Path(__file__).resolve().parent
 _PLUGIN_NAME = "astrbot_plugin_lk_egg"
-VERSION = "2.0.1"
+VERSION = "2.0.2"
 
 
 def _cand_dirs() -> List[Path]:
@@ -335,7 +335,7 @@ def _hard_save_state(state: Dict[str, Any]) -> None:
     "astrbot_plugin_lk_egg",
     "MIKU013970 & DeepSeek",
     "洛克小肥鱼全功能 + 炫彩花种订阅",
-    "2.0.1",
+    "2.0.2",
 )
 class LkMarketNotify(Star):
     def __init__(self, context: Context, config: AstrBotConfig = None):
@@ -4365,8 +4365,10 @@ class LkMarketNotify(Star):
                 group = (rg
                          or " / ".join([g for g in (info.get("groups") or []) if g])
                          or "未分组")
+                # 首领化形态（stage>=4，比如 满月砣 = 月亮砣的首领化）单独标出来
+                nm_disp = nm + ("（首领化）" if info.get("leader") else "")
                 rows.setdefault(sid, {}).setdefault(group, []).append(
-                    nm + "·" + "+".join(marks))
+                    nm_disp + "·" + "+".join(marks))
 
         # 花名册缺失时退回按图鉴算
         if not rows:
