@@ -138,7 +138,7 @@ def _strip_emoji(text: str) -> str:
 
 _PLUGIN_DIR = Path(__file__).resolve().parent
 _PLUGIN_NAME = "astrbot_plugin_lk_egg"
-VERSION = "2.1.20"
+VERSION = "2.1.21"
 
 
 def _cand_dirs() -> List[Path]:
@@ -370,7 +370,7 @@ def _hard_save_state(state: Dict[str, Any]) -> None:
     "astrbot_plugin_lk_egg",
     "MIKU013970 & DeepSeek",
     "洛克小肥鱼全功能 + 炫彩花种订阅",
-    "2.1.20",
+    "2.1.21",
 )
 class LkMarketNotify(Star):
     def __init__(self, context: Context, config: AstrBotConfig = None):
@@ -1086,7 +1086,7 @@ class LkMarketNotify(Star):
         if not info or nm in (self.ranges.get("species") or {}):
             return None
         groups = [g for g in (info.get("groups") or []) if g]
-        egg = f"{nm}的蛋"
+        egg = self._egg_name_of(nm)
         chain = []
         head = self._chain_map().get(nm)
         if head:
@@ -4544,6 +4544,23 @@ class LkMarketNotify(Star):
             out.append(self._row_of(nm, sid, {}))
         return out
 
+    def _egg_name_of(self, name: str) -> str:
+        """这只精灵那颗蛋叫什么：自己有 → 进化链一阶段有 → 名字+的蛋。"""
+        sp = self.ranges.get("species") or {}
+        nm = str(name or "").strip()
+        rec = sp.get(nm) or {}
+        egg = str(rec.get("蛋名") or "").strip()
+        if egg:
+            return egg
+        head = self._chain_map().get(nm)
+        for cand in (head, nm):
+            if not cand:
+                continue
+            e2 = str((sp.get(cand) or {}).get("蛋名") or "").strip()
+            if e2:
+                return e2
+        return f"{head or nm}的蛋"
+
     def _row_of(self, nm: str, sid: str, info: Dict[str, Any]) -> Dict[str, Any]:
         """造一条名单行（蛋组 / 同乘 / 蛋名 都按名字补）。"""
         sp = self.ranges.get("species") or {}
@@ -4566,7 +4583,7 @@ class LkMarketNotify(Star):
             "ride": ride,
             "no": str(info.get("no") or (self._book_by_name().get(nm) or {}).get("number") or ""),
             "stage": stage,
-            "egg": str(rec.get("蛋名") or f"{nm}的蛋"),
+            "egg": self._egg_name_of(nm),
         }
 
     def _shiny_report(self, season: str = "") -> str:
