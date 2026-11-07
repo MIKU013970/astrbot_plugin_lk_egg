@@ -21,6 +21,7 @@ from __future__ import annotations
 
 import asyncio
 import base64
+import copy
 from collections import OrderedDict
 import hashlib
 import math
@@ -137,7 +138,7 @@ def _strip_emoji(text: str) -> str:
 
 _PLUGIN_DIR = Path(__file__).resolve().parent
 _PLUGIN_NAME = "astrbot_plugin_lk_egg"
-VERSION = "2.1.17"
+VERSION = "2.1.18"
 
 
 def _cand_dirs() -> List[Path]:
@@ -369,7 +370,7 @@ def _hard_save_state(state: Dict[str, Any]) -> None:
     "astrbot_plugin_lk_egg",
     "MIKU013970 & DeepSeek",
     "洛克小肥鱼全功能 + 炫彩花种订阅",
-    "2.1.17",
+    "2.1.18",
 )
 class LkMarketNotify(Star):
     def __init__(self, context: Context, config: AstrBotConfig = None):
@@ -5231,14 +5232,67 @@ class LkMarketNotify(Star):
         while len(cls._GRID_CARDS) > cls._GRID_CARDS_MAX:
             cls._GRID_CARDS.popitem(last=False)
 
+    def _form_sigs(self, name: str) -> List[tuple]:
+        """这只精灵有几种「蛋 + 区间」不同的形态。
+
+        返回 [(形态简称, 蛋名, 区间数)]，按出现顺序去重；只有一种时返回空列表
+        （说明不需要拆卡）。异色形态不算。
+        """
+        rec = (self.ranges.get("species") or {}).get(str(name or "")) or {}
+        out: List[tuple] = []
+        seen = set()
+        for v in (rec.get("variants") or []):
+            egg = str(v.get("蛋名") or "")
+            if "异色" in egg:
+                continue
+            try:
+                n = int(v.get("区间数"))
+            except (TypeError, ValueError):
+                n = None
+            key = (egg, n)
+            if key in seen:
+                continue
+            seen.add(key)
+            form = str(v.get("形态简称") or "").strip()
+            out.append((form, egg, n))
+        return out if len(out) > 1 else []
+
     def _group_cards(self, group: str) -> List[Dict[str, Any]]:
-        """蛋组 → 全部卡片（不分常驻/奇遇，一张图装完）。带缓存，第二次起 0 ms。"""
+        """蛋组 → 全部卡片（一张图装完）。**多形态按「蛋 + 区间」拆成多张卡**。
+
+        鸭吉吉 6 个形态其实有 4 种区间（27 / 40 / 44 / 40），挤成一张卡只看得到其中一个；
+        拆开后每张卡显示该形态自己的区间和蛋图。
+        """
         key = f"g|{group}|{self._grid_sig()}"
         hit = self._grid_cards_cache_get(key)
         if hit is not None:
             return hit
         rows = self._group_rows(group)
-        val = self._shiny_grid_cards(sorted(rows, key=self._grid_sort_key))
+        merged = self._shiny_grid_cards(sorted(rows, key=self._grid_sort_key))
+        val: List[Dict[str, Any]] = []
+        for card in merged:
+            sigs = self._form_sigs(str(card.get("name") or ""))
+            if not sigs:
+                val.append(card)
+                continue
+            for form, egg, bins in sigs:
+                c2 = copy.deepcopy(card)
+                c2["bins"] = bins
+                # 小字补形态名，否则拆开后两张卡长得一模一样
+                sub = str(card.get("sub") or "")
+                if form:
+                    c2["sub"] = f"{sub} · {form}" if sub else form
+                egg_icon = None
+                c = _card()
+                if c is not None and egg:
+                    egg_icon = c.icon_path("egg", egg)
+                if egg_icon and Path(egg_icon).stem == "magic_egg":
+                    egg_icon = None
+                sats = [s for s in (c2.get("sats") or []) if (s or {}).get("text") != "蛋"]
+                if egg_icon:
+                    sats.insert(0, {"icon": egg_icon, "text": "蛋"})
+                c2["sats"] = sats
+                val.append(c2)
         self._grid_cards_cache_put(key, val)
         return val
 
