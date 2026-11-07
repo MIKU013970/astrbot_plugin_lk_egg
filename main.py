@@ -138,7 +138,7 @@ def _strip_emoji(text: str) -> str:
 
 _PLUGIN_DIR = Path(__file__).resolve().parent
 _PLUGIN_NAME = "astrbot_plugin_lk_egg"
-VERSION = "2.1.23"
+VERSION = "2.1.24"
 
 
 def _cand_dirs() -> List[Path]:
@@ -370,7 +370,7 @@ def _hard_save_state(state: Dict[str, Any]) -> None:
     "astrbot_plugin_lk_egg",
     "MIKU013970 & DeepSeek",
     "洛克小肥鱼全功能 + 炫彩花种订阅",
-    "2.1.23",
+    "2.1.24",
 )
 class LkMarketNotify(Star):
     def __init__(self, context: Context, config: AstrBotConfig = None):
@@ -5300,6 +5300,9 @@ class LkMarketNotify(Star):
         while len(cls._GRID_CARDS) > cls._GRID_CARDS_MAX:
             cls._GRID_CARDS.popitem(last=False)
 
+    #: 特殊形态：名字是别的精灵 / 活动皮肤，不参与「按区间拆卡」
+    SPECIAL_FORMS = {"睡铃雪影娃娃", "果实立方人"}
+
     def _form_sigs(self, name: str) -> List[tuple]:
         """这只精灵有几种「蛋 + 区间」不同的形态。
 
@@ -5323,6 +5326,13 @@ class LkMarketNotify(Star):
             seen.add(key)
             form = str(v.get("形态简称") or "").strip()
             out.append((form, egg, n))
+        # 「特殊形态」（睡铃雪影娃娃 / 果实立方人 这类另一只精灵的皮肤）不拆卡，
+        # 和机械方方一样只按本体显示
+        if any(f in self.SPECIAL_FORMS for f, _e, _n in out):
+            return []
+        # 只有「区间真的不同」才拆：梦游两个形态区间一样（都是 3），拆开就是重复
+        if len({n for _f, _e, n in out}) <= 1:
+            return []
         return out if len(out) > 1 else []
 
     def _group_cards(self, group: str) -> List[Dict[str, Any]]:
