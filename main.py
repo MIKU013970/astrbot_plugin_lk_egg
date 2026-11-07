@@ -137,7 +137,7 @@ def _strip_emoji(text: str) -> str:
 
 _PLUGIN_DIR = Path(__file__).resolve().parent
 _PLUGIN_NAME = "astrbot_plugin_lk_egg"
-VERSION = "2.1.8"
+VERSION = "2.1.9"
 
 
 def _cand_dirs() -> List[Path]:
@@ -369,7 +369,7 @@ def _hard_save_state(state: Dict[str, Any]) -> None:
     "astrbot_plugin_lk_egg",
     "MIKU013970 & DeepSeek",
     "洛克小肥鱼全功能 + 炫彩花种订阅",
-    "2.1.8",
+    "2.1.9",
 )
 class LkMarketNotify(Star):
     def __init__(self, context: Context, config: AstrBotConfig = None):
@@ -4997,8 +4997,10 @@ class LkMarketNotify(Star):
             else:
                 main = st1 or c.icon_path("pet", nm) or shiny
             sats: List[Dict[str, Any]] = []
+            # 一阶段立绘缩略图排在**最后**：卡片只取前 2 枚，前两枚必须是蛋和异色蛋
+            st1_sat: Optional[Dict[str, Any]] = None
             if avatar_mode == "shiny" and st1 and main and Path(st1).name != Path(main).name:
-                sats.append({"icon": st1})       # 用异色立绘当头像时，一阶段图退到徽标
+                st1_sat = {"icon": st1}
             egg_name = str(grp.get("egg") or f"{nm}的蛋")
             egg_icon = c.icon_path("egg", egg_name)
             if egg_icon and Path(egg_icon).stem == "magic_egg":
@@ -5017,6 +5019,8 @@ class LkMarketNotify(Star):
                   or c.icon_path("egg", f"{nm}的异色蛋"))
             if se and (not egg_icon or Path(se).name != Path(egg_icon).name):
                 sats.append({"icon": se, "text": "异色蛋"})
+            if st1_sat is not None:
+                sats.append(st1_sat)          # 第 3 枚起才轮到立绘缩略图
 
             # 系别（左下角章 + 卡片底色）
             types = self._elem_types(nm)
