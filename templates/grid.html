@@ -99,7 +99,7 @@
     padding: 1px 7px;
     border-radius: 999px;
     font-size: {{ base - 7 }}px; font-weight: 800; line-height: 1.45;
-    color: #fff; background: #3E4A59;
+    color: #fff; background: var(--bins-bg, #3E4A59);
     box-shadow: 0 0 0 2px var(--card-bg, #fff);
     white-space: nowrap;
   }
@@ -190,7 +190,7 @@
             <div class="avatar" style="--ring: {{ c.ring }};">
               {% if c.img %}<img src="{{ c.img }}" alt="{{ c.name }}">{% else %}<span class="q">?</span>{% endif %}
               {% if c.elem %}<span class="elem" style="background: {{ c.elem_dark or c.elem_color }};">{{ c.elem }}</span>{% endif %}
-              {% if c.bins %}<span class="bins">区间 {{ c.bins }}</span>{% endif %}
+              {% if c.bins %}<span class="bins" style="--bins-bg: {{ c.bins_bg }};">区间 {{ c.bins }}</span>{% endif %}
               {% for s in c.sats %}
               <div class="sat {{ ['tl','tr','bl','br'][loop.index0] }}" style="--ring: {{ s.ring or c.ring }};">
                 {% if s.img %}<img src="{{ s.img }}" alt="">{% elif s.text %}<span style="color: {{ s.color }};">{{ s.text }}</span>{% endif %}

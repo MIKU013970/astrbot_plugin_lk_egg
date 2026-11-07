@@ -137,7 +137,7 @@ def _strip_emoji(text: str) -> str:
 
 _PLUGIN_DIR = Path(__file__).resolve().parent
 _PLUGIN_NAME = "astrbot_plugin_lk_egg"
-VERSION = "2.1.3"
+VERSION = "2.1.4"
 
 
 def _cand_dirs() -> List[Path]:
@@ -369,7 +369,7 @@ def _hard_save_state(state: Dict[str, Any]) -> None:
     "astrbot_plugin_lk_egg",
     "MIKU013970 & DeepSeek",
     "洛克小肥鱼全功能 + 炫彩花种订阅",
-    "2.1.3",
+    "2.1.4",
 )
 class LkMarketNotify(Star):
     def __init__(self, context: Context, config: AstrBotConfig = None):
@@ -5004,7 +5004,8 @@ class LkMarketNotify(Star):
             if egg_icon and Path(egg_icon).stem == "magic_egg":
                 egg_icon = None                  # 通用占位白蛋不画进徽标
             if egg_icon:
-                sats.append({"icon": egg_icon, "text": "蛋", "ring": "#8A8178"})
+                # 不指定 ring → 渲染器用这只精灵的系别色（整张卡颜色统一）
+                sats.append({"icon": egg_icon, "text": "蛋"})
             # 异色蛋徽标：**按图标库有没有这张图来决定**，不看 marks。
             # （蛋组查询的行没有 marks，以前就会被漏掉 —— 蛋组卡片上就只剩一个蛋）
             # 图标库里的键有四种写法：异色XX的蛋 / 异色XX蛋 / 异色XX / XX的异色蛋，
@@ -5015,8 +5016,7 @@ class LkMarketNotify(Star):
                   or c.icon_path("egg", f"异色{nm}")
                   or c.icon_path("egg", f"{nm}的异色蛋"))
             if se and (not egg_icon or Path(se).name != Path(egg_icon).name):
-                # 异色蛋徽标用紫环，和普通蛋（灰环）一眼区分
-                sats.append({"icon": se, "text": "异色蛋", "ring": "#8B5CF6"})
+                sats.append({"icon": se, "text": "异色蛋"})
 
             # 系别（左下角章 + 卡片底色）
             types = self._elem_types(nm)

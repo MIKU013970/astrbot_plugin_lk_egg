@@ -702,7 +702,7 @@ def render_grid(
                 f_b = _font(font_path, max(9, fs_tag), bold=True)
                 bh2 = max(16, fs_tag + 8)
                 bw2 = int(_tw(draw, btxt, f_b) + 12)
-                bcol = (62, 74, 89)                       # 中性深灰蓝，和系别色区分
+                bcol = _mix(accent or th["强调"], (0, 0, 0), 0.30)   # 和系别章同色
                 bcx = cx + avatar_d * 0.40
                 bcy = ay + avatar_d * 0.06
                 bx0 = bcx - bw2 / 2.0
@@ -870,6 +870,7 @@ def html_data(
                 "elem": str(c.get("elem") or ""),
                 "elem_color": "#%02X%02X%02X" % accent if accent else "",
                 "bins": c.get("bins"),
+                "bins_bg": ("#%02X%02X%02X" % _mix(accent, (0, 0, 0), 0.30)) if accent else "",
                 "img": data_uri(str(c.get("icon") or "")),
                 "tags": tags,
                 "sats": sats,

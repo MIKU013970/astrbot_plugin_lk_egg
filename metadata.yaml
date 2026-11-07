@@ -4,7 +4,7 @@ desc: >-
   输入精灵名字或「身高/体重」查出这是什么蛋，带真实孵化概率；
   查精灵蛋市场的花种（颜色 / 粒子 / 价格），可订阅颜色、粒子、精灵，
   有新花种上架自动推送。还支持查商家、黑白名单、新上架监控。
-version: 2.1.3
+version: 2.1.4
 author: MIKU013970 & DeepSeek
 repo: https://github.com/MIKU013970/astrbot_plugin_lk_egg
 short_desc: 查精灵蛋 · 花种订阅 · 商家查询 · 自动推送
