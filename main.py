@@ -138,7 +138,7 @@ def _strip_emoji(text: str) -> str:
 
 _PLUGIN_DIR = Path(__file__).resolve().parent
 _PLUGIN_NAME = "astrbot_plugin_lk_egg"
-VERSION = "2.1.25"
+VERSION = "2.1.26"
 
 
 def _cand_dirs() -> List[Path]:
@@ -370,7 +370,7 @@ def _hard_save_state(state: Dict[str, Any]) -> None:
     "astrbot_plugin_lk_egg",
     "MIKU013970 & DeepSeek",
     "洛克小肥鱼全功能 + 炫彩花种订阅",
-    "2.1.25",
+    "2.1.26",
 )
 class LkMarketNotify(Star):
     def __init__(self, context: Context, config: AstrBotConfig = None):
@@ -5356,6 +5356,11 @@ class LkMarketNotify(Star):
             for form, egg, bins in sigs:
                 c2 = copy.deepcopy(card)
                 c2["bins"] = bins
+                # 头像换成**这个形态自己的立绘**（不然 4 张卡长得一模一样）
+                if form:
+                    _fi = _card().icon_path("pet", str(card.get("name") or ""), form)
+                    if _fi:
+                        c2["icon"] = _fi
                 # 小字补形态名，否则拆开后两张卡长得一模一样
                 sub = str(card.get("sub") or "")
                 if form:
