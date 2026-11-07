@@ -177,7 +177,8 @@ def card(name: str, sub: str = "", icon: Optional[str] = None,
          ring: str = "#5C7AEA", tags: Optional[Sequence[Any]] = None,
          sats: Optional[Sequence[Dict[str, Any]]] = None,
          elem: str = "", elem_color: str = "",
-         bg: str = "", border: str = "", sub_fg: str = "") -> Dict[str, Any]:
+         bg: str = "", border: str = "", sub_fg: str = "",
+         bins: Optional[int] = None) -> Dict[str, Any]:
     """造一张卡片。tags 可以传 dict（tag() 造的）、(文字, 类型) 元组或纯文字。
 
     elem / elem_color —— 系别文字（如 `龙/翼`）和系别主色（如 `#e64c62`）。
@@ -204,6 +205,7 @@ def card(name: str, sub: str = "", icon: Optional[str] = None,
         "bg": str(bg or ""),
         "border": str(border or ""),
         "sub_fg": str(sub_fg or ""),
+        "bins": int(bins) if bins not in (None, "") else None,
     }
 
 
@@ -653,7 +655,7 @@ def render_grid(
             if sats:
                 rc = avatar_d / 2.0 + SAT / 2.0 - 2
                 sx, sy = cx, ay + avatar_d / 2.0
-                spots = [(-1, -1), (1, -1), (-1, 1), (1, 1)]
+                spots = [(-1, -1), (1, 1), (-1, 1), (1, -1)]
                 for k, s in enumerate(sats):
                     ux, uy = spots[k]
                     px = sx + ux * rc * 0.74
@@ -692,6 +694,26 @@ def render_grid(
                 etw = _tw(draw, elem_txt, f_el)
                 draw.text((ex0 + (bw - etw) / 2.0, ey0 + bh / 2.0 - fs_tag * 0.66),
                           elem_txt, font=f_el, fill=(255, 255, 255))
+
+            # 区间数：精灵图**右上角**，和系别章同一套胶囊样式
+            bins_n = c.get("bins")
+            if bins_n not in (None, ""):
+                btxt = f"区间 {bins_n}"
+                f_b = _font(font_path, max(9, fs_tag), bold=True)
+                bh2 = max(16, fs_tag + 8)
+                bw2 = int(_tw(draw, btxt, f_b) + 12)
+                bcol = (62, 74, 89)                       # 中性深灰蓝，和系别色区分
+                bcx = cx + avatar_d * 0.40
+                bcy = ay + avatar_d * 0.06
+                bx0 = bcx - bw2 / 2.0
+                by0b = bcy - bh2 / 2.0
+                draw.rounded_rectangle([bx0, by0b, bx0 + bw2, by0b + bh2],
+                                       radius=bh2 / 2.0, fill=bcol,
+                                       outline=(card_fill[0], card_fill[1], card_fill[2], 255),
+                                       width=3)
+                btw = _tw(draw, btxt, f_b)
+                draw.text((bx0 + (bw2 - btw) / 2.0, by0b + bh2 / 2.0 - fs_tag * 0.66),
+                          btxt, font=f_b, fill=(255, 255, 255))
 
             # 名字 / 小字
             ny = ay + avatar_d + 12
@@ -847,6 +869,7 @@ def html_data(
                 "border": line_hex,
                 "elem": str(c.get("elem") or ""),
                 "elem_color": "#%02X%02X%02X" % accent if accent else "",
+                "bins": c.get("bins"),
                 "img": data_uri(str(c.get("icon") or "")),
                 "tags": tags,
                 "sats": sats,

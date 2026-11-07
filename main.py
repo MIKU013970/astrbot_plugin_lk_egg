@@ -137,7 +137,7 @@ def _strip_emoji(text: str) -> str:
 
 _PLUGIN_DIR = Path(__file__).resolve().parent
 _PLUGIN_NAME = "astrbot_plugin_lk_egg"
-VERSION = "2.1.2"
+VERSION = "2.1.3"
 
 
 def _cand_dirs() -> List[Path]:
@@ -369,7 +369,7 @@ def _hard_save_state(state: Dict[str, Any]) -> None:
     "astrbot_plugin_lk_egg",
     "MIKU013970 & DeepSeek",
     "洛克小肥鱼全功能 + 炫彩花种订阅",
-    "2.1.2",
+    "2.1.3",
 )
 class LkMarketNotify(Star):
     def __init__(self, context: Context, config: AstrBotConfig = None):
@@ -4949,6 +4949,25 @@ class LkMarketNotify(Star):
         t = max(0.0, min(1.0, float(ratio)))
         return "#%02X%02X%02X" % tuple(int(round(a[i] * t + b[i] * (1 - t))) for i in range(3))
 
+    def _bins_of(self, name: str) -> Optional[int]:
+        """这只精灵（一阶段那颗蛋）的区间数。取不到返回 None。"""
+        rec = (self.ranges.get("species") or {}).get(str(name or "")) or {}
+        for v in (rec.get("variants") or [rec]):
+            if "异色" in str(v.get("蛋名") or ""):
+                continue
+            n = v.get("区间数")
+            if n in (None, ""):
+                continue
+            try:
+                return int(n)
+            except (TypeError, ValueError):
+                continue
+        n = rec.get("区间数")
+        try:
+            return int(n) if n not in (None, "") else None
+        except (TypeError, ValueError):
+            return None
+
     def _shiny_grid_cards(self, rows: List[Dict[str, Any]]) -> List[Dict[str, Any]]:
         """名单行 → 网格图卡片。
 
@@ -5043,6 +5062,7 @@ class LkMarketNotify(Star):
             out.append(g.card(
                 name=nm,
                 sub=" · ".join(sub_parts),
+                bins=self._bins_of(nm),
                 icon=main,
                 ring=g.ring_color(grp.get("group") or (gs[0] if gs else "")),
                 tags=tags,

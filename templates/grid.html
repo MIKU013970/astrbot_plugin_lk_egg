@@ -92,6 +92,18 @@
   .avatar .q { font-size: {{ base + 9 }}px; color: var(--blank); }
 
   /* 系别章：贴在精灵图左下角 */
+  /* 区间数章：精灵图右上角，和系别章同款 */
+  .bins {
+    position: absolute;
+    right: -12px; top: 2px;
+    padding: 1px 7px;
+    border-radius: 999px;
+    font-size: {{ base - 7 }}px; font-weight: 800; line-height: 1.45;
+    color: #fff; background: #3E4A59;
+    box-shadow: 0 0 0 2px var(--card-bg, #fff);
+    white-space: nowrap;
+  }
+
   .elem {
     position: absolute;
     left: -12px; bottom: 2px;
@@ -178,6 +190,7 @@
             <div class="avatar" style="--ring: {{ c.ring }};">
               {% if c.img %}<img src="{{ c.img }}" alt="{{ c.name }}">{% else %}<span class="q">?</span>{% endif %}
               {% if c.elem %}<span class="elem" style="background: {{ c.elem_dark or c.elem_color }};">{{ c.elem }}</span>{% endif %}
+              {% if c.bins %}<span class="bins">区间 {{ c.bins }}</span>{% endif %}
               {% for s in c.sats %}
               <div class="sat {{ ['tl','tr','bl','br'][loop.index0] }}" style="--ring: {{ s.ring or c.ring }};">
                 {% if s.img %}<img src="{{ s.img }}" alt="">{% elif s.text %}<span style="color: {{ s.color }};">{{ s.text }}</span>{% endif %}

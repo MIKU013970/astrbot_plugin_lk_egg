@@ -11,3 +11,9 @@ main.py.bak-*
 # 运行时缓存（网格图预生成产物，不进仓库）
 data/grid_cache/
 data/
+
+# 备份 / 运行时产物，一律不进仓库（仓库体积直接决定插件市场能不能过审）
+*.bak
+*.bak-*
+data/
+icons/hi/
