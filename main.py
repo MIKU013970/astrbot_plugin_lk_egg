@@ -137,7 +137,7 @@ def _strip_emoji(text: str) -> str:
 
 _PLUGIN_DIR = Path(__file__).resolve().parent
 _PLUGIN_NAME = "astrbot_plugin_lk_egg"
-VERSION = "2.1.15"
+VERSION = "2.1.16"
 
 
 def _cand_dirs() -> List[Path]:
@@ -369,7 +369,7 @@ def _hard_save_state(state: Dict[str, Any]) -> None:
     "astrbot_plugin_lk_egg",
     "MIKU013970 & DeepSeek",
     "洛克小肥鱼全功能 + 炫彩花种订阅",
-    "2.1.15",
+    "2.1.16",
 )
 class LkMarketNotify(Star):
     def __init__(self, context: Context, config: AstrBotConfig = None):
@@ -4898,9 +4898,50 @@ class LkMarketNotify(Star):
         t = max(0.0, min(1.0, float(ratio)))
         return "#%02X%02X%02X" % tuple(int(round(a[i] * t + b[i] * (1 - t))) for i in range(3))
 
+    _BINS_TABLE: Optional[Dict[str, int]] = None
+
+    @classmethod
+    def _bins_table(cls) -> Dict[str, int]:
+        """bins.json：精灵名 / 形态名 / 蛋名 → 区间数（tools/build_bins.py 生成）。"""
+        if cls._BINS_TABLE is not None:
+            return cls._BINS_TABLE
+        out: Dict[str, int] = {}
+        try:
+            fp = _PLUGIN_DIR / "bins.json"
+            if fp.is_file():
+                d = json.loads(fp.read_text(encoding="utf-8-sig"))
+                import re as _re
+                zw = _re.compile("[\u200b\u200c\u200d\u200e\u200f\ufeff]")
+                for k, v in (d.get("bins") or {}).items():
+                    k = zw.sub("", str(k)).strip()
+                    try:
+                        out[k] = int(v)
+                    except (TypeError, ValueError):
+                        pass
+        except Exception as e:
+            logger.warning(f"[区间] bins.json 读取失败: {type(e).__name__}: {e}")
+        cls._BINS_TABLE = out
+        return out
+
     def _bins_of(self, name: str) -> Optional[int]:
-        """这只精灵（一阶段那颗蛋）的区间数。取不到返回 None。"""
-        rec = (self.ranges.get("species") or {}).get(str(name or "")) or {}
+        """这只精灵（一阶段那颗蛋）的区间数。
+
+        图鉴里有一批精灵是**按蛋名收的**（玳龟 → 「玳龟的蛋」、星星眼 → 「星星眼的蛋」），
+        直接按精灵名查会落空，导致卡片上没区间。这里把几种写法都试一遍。
+        """
+        sp = self.ranges.get("species") or {}
+        alias = self.ranges.get("alias") or {}
+        nm = str(name or "").strip()
+        cands = [nm, str(alias.get(nm) or ""), nm + "的蛋", nm + "蛋"]
+        if nm.endswith("的蛋"):
+            cands.append(nm[:-2])
+        elif nm.endswith("蛋"):
+            cands.append(nm[:-1])
+        rec: Dict[str, Any] = {}
+        for c in cands:
+            if c and c in sp:
+                rec = sp[c] or {}
+                break
         for v in (rec.get("variants") or [rec]):
             if "异色" in str(v.get("蛋名") or ""):
                 continue
@@ -4912,10 +4953,32 @@ class LkMarketNotify(Star):
             except (TypeError, ValueError):
                 continue
         n = rec.get("区间数")
-        try:
-            return int(n) if n not in (None, "") else None
-        except (TypeError, ValueError):
-            return None
+        if n not in (None, ""):
+            try:
+                return int(n)
+            except (TypeError, ValueError):
+                pass
+
+        # 图鉴里没有 → 查 bins.json（精灵名 / 蛋名 / 家族成员都在里面）
+        bins = self._bins_table()
+        for c in cands:
+            if c and c in bins:
+                return bins[c]
+        # 还不行就用进化链一阶段那只的区间（同一条链共用一颗蛋）
+        head = self._chain_map().get(nm)
+        for c in (head, *( [head + "的蛋"] if head else [] )):
+            if c and c in bins:
+                return bins[c]
+            if c and c in sp:
+                r2 = sp[c] or {}
+                v2 = (r2.get("variants") or [r2])[0]
+                n2 = v2.get("区间数") if isinstance(v2, dict) else None
+                try:
+                    if n2 not in (None, ""):
+                        return int(n2)
+                except (TypeError, ValueError):
+                    pass
+        return None
 
     def _shiny_grid_cards(self, rows: List[Dict[str, Any]]) -> List[Dict[str, Any]]:
         """名单行 → 网格图卡片。
