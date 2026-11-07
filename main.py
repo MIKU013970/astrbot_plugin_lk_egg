@@ -103,7 +103,7 @@ def _strip_emoji(text: str) -> str:
 
 _PLUGIN_DIR = Path(__file__).resolve().parent
 _PLUGIN_NAME = "astrbot_plugin_lk_egg"
-VERSION = "2.0.0"
+VERSION = "2.0.1"
 
 
 def _cand_dirs() -> List[Path]:
@@ -335,7 +335,7 @@ def _hard_save_state(state: Dict[str, Any]) -> None:
     "astrbot_plugin_lk_egg",
     "MIKU013970 & DeepSeek",
     "洛克小肥鱼全功能 + 炫彩花种订阅",
-    "2.0.0",
+    "2.0.1",
 )
 class LkMarketNotify(Star):
     def __init__(self, context: Context, config: AstrBotConfig = None):
@@ -1858,7 +1858,9 @@ class LkMarketNotify(Star):
         pet = str(v.get("精灵") or rec.get("精灵") or "")
         egg = str(v.get("蛋名") or rec.get("蛋名") or pet)
         form0 = str(v.get("形态简称") or v.get("形态") or "")
-        egg_path = c.icon_path("egg", egg)
+        # 多形态精灵每个形态可能各有一颗蛋（地鼠：枯水期 107012 / 储水时 107170），
+        # 这里必须把形态一起传下去，否则两个形态都会拿到同一张图
+        egg_path = c.icon_path("egg", egg, form0)
         # magic_egg 是通用占位白蛋：通行证精灵官方只有异色蛋、没有普通蛋，别拿它凑数
         if egg_path and Path(egg_path).stem == "magic_egg":
             egg_path = None
