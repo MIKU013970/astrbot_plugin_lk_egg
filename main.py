@@ -137,7 +137,7 @@ def _strip_emoji(text: str) -> str:
 
 _PLUGIN_DIR = Path(__file__).resolve().parent
 _PLUGIN_NAME = "astrbot_plugin_lk_egg"
-VERSION = "2.1.4"
+VERSION = "2.1.5"
 
 
 def _cand_dirs() -> List[Path]:
@@ -369,7 +369,7 @@ def _hard_save_state(state: Dict[str, Any]) -> None:
     "astrbot_plugin_lk_egg",
     "MIKU013970 & DeepSeek",
     "洛克小肥鱼全功能 + 炫彩花种订阅",
-    "2.1.4",
+    "2.1.5",
 )
 class LkMarketNotify(Star):
     def __init__(self, context: Context, config: AstrBotConfig = None):
@@ -5160,6 +5160,21 @@ class LkMarketNotify(Star):
     _GRID_CARDS: "OrderedDict[str, Any]" = OrderedDict()
     _GRID_CARDS_MAX = 48
 
+    @staticmethod
+    def _render_sig() -> str:
+        """渲染器指纹：grid.py / 模板改了就变，旧缓存自动失效。
+
+        （之前漏了这个 —— 改完画法后，缓存键没变，发出去还是旧图）
+        """
+        parts = []
+        for n in ("grid.py", "templates/grid.html"):
+            try:
+                parts.append(os.path.getmtime(_PLUGIN_DIR / n))
+            except Exception:
+                parts.append(0)
+        raw = json.dumps(parts, default=str) + VERSION
+        return hashlib.sha1(raw.encode("utf-8")).hexdigest()[:12]
+
     def _grid_sig(self) -> str:
         """影响卡片外观的配置 + 数据文件修改时间。任意一项变了，卡片缓存就失效。"""
         cfg = [
@@ -5177,7 +5192,8 @@ class LkMarketNotify(Star):
                 stamps.append(Path(_PLUGIN_DIR / n).stat().st_mtime)
             except Exception:
                 stamps.append(0)
-        raw = json.dumps([cfg, stamps], ensure_ascii=False, default=str)
+        raw = json.dumps([cfg, stamps, self._render_sig()],
+                         ensure_ascii=False, default=str)
         return hashlib.sha1(raw.encode("utf-8")).hexdigest()
 
     def _grid_cards_cache_get(self, key: str):
@@ -5211,6 +5227,7 @@ class LkMarketNotify(Star):
             "header", "subtitle", "footer", "page", "total_pages", "total",
             "width", "cols", "font_size", "font_path", "theme")}
         payload["engine"] = self._grid_engine()
+        payload["render"] = self._render_sig()
         payload["panels"] = kw.get("panels") or [{"cards": kw.get("cards") or []}]
         raw = json.dumps(payload, ensure_ascii=False, sort_keys=True, default=str)
         return hashlib.sha1(raw.encode("utf-8")).hexdigest()

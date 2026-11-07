@@ -151,6 +151,12 @@ def parse_theme(text: Any, base: Optional[Dict[str, str]] = None) -> Dict[str, T
     return out
 
 
+def _fg_on(bg: Tuple[int, int, int]) -> Tuple[int, int, int]:
+    """在给定底色上选白字还是黑字（保证读得清）。"""
+    lum = 0.299 * bg[0] + 0.587 * bg[1] + 0.114 * bg[2]
+    return (255, 255, 255) if lum < 150 else (28, 24, 20)
+
+
 def _mix(a: Tuple[int, int, int], b: Tuple[int, int, int], t: float) -> Tuple[int, int, int]:
     t = max(0.0, min(1.0, float(t)))
     return (int(a[0] + (b[0] - a[0]) * t),
@@ -655,7 +661,7 @@ def render_grid(
             if sats:
                 rc = avatar_d / 2.0 + SAT / 2.0 - 2
                 sx, sy = cx, ay + avatar_d / 2.0
-                spots = [(-1, -1), (1, 1), (-1, 1), (1, -1)]
+                spots = [(-1, -1), (1, -1), (1, 1), (-1, 1)]
                 for k, s in enumerate(sats):
                     ux, uy = spots[k]
                     px = sx + ux * rc * 0.74
@@ -683,7 +689,7 @@ def render_grid(
                 bw = int(_tw(draw, elem_txt, f_el) + 12)
                 # 章用系别色的**深一档**（主色留给外圈），加粗白边 —— 这样章和外圈
                 # 分得开，不会糊成一坨让人以为头像不圆
-                ecol = _mix(accent or th["强调"], (0, 0, 0), 0.30)
+                ecol = accent or th["强调"]
                 ecx = cx - avatar_d * 0.38
                 ecy = ay + avatar_d * 0.92
                 ex0, ey0 = ecx - bw / 2.0, ecy - bh / 2.0
@@ -693,7 +699,7 @@ def render_grid(
                                        width=3)
                 etw = _tw(draw, elem_txt, f_el)
                 draw.text((ex0 + (bw - etw) / 2.0, ey0 + bh / 2.0 - fs_tag * 0.66),
-                          elem_txt, font=f_el, fill=(255, 255, 255))
+                          elem_txt, font=f_el, fill=_fg_on(ecol))
 
             # 区间数：精灵图**右上角**，和系别章同一套胶囊样式
             bins_n = c.get("bins")
@@ -702,18 +708,18 @@ def render_grid(
                 f_b = _font(font_path, max(9, fs_tag), bold=True)
                 bh2 = max(16, fs_tag + 8)
                 bw2 = int(_tw(draw, btxt, f_b) + 12)
-                bcol = _mix(accent or th["强调"], (0, 0, 0), 0.30)   # 和系别章同色
-                bcx = cx + avatar_d * 0.40
-                bcy = ay + avatar_d * 0.06
-                bx0 = bcx - bw2 / 2.0
-                by0b = bcy - bh2 / 2.0
-                draw.rounded_rectangle([bx0, by0b, bx0 + bw2, by0b + bh2],
+                bcol = accent or th["强调"]                          # 和系别章同色
+                bcx = cx + avatar_d * 0.38
+                bcy = ay + avatar_d * 0.92
+                pbx = bcx - bw2 / 2.0
+                pby = bcy - bh2 / 2.0
+                draw.rounded_rectangle([pbx, pby, pbx + bw2, pby + bh2],
                                        radius=bh2 / 2.0, fill=bcol,
                                        outline=(card_fill[0], card_fill[1], card_fill[2], 255),
                                        width=3)
                 btw = _tw(draw, btxt, f_b)
-                draw.text((bx0 + (bw2 - btw) / 2.0, by0b + bh2 / 2.0 - fs_tag * 0.66),
-                          btxt, font=f_b, fill=(255, 255, 255))
+                draw.text((pbx + (bw2 - btw) / 2.0, pby + bh2 / 2.0 - fs_tag * 0.66),
+                          btxt, font=f_b, fill=_fg_on(bcol))
 
             # 名字 / 小字
             ny = ay + avatar_d + 12
@@ -858,11 +864,11 @@ def html_data(
                 line_hex = "#%02X%02X%02X" % th["边框"]
             ring_hex = ("#%02X%02X%02X" % accent) if accent else str(
                 c.get("ring") or RING_PALETTE[0])
-            elem_dark = ("#%02X%02X%02X" % _mix(accent, (0, 0, 0), 0.30)) if accent else ""
+            elem_bg = ("#%02X%02X%02X" % accent) if accent else ""
             out_cards.append({
                 "name": str(c.get("name") or ""),
                 "sub": str(c.get("sub") or ""),
-                "elem_dark": elem_dark,
+                "elem_bg": elem_bg,
                 "sub_fg": str(c.get("sub_fg") or ""),
                 "ring": ring_hex,
                 "bg": bg_hex,
@@ -870,7 +876,7 @@ def html_data(
                 "elem": str(c.get("elem") or ""),
                 "elem_color": "#%02X%02X%02X" % accent if accent else "",
                 "bins": c.get("bins"),
-                "bins_bg": ("#%02X%02X%02X" % _mix(accent, (0, 0, 0), 0.30)) if accent else "",
+                "bins_bg": ("#%02X%02X%02X" % accent) if accent else "",
                 "img": data_uri(str(c.get("icon") or "")),
                 "tags": tags,
                 "sats": sats,
