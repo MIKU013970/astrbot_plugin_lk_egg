@@ -138,7 +138,7 @@ def _strip_emoji(text: str) -> str:
 
 _PLUGIN_DIR = Path(__file__).resolve().parent
 _PLUGIN_NAME = "astrbot_plugin_lk_egg"
-VERSION = "2.1.18"
+VERSION = "2.1.19"
 
 
 def _cand_dirs() -> List[Path]:
@@ -370,7 +370,7 @@ def _hard_save_state(state: Dict[str, Any]) -> None:
     "astrbot_plugin_lk_egg",
     "MIKU013970 & DeepSeek",
     "洛克小肥鱼全功能 + 炫彩花种订阅",
-    "2.1.18",
+    "2.1.19",
 )
 class LkMarketNotify(Star):
     def __init__(self, context: Context, config: AstrBotConfig = None):
@@ -1076,6 +1076,45 @@ class LkMarketNotify(Star):
             logger.warning(f"[市集推送] 读取图鉴失败: {e}")
         return {"species": {}, "alias": {}, "count": 0}
 
+    def _synth_species(self, name: str) -> Optional[Dict[str, Any]]:
+        """图鉴(206 只)里没有、但官方全量表里有的精灵，临时合成一条图鉴记录。
+
+        这样 `查询 呆呆铃` 也能出卡（组别 / 图鉴号 / 区间 / 进化链 都从官方表+chains 补）。
+        """
+        nm = str(name or "").strip()
+        info = (self._pets_table() or {}).get(nm)
+        if not info or nm in (self.ranges.get("species") or {}):
+            return None
+        groups = [g for g in (info.get("groups") or []) if g]
+        egg = f"{nm}的蛋"
+        chain = []
+        head = self._chain_map().get(nm)
+        if head:
+            try:
+                import json as _json
+                d = _json.loads((_PLUGIN_DIR / "chains.json").read_text(encoding="utf-8-sig"))
+                chain = (d.get("chains") or {}).get(head) or []
+            except Exception:
+                chain = []
+        link = " → ".join(chain) if chain else nm
+        bins = self._bins_of(nm)
+        # 字段尽量补齐：下游有直接用 [] 取值的地方（身高区间 / 体重区间）
+        variant = {
+            "形态": nm, "形态简称": "", "蛋名": egg,
+            "图鉴编号": str(info.get("no") or ""), "蛋组": " / ".join(groups),
+            "公母": "未知", "进化链": link, "区间数": bins,
+            "身高区间": "", "体重区间": "",
+            "小块头过线值": "", "小块头极限值": "",
+            "大块头过线值": "", "大块头极限值": "",
+        }
+        return {
+            "精灵": nm, "蛋名": egg, "图鉴编号": str(info.get("no") or ""),
+            "蛋组": " / ".join(groups), "公母": "未知", "进化链": link,
+            "形态数": 1, "同乘": bool(info.get("ride")),
+            "身高区间": "", "体重区间": "",
+            "variants": [variant],
+        }
+
     def _find_species(self, q: str, strict: bool = False) -> Optional[Dict[str, Any]]:
         """精灵名 / 蛋名 / 进化链上任意名字 / 裸名字 → 记录（含多形态）。
 
@@ -1106,6 +1145,11 @@ class LkMarketNotify(Star):
         for nm, target in alias.items():
             if (q in nm or nm in q) and target in sp:
                 return sp[target]
+
+        # 官方表里有、图鉴里没有的（呆呆铃 / 跳跳铃 / 铃兰夫人 / 伊里斯 …）→ 合成一条记录
+        hit = self._synth_species(q)
+        if hit is not None:
+            return hit
 
         # ---- 下面两档是给「打缩写 / 记不全名字」用的 ----
         # ① 拼音首字母：fcsm → 翡翠水母、dle → 豆粒鹅
@@ -5181,21 +5225,26 @@ class LkMarketNotify(Star):
     _GRID_CARDS: "OrderedDict[str, Any]" = OrderedDict()
     _GRID_CARDS_MAX = 48
 
-    @staticmethod
-    def _render_sig() -> str:
+    @classmethod
+    def _render_sig(cls) -> str:
         """渲染器指纹：grid.py / 模板改了就变，旧缓存自动失效。
 
         （之前漏了这个 —— 改完画法后，缓存键没变，发出去还是旧图）
         """
-        parts = []
+        # **按文件内容哈希**，不按 mtime：插件覆盖安装时 mtime 可能没变（解包/复制保留旧时间），
+        # 那样改了画法还在发旧图（v2.1.18 就被这个坑过）。缓存一次算好放类变量里。
+        cached = getattr(cls, "_RENDER_SIG_CACHE", None)
+        if cached:
+            return cached
+        h = hashlib.sha1()
         for n in ("grid.py", "templates/grid.html"):
             try:
-                parts.append(os.path.getmtime(_PLUGIN_DIR / n))
+                h.update((_PLUGIN_DIR / n).read_bytes())
             except Exception:
-                parts.append(0)
-        # 只认渲染器文件本身的 mtime：版本号变了但没动画法时，缓存不该失效
-        # （以前带 VERSION，每升一版整库图全作废，预生成等于白跑）
-        return hashlib.sha1(json.dumps(parts, default=str).encode("utf-8")).hexdigest()[:12]
+                h.update(b"missing")
+        sig = h.hexdigest()[:12]
+        cls._RENDER_SIG_CACHE = sig
+        return sig
 
     def _grid_sig(self) -> str:
         """影响卡片外观的配置 + 数据文件修改时间。任意一项变了，卡片缓存就失效。"""
@@ -6988,7 +7037,9 @@ class LkMarketNotify(Star):
     #: 「查询 组」这种，列全部组名
     GROUP_LIST_WORDS = {"组", "组别", "蛋组", "所有组", "全部组", "组列表", "蛋组列表"}
     #: 数据里这些不是真蛋组（空 / 占位）
-    GROUP_JUNK = {"", "—", "-", "－", "--", "无", "未知", "待定", "?", "？", "其他"}
+    #: 「未发现」= 不能生蛋（首领化 / 活动专属），不算蛋组，列表里不单列
+    GROUP_JUNK = {"", "—", "-", "－", "--", "无", "未知", "待定", "?", "？", "其他",
+                  "未发现"}
 
     def _all_groups(self) -> Dict[str, List[Dict[str, Any]]]:
         """蛋组名 → 属于它的记录列表（一次性建好，数据是静态的）。"""
@@ -6996,6 +7047,7 @@ class LkMarketNotify(Star):
         if cached is not None:
             return cached
         out: Dict[str, List[Dict[str, Any]]] = {}
+        seen_names: Dict[str, set] = {}
         for rec in (self.ranges.get("species") or {}).values():
             seen = []
             for holder in [rec] + list(rec.get("variants") or []):
@@ -7007,6 +7059,27 @@ class LkMarketNotify(Star):
                         seen.append(g)
             for g in seen:
                 out.setdefault(g, []).append(rec)
+                seen_names.setdefault(g, set()).add(str(rec.get("精灵") or ""))
+        # 官方表里还有一批「图鉴没收、但确实在某个蛋组」的精灵（呆呆铃 → 植物组/拟人组）
+        for nm, info in (self._pets_table() or {}).items():
+            if not nm:
+                continue
+            for g in (info.get("groups") or []):
+                g = str(g).strip()
+                if not g or g in self.GROUP_JUNK:
+                    continue
+                if nm in seen_names.get(g, set()):
+                    continue
+                out.setdefault(g, []).append({
+                    "精灵": nm, "蛋名": f"{nm}的蛋", "图鉴编号": info.get("no") or "",
+                    "蛋组": " / ".join(info.get("groups") or []),
+                    "进化链": "", "同乘": bool(info.get("ride")),
+                    "variants": [{"形态": nm, "蛋名": f"{nm}的蛋",
+                                  "图鉴编号": info.get("no") or "",
+                                  "区间数": self._bins_of(nm),
+                                  "蛋组": " / ".join(info.get("groups") or [])}],
+                })
+                seen_names.setdefault(g, set()).add(nm)
         try:
             self._group_cache = out
         except Exception:
