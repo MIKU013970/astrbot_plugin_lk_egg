@@ -356,8 +356,9 @@ def card_height(base: int, avatar_d: int = AVATAR, tag_rows: int = 1) -> int:
     fs_tag = max(9, base - 6)
     pill_h = fs_tag + 12
     tag_rows = max(1, min(2, int(tag_rows or 1)))
-    return int(16 + avatar_d + 12 + fs_name + 6 + fs_sub + 10
-               + tag_rows * pill_h + (tag_rows - 1) * 4 + 16)
+    # 名字↔图鉴号、图鉴号↔组别 的间隔收小；底部留白加大，组别不再贴着卡片下沿
+    return int(16 + avatar_d + 10 + fs_name + 3 + fs_sub + 6
+               + tag_rows * pill_h + (tag_rows - 1) * 4 + 20)
 
 
 def _tag_rows(draw, tags: Sequence[Any], font, maxw: float) -> List[List[Dict[str, Any]]]:
@@ -723,11 +724,11 @@ def render_grid(
                           btxt, font=f_b, fill=_fg_on(bcol))
 
             # 名字 / 小字
-            ny = ay + avatar_d + 12
+            ny = ay + avatar_d + 10
             name = _ellipsis(draw, str(c.get("name") or ""), f_name, card_w - 24)
             nw = _tw(draw, name, f_name)
             draw.text((cx - nw / 2.0, ny), name, font=f_name, fill=th["标题"])
-            sy2 = ny + fs_name + 6
+            sy2 = ny + fs_name + 3
             sub = _ellipsis(draw, str(c.get("sub") or ""), f_small, card_w - 24)
             if sub:
                 sw = _tw(draw, sub, f_small)
@@ -735,7 +736,7 @@ def render_grid(
                           fill=(_to_rgb(c.get("sub_fg") or "") or th["次要"]))
 
             # 标签（多色小胶囊，居中，最多两行 —— 高度已经在上面量好了）
-            ty = sy2 + fs_sub + 10
+            ty = sy2 + fs_sub + 6
             maxw = card_w - 16
             rows_tags = _tag_rows(draw, c.get("tags") or [], f_tag, maxw)
             for ri, row in enumerate(rows_tags):

@@ -137,7 +137,7 @@ def _strip_emoji(text: str) -> str:
 
 _PLUGIN_DIR = Path(__file__).resolve().parent
 _PLUGIN_NAME = "astrbot_plugin_lk_egg"
-VERSION = "2.1.12"
+VERSION = "2.1.13"
 
 
 def _cand_dirs() -> List[Path]:
@@ -369,7 +369,7 @@ def _hard_save_state(state: Dict[str, Any]) -> None:
     "astrbot_plugin_lk_egg",
     "MIKU013970 & DeepSeek",
     "洛克小肥鱼全功能 + 炫彩花种订阅",
-    "2.1.12",
+    "2.1.13",
 )
 class LkMarketNotify(Star):
     def __init__(self, context: Context, config: AstrBotConfig = None):
@@ -4447,131 +4447,80 @@ class LkMarketNotify(Star):
         return set(names) if names else set(self.SPECIAL_PETS)
 
     def _book_rows(self, season: str = "") -> List[Dict[str, Any]]:
-        """官方异色记录本 → 网格图的行。
+        """名单行：**以官方全量表的 season_id + has_shiny 为准**，记录本只提供赛季名。
 
-        `season`："" = 全部；"S0"/"none" = 常驻；"S1"…"S5" = 该赛季奇遇。
-        蛋组 / 同乘 / 蛋名 从官方全量表（pets.json）和 ranges.json 补。
+        之前直接信记录本的 "season"，结果把官方标成 S5 的精灵（锤头鹳 / 小翼龙 / 伊雷龙 …）
+        当成「常驻」，S1~S5 也出现过季节不符。现在：
+          · 常驻 = 官方 season_id 0 且有异色
+          · S1~S5 = 官方 season_id 对应且 has_shiny
+          · 特殊精灵果实（云梦豚 / 火红尾 …）不算常驻
+          · 记录本里有、官方表里没有的名字，才回退用记录本的赛季
         """
         pets = self._pets_table()
+        book = self._book_by_name()
         sp = self.ranges.get("species") or {}
         cmap = self._chain_map()
         special = self._special_pets()
         want = str(season or "").strip().upper()
         if want in ("S0", "NONE", "常驻"):
             want = "S0"
+
         out: List[Dict[str, Any]] = []
-        for r in (self._shiny_book().get("pets") or []):
-            if not isinstance(r, dict):
+        seen = set()
+
+        def sid_of(info: Dict[str, Any]) -> str:
+            try:
+                n = int(info.get("season") or 0)
+            except (TypeError, ValueError):
+                n = 0
+            return f"S{n}" if n >= 1 else "S0"
+
+        for nm, info in pets.items():
+            seen.add(nm)                     # 官方表里出现过的名字，一律不再走记录本兜底
+            if not info.get("has_shiny"):
                 continue
-            nm = str(r.get("name") or "").strip()
-            if not nm:
-                continue
-            sid = str(r.get("season") or "none")
-            sid = "S0" if sid == "none" else sid
-            if want and sid != want:
-                continue
-            # 特殊精灵果实（云梦豚 / 火红尾 那批）不算在赛季常驻里
             if nm in special or (cmap.get(nm) in special):
                 continue
-            info = pets.get(nm) or {}
-            rec = sp.get(nm) or {}
-            groups = [g for g in (info.get("groups") or []) if g]
-            ride = info.get("ride")
-            if ride is None and rec.get("同乘") is not None:
-                ride = bool(rec.get("同乘"))
-            out.append({
-                "season": sid,
-                "name": nm,
-                "group": " / ".join(groups) or "未分组",
-                "groups": groups,
-                "marks": ["异色", "异色蛋"],
-                "leader": int(r.get("stage") or info.get("stage") or 0) >= 4,
-                "ride": ride,
-                "no": str(r.get("number") or info.get("no") or ""),
-                "stage": int(r.get("stage") or info.get("stage") or 0),
-                "egg": str(rec.get("蛋名") or f"{nm}的蛋"),
-            })
-        return out
-
-    def _shiny_roster_rows(self, season: str = "") -> List[Dict[str, Any]]:
-        """异色名单的**原始行**（一只一条）—— 文字报告和网格图共用同一份数据。
-
-        名单以**官方花名册**(season_roster.json) 为准 —— 图鉴只收了可孵蛋的 206 种，
-        光按图鉴列会把 S4 这种只收了几只的赛季漏掉一大半。
-
-        返回 `{"season","name","group","groups","marks","leader","no","egg"}`。
-        """
-        have_shiny, have_shiny_egg = set(), set()
-        try:
-            idx = json.loads(
-                (_PLUGIN_DIR / "icons" / "index.json").read_text(encoding="utf-8-sig"))
-            have_shiny = set((idx.get("pet_shiny") or {}).keys())
-            for k in (idx.get("egg") or {}):
-                if str(k).startswith("异色"):
-                    have_shiny_egg.add(str(k)[2:])       # 异色小剪影的蛋 → 小剪影的蛋
-        except Exception as e:
-            logger.warning(f"[异色] 图标库读取失败: {type(e).__name__}: {e}")
-
-        roster = self._roster_table()
-        sp = self.ranges.get("species") or {}
-        # 图鉴里的蛋组 / 正式名字（花名册没有蛋组的用它兜底）
-        r_group = {str(nm): str(rec.get("蛋组") or "") for nm, rec in sp.items()}
-
-        out: List[Dict[str, Any]] = []
-        for sid, members in (roster or {}).items():
-            if season and sid != season:
+            sid = sid_of(info)
+            if want and sid != want:
                 continue
-            for nm, info in (members or {}).items():
-                if not isinstance(info, dict) or not info.get("has_shiny"):
-                    continue
-                marks = []
-                if nm in have_shiny:
-                    marks.append("异色")
-                # have_shiny_egg 存的是「蛋名」（异色小剪影的蛋 → 小剪影的蛋）
-                if f"{nm}的蛋" in have_shiny_egg or nm in have_shiny_egg:
-                    marks.append("异色蛋")
-                if not marks:
-                    continue
-                rg = r_group.get(nm) or ""
-                if rg in ("未发现", "待定", "未分组"):
-                    rg = ""
-                groups = [g for g in (info.get("groups") or []) if g]
-                out.append({
-                    "season": sid,
-                    "name": nm,
-                    "group": rg or " / ".join(groups) or "未分组",
-                    "groups": groups,
-                    "marks": marks,
-                    "leader": bool(info.get("leader")),
-                    "no": str(info.get("no") or ""),
-                    "stage": int(info.get("stage") or 0),
-                    "egg": str((sp.get(nm) or {}).get("蛋名") or f"{nm}的蛋"),
-                })
+            out.append(self._row_of(nm, sid, info))
 
-        # 花名册缺失时退回按图鉴算
-        if not out:
-            for nm, rec in sp.items():
-                if not nm or nm.endswith("的蛋"):
-                    continue
-                sid = self._season_of(nm) or "S?"
-                if season and sid != season:
-                    continue
-                egg = str(rec.get("蛋名") or "")
-                marks = []
-                if nm in have_shiny:
-                    marks.append("异色")
-                if egg and egg in have_shiny_egg:
-                    marks.append("异色蛋")
-                if marks:
-                    groups = [g for g in str(rec.get("蛋组") or "").split(" / ") if g]
-                    out.append({
-                        "season": sid, "name": nm,
-                        "group": r_group.get(nm) or "未分组",
-                        "groups": groups, "marks": marks, "leader": False,
-                        "no": str(rec.get("图鉴编号") or ""), "stage": 0,
-                        "egg": egg,
-                    })
+        # 官方表里没有的名字（老数据才有的），回退用记录本的赛季
+        for nm, rec in book.items():
+            if nm in seen or nm in special:
+                continue
+            sid = str(rec.get("season") or "none")
+            sid = "S0" if sid in ("none", "S0") else sid
+            if want and sid != want:
+                continue
+            out.append(self._row_of(nm, sid, {}))
         return out
+
+    def _row_of(self, nm: str, sid: str, info: Dict[str, Any]) -> Dict[str, Any]:
+        """造一条名单行（蛋组 / 同乘 / 蛋名 都按名字补）。"""
+        sp = self.ranges.get("species") or {}
+        rec = sp.get(nm) or {}
+        groups = [g for g in (info.get("groups") or []) if g]
+        ride = info.get("ride")
+        if ride is None and rec.get("同乘") is not None:
+            ride = bool(rec.get("同乘"))
+        try:
+            stage = int(info.get("stage") or rec.get("形态数") or 0)
+        except (TypeError, ValueError):
+            stage = 0
+        return {
+            "season": sid,
+            "name": nm,
+            "group": " / ".join(groups) or "未分组",
+            "groups": groups,
+            "marks": ["异色", "异色蛋"],
+            "leader": stage >= 4 or bool((self._book_by_name().get(nm) or {}).get("leader")),
+            "ride": ride,
+            "no": str(info.get("no") or (self._book_by_name().get(nm) or {}).get("number") or ""),
+            "stage": stage,
+            "egg": str(rec.get("蛋名") or f"{nm}的蛋"),
+        }
 
     def _shiny_report(self, season: str = "") -> str:
         """异色名单的文字版（出图失败时兜底），和网格图同一份数据（官方异色记录本）。"""
@@ -5180,8 +5129,9 @@ class LkMarketNotify(Star):
                 parts.append(os.path.getmtime(_PLUGIN_DIR / n))
             except Exception:
                 parts.append(0)
-        raw = json.dumps(parts, default=str) + VERSION
-        return hashlib.sha1(raw.encode("utf-8")).hexdigest()[:12]
+        # 只认渲染器文件本身的 mtime：版本号变了但没动画法时，缓存不该失效
+        # （以前带 VERSION，每升一版整库图全作废，预生成等于白跑）
+        return hashlib.sha1(json.dumps(parts, default=str).encode("utf-8")).hexdigest()[:12]
 
     def _grid_sig(self) -> str:
         """影响卡片外观的配置 + 数据文件修改时间。任意一项变了，卡片缓存就失效。"""
@@ -5431,12 +5381,14 @@ class LkMarketNotify(Star):
         hit = self._grid_cards_cache_get(key)
         if hit is not None:
             return hit
-        rows_res = self._book_rows("S0")
-        if season == "S0":
-            rows_enc: List[Dict[str, Any]] = []
-        elif season:
+        # 指定赛季 → 只出这个赛季（单栏）；不指定 → 左常驻 / 右全部奇遇
+        if season and season != "S0":
+            rows_res: List[Dict[str, Any]] = []
             rows_enc = self._book_rows(season)
+        elif season == "S0":
+            rows_res, rows_enc = self._book_rows("S0"), []
         else:
+            rows_res = self._book_rows("S0")
             rows_enc = [r for r in self._book_rows("")
                         if str(r.get("season")) != "S0"]
         cards_res = self._shiny_grid_cards(sorted(rows_res, key=self._grid_sort_key))
@@ -5520,15 +5472,15 @@ class LkMarketNotify(Star):
     async def _shiny_result(self, event: Any, season: str = "", page: int = 0):
         """异色名单：左常驻 / 右奇遇的网格图，出不了就发原来的文字版。"""
         text = self._shiny_report(season)
-        # 名单以官方「异色记录本」为准：常驻（none）+ 各赛季奇遇
-        rows_res = self._book_rows("S0")                          # 常驻
-        if season == "S0":
-            rows_enc = []                                          # 只看常驻，右边留空
-        elif season:
-            rows_enc = self._book_rows(season)                      # 该赛季奇遇
+        # 指定赛季 → **只发这个赛季**（单栏，不再把常驻塞在左边）；
+        # 不指定 → 左常驻 / 右全部奇遇
+        if season and season != "S0":
+            rows_res, rows_enc = [], self._book_rows(season)
+        elif season == "S0":
+            rows_res, rows_enc = self._book_rows("S0"), []
         else:
-            rows_enc = self._book_rows("")                          # 全部（不含常驻）
-            rows_enc = [r for r in rows_enc if str(r.get("season")) != "S0"]
+            rows_res = self._book_rows("S0")
+            rows_enc = [r for r in self._book_rows("") if str(r.get("season")) != "S0"]
         if not rows_res and not rows_enc:
             return await self._say(event, text)
         if not (self._grid_enabled() and self._image_reply_on() and _grid() is not None):
@@ -7027,7 +6979,17 @@ class LkMarketNotify(Star):
                 d = json.loads(fp.read_text(encoding="utf-8-sig"))
                 for r in (d.get("pets") or []):
                     nm = str(r.get("name") or "")
-                    if nm and nm not in out:
+                    if not nm:
+                        continue
+                    cur = out.get(nm)
+                    if cur is None:
+                        out[nm] = r
+                        continue
+                    # 同名多条（同名的不同形态/不同赛季）：优先「有异色」的，其次 pet_id 大的
+                    if bool(r.get("has_shiny")) and not bool(cur.get("has_shiny")):
+                        out[nm] = r
+                    elif (bool(r.get("has_shiny")) == bool(cur.get("has_shiny"))
+                          and int(r.get("pet_id") or 0) > int(cur.get("pet_id") or 0)):
                         out[nm] = r
         except Exception as e:
             logger.warning(f"[蛋组] pets.json 读取失败: {type(e).__name__}: {e}")
@@ -7082,7 +7044,7 @@ class LkMarketNotify(Star):
             cards_res=cards, cards_enc=[], per=len(cards), all_pages=True)
         if not pngs:
             return await self._say(event, text)
-        r = self._result_images(event, pngs, f"蛋组 · {group}｜共 {total} 只")
+        r = self._result_images(event, pngs)          # 不发「蛋组 · xx｜共 N 只」这行字
         if r is not None:
             return r
         return event.plain_result(text)
