@@ -137,7 +137,7 @@ def _strip_emoji(text: str) -> str:
 
 _PLUGIN_DIR = Path(__file__).resolve().parent
 _PLUGIN_NAME = "astrbot_plugin_lk_egg"
-VERSION = "2.1.7"
+VERSION = "2.1.8"
 
 
 def _cand_dirs() -> List[Path]:
@@ -369,7 +369,7 @@ def _hard_save_state(state: Dict[str, Any]) -> None:
     "astrbot_plugin_lk_egg",
     "MIKU013970 & DeepSeek",
     "洛克小肥鱼全功能 + 炫彩花种订阅",
-    "2.1.7",
+    "2.1.8",
 )
 class LkMarketNotify(Star):
     def __init__(self, context: Context, config: AstrBotConfig = None):
@@ -5067,7 +5067,9 @@ class LkMarketNotify(Star):
                 icon=main,
                 ring=g.ring_color(grp.get("group") or (gs[0] if gs else "")),
                 tags=tags,
-                sats=sats[:4],
+                # 最多 2 枚（普通蛋 + 异色蛋）。第 3/4 枚（一阶段图）会压到左下系别胶囊，
+                # layout-checker 实测压掉 57.6%，所以只画两枚
+                sats=sats[:2],
                 elem=elem_txt,
                 elem_color=elem_color,
                 bg=card_bg,
