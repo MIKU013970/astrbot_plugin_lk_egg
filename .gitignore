@@ -16,3 +16,10 @@ data/
 *.bak*
 data/
 icons/hi/
+
+# 图标 PNG 不进仓库/安装包：运行时从控制台或 asset_url 拉一次，缓存在 data/icons/
+# 素材源保存在 ../洛克王国蛋神助手/icons_src/，打包工具 tools/pack_icons_zip.py
+icons/pet/
+icons/egg/
+icons/shiny/
+icons/hi/

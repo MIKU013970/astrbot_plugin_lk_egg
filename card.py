@@ -195,8 +195,38 @@ def _png_bytes(img) -> bytes:
             pass
     return data
 
-#: 图标目录（和 card.py 同级）
+#: 图标目录（和 card.py 同级）—— 安装包里只放 index.json
 ICON_DIR = Path(__file__).resolve().parent / "icons"
+
+#: 运行时下载的图标缓存目录（asset_store 往这里写）。查找顺序：ICON_DIR → 这里
+ICON_EXTRA_DIRS: List[Path] = []
+
+
+def set_icon_dirs(*dirs) -> None:
+    """登记额外的图标目录（例如 <data>/icons）。包内没有的图会去这些目录找。"""
+    global ICON_EXTRA_DIRS
+    out: List[Path] = []
+    for d in dirs:
+        p = Path(d)
+        if p not in out:
+            out.append(p)
+    ICON_EXTRA_DIRS = out
+
+
+def _icon_file(kind: str, slug: str) -> Optional[str]:
+    """按 kind/slug 找图标文件：先包内、再缓存目录。都没有返回 None。"""
+    if not kind or not slug:
+        return None
+    for base in [ICON_DIR] + list(ICON_EXTRA_DIRS):
+        try:
+            p = base / kind / f"{slug}.png"
+            if p.is_file():
+                return str(p)
+        except Exception:
+            continue
+    return None
+
+
 _ICON_INDEX: Optional[Dict[str, Dict[str, str]]] = None
 
 
@@ -207,6 +237,11 @@ def _icon_index() -> Dict[str, Dict[str, str]]:
                        "pet_shiny": {}, "pet_stage1": {}}
         try:
             p = ICON_DIR / "index.json"
+            if not p.is_file():                 # 包内没有就退到运行时缓存目录
+                for _d in ICON_EXTRA_DIRS:
+                    if (_d / "index.json").is_file():
+                        p = _d / "index.json"
+                        break
             if p.is_file():
                 d = json.loads(p.read_text(encoding="utf-8"))
                 for k in ("pet", "egg", "pet_form", "egg_form", "pet_shiny",
@@ -245,17 +280,17 @@ def icon_path(kind: str, name: str, form: str = "") -> Optional[str]:
         for k in cands:
             sl = sm.get(k)
             if sl:
-                p = ICON_DIR / "shiny" / f"{sl}.png"
-                if p.is_file():
-                    return str(p)
+                p = _icon_file("shiny", sl)
+                if p:
+                    return p
         return None
     if kind == "pet_stage1" and n0:
         _p1 = full.get("pet_stage1") or {}
         s1 = (_p1.get(f"{n0}|{f0}") if f0 else None) or _p1.get(n0)
         if s1:
-            p = ICON_DIR / "pet" / f"{s1}.png"
-            if p.is_file():
-                return str(p)
+            p = _icon_file("pet", s1)
+            if p:
+                return p
     if kind == "pet" and n0 and f0:
         pf = (full.get("pet_form") or {}).get(f"{n0}|{f0}")
         if not pf:                       # 形态名可能带「名字（形态）」这种写法
@@ -263,9 +298,9 @@ def icon_path(kind: str, name: str, form: str = "") -> Optional[str]:
             if short:
                 pf = (full.get("pet_form") or {}).get(f"{n0}|{short}")
         if pf:
-            p = ICON_DIR / "pet" / f"{pf}.png"
-            if p.is_file():
-                return str(p)
+            p = _icon_file("pet", pf)
+            if p:
+                return p
     if kind == "egg" and n0 and f0:
         # 同一只精灵的不同形态，蛋名可能一样但蛋图不一样
         # （鸭吉吉 5 个形态都叫「鸭吉吉蛋」，图标却分别是 107009/107017/…）
@@ -283,9 +318,9 @@ def icon_path(kind: str, name: str, form: str = "") -> Optional[str]:
                     continue
                 ef = (full.get("egg_form") or {}).get(f"{bn}|{fm}")
                 if ef:
-                    p = ICON_DIR / "egg" / f"{ef}.png"
-                    if p.is_file():
-                        return str(p)
+                    p = _icon_file("egg", ef)
+                    if p:
+                        return p
     idx = full.get(kind) or {}
     n = n0
     if not n or not idx:
@@ -305,8 +340,7 @@ def icon_path(kind: str, name: str, form: str = "") -> Optional[str]:
             break
     if not slug:
         return None
-    f = ICON_DIR / kind / f"{slug}.png"
-    return str(f) if f.is_file() else None
+    return _icon_file(kind, slug)
 
 
 def has_icons() -> bool:

@@ -81,6 +81,35 @@ def _card():
     return _CARD_MOD
 
 
+# ---------------------------------------------------------------- 素材仓库
+_ASSET_MOD = None
+_ASSET_TRIED = False
+
+
+def _asset_module():
+    """加载同目录的 asset_store.py（运行时图标缓存）。"""
+    global _ASSET_MOD, _ASSET_TRIED
+    if _ASSET_TRIED:
+        return _ASSET_MOD
+    _ASSET_TRIED = True
+    import importlib.util
+    fp = Path(__file__).with_name("asset_store.py")
+    if not fp.is_file():
+        return None
+    try:
+        spec = importlib.util.spec_from_file_location("lk_egg_assets", str(fp))
+        m = importlib.util.module_from_spec(spec)
+        # dataclass 需要模块在 sys.modules 里注册，否则 exec_module 时 __dict__ 为 None
+        import sys as _sys
+        _sys.modules["lk_egg_assets"] = m
+        spec.loader.exec_module(m)
+        _ASSET_MOD = m
+    except Exception as e:
+        logger.warning(f"[素材] asset_store.py 加载失败: {type(e).__name__}: {e}")
+        _ASSET_MOD = None
+    return _ASSET_MOD
+
+
 # ---------------------------------------------------------------- 网格图模块
 _GRID_MOD = None
 _GRID_TRIED = False
@@ -138,7 +167,7 @@ def _strip_emoji(text: str) -> str:
 
 _PLUGIN_DIR = Path(__file__).resolve().parent
 _PLUGIN_NAME = "astrbot_plugin_lk_egg"
-VERSION = "2.1.26"
+VERSION = "2.1.27"
 
 
 def _cand_dirs() -> List[Path]:
@@ -370,7 +399,7 @@ def _hard_save_state(state: Dict[str, Any]) -> None:
     "astrbot_plugin_lk_egg",
     "MIKU013970 & DeepSeek",
     "洛克小肥鱼全功能 + 炫彩花种订阅",
-    "2.1.26",
+    "2.1.27",
 )
 class LkMarketNotify(Star):
     def __init__(self, context: Context, config: AstrBotConfig = None):
@@ -384,6 +413,18 @@ class LkMarketNotify(Star):
         self.state.setdefault("marks", {})
         self.ranges = self._load_ranges()
         self.stats = {"polls": 0, "sent": 0, "skipped": 0, "errors": 0, "last_at": 0}
+        # 运行时图标仓库：包内只有 icons/index.json，PNG 首次运行从控制台/asset_url 拉一次
+        self.assets = None
+        try:
+            am = _asset_module()
+            if am is not None:
+                self.assets = am.AssetStore(
+                    data_root=_data_dir(), plugin_dir=_PLUGIN_DIR,
+                    console_base=self.api_base,
+                    asset_url=str(self._cfg("asset_url", "") or ""),
+                    logger=logger)
+        except Exception as e:
+            logger.warning(f"[素材] 初始化失败: {type(e).__name__}: {e}")
 
     # ---------------------------------------------------------------- 配置
     def _cfg(self, key: str, default: Any = None) -> Any:
@@ -976,7 +1017,9 @@ class LkMarketNotify(Star):
         # 网格图预生成：蛋组 / 各赛季异色这些内容基本不变，先渲好放缓存，
         # 用户发指令时直接命中（不用等 HTML 截图或 Pillow 现画）
         try:
-            self._grid_warm_task = asyncio.create_task(self._prewarm_grids())
+            # 先拉图标（只拉一次，之后命中本地），拉完再预生成网格图 ——
+            # 不然预生成出来的图全是问号占位
+            self._grid_warm_task = asyncio.create_task(self._assets_then_prewarm())
         except Exception as e:
             logger.warning(f"[网格图] 预生成启动失败: {type(e).__name__}: {e}")
             self._grid_warm_task = None
@@ -5598,6 +5641,59 @@ class LkMarketNotify(Star):
         cards_enc = self._shiny_grid_cards(sorted(rows_enc, key=self._grid_sort_key))
         self._grid_cards_cache_put(key, (cards_res, cards_enc))
         return cards_res, cards_enc
+
+    async def _asset_sync(self, force: bool = False):
+        """确保本地有图标。返回 (ok, 说明文字)。"""
+        if self.assets is None:
+            return False, "素材模块不可用"
+        try:
+            st = await self.assets.ensure(force=force)
+        except Exception as e:
+            logger.warning(f"[素材] 同步异常: {type(e).__name__}: {e}")
+            return False, f"同步异常：{type(e).__name__}"
+        if st.ok and not st.skipped:
+            logger.info(f"[素材] {st.line()}")
+        elif not st.ok:
+            logger.warning(f"[素材] {st.line()}")
+        return st.ok, st.line()
+
+    def _apply_icon_dirs(self) -> None:
+        """把运行时缓存目录登记给 card.py（包内没有再找这里）。"""
+        c = _card()
+        if c is None or self.assets is None:
+            return
+        try:
+            c.set_icon_dirs(self.assets.root)
+        except Exception as e:
+            logger.warning(f"[素材] 登记图标目录失败: {type(e).__name__}: {e}")
+
+    async def _assets_then_prewarm(self) -> None:
+        """启动顺序：素材同步 → 登记目录 → 预生成网格图。"""
+        try:
+            await self._asset_sync()
+            self._apply_icon_dirs()
+            await self._prewarm_grids()
+        except asyncio.CancelledError:
+            raise
+        except Exception as e:
+            logger.warning(f"[素材] 启动流程异常: {type(e).__name__}: {e}")
+
+    @filter.command("洛克素材")
+    async def cmd_roco_assets(self, event: AstrMessageEvent):
+        """洛克素材 —— 看素材状态；洛克素材 更新 —— 强制重新拉一次"""
+        raw = str(getattr(event, "message_str", "") or "")
+        force = any(w in raw for w in ("更新", "同步", "重下", "刷新"))
+        if self.assets is None:
+            yield event.plain_result("素材模块没加载起来（asset_store.py 不见了？）")
+            return
+        ok, line = await self._asset_sync(force=force)
+        self._apply_icon_dirs()
+        total = self.assets.count()
+        yield event.plain_result(
+            f"{'✅' if ok else '⚠️'} {line}\n"
+            f"本地图标：{total} 张\n"
+            f"缓存目录：{self.assets.root}\n"
+            f"（没有图标也不影响查蛋，只是卡片上不显示精灵图）")
 
     async def _prewarm_grids(self) -> None:
         """启动预生成：所有蛋组、各赛季异色图先渲好（这些内容基本不变）。"""

@@ -4,6 +4,52 @@
 > `页面更新`（控制台 8777 那套，要重启控制台）。没有改动的那节写成「无」，不许省。
 > 对应推送的更新文档：`洛克王国蛋神助手\更新说明-vX.Y.Z.md`。
 
+## v2.1.27
+
+### 插件更新
+
+#### 安装包从 **7.61 MB 砍到 0.4 MB**（图标改运行时拉取）
+
+市场审核卡在包体上。7.61 MB 里 **7.09 MB 是 1541 张图标 PNG**（93%），代码 + 数据只有 0.3 MB。
+所以：
+
+| 内容 | 以前 | 现在 |
+|---|---|---|
+| `icons/pet` + `icons/egg` + `icons/shiny`（1777 张） | 7.9 MB 打进包 | **不进包**，挪到 `洛克王国蛋神助手/icons_src/` |
+| `icons/index.json`（名字→slug 映射） | 17 KB | **保留在包里**（没有它认不出文件名） |
+| 安装包 zip | 7.61 MB | **约 0.4 MB** |
+
+#### 图标从哪来：控制台优先，其次 asset_url
+
+新增 `asset_store.py`：
+
+1. 首次运行（`initialize()` 后台任务）先向 **蛋神助手控制台** 要一个素材包：
+   `GET {api_base}/api/plugin-assets/zip` → 解到 `<插件>/data/icons/`（1777 张 / 约 0.8 秒，一次搞定）；
+2. 控制台没有就退到配置里的 `asset_url`（GitHub Release 的 `icons.zip`）；
+3. 都不行就降级：**没有图标也能查蛋**，只是卡片上不显示精灵图。
+
+* 缓存：内存命中 + 磁盘 `data/icons/`，有 `.synced` 标记，第二次启动直接跳过（0 ms）；
+* 原子安装：先解到临时目录再整体替换，断电不会留半个文件；
+* `aiohttp` 不可用时自动退到 `urllib`；
+* 新增指令 `洛克素材`（看状态）/ `洛克素材 更新`（强制重拉）。
+
+#### 控制台侧（页面更新）
+
+`web/server.py` 新增 3 个接口：
+
+```
+GET  /api/plugin-assets/status   有没有素材包 / 多大 / 更新时间
+GET  /api/plugin-assets/zip      素材包本体（插件启动时拉一次）
+POST /api/plugin-assets/sync     {"dir": "本地图标目录"} 打包  或  {"url": "..."} 下载存下来
+```
+
+素材包位置：`<控制台>/data/plugin_assets/icons.zip`。
+打包工具：`python tools/pack_icons_zip.py --copy-console`。
+
+### 页面更新
+
+控制台新增 `/api/plugin-assets/*` 三个接口（见上），**需要重启控制台 + 浏览器刷新**。
+
 ## v2.1.26
 
 ### 插件更新

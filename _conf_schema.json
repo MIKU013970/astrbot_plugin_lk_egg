@@ -312,5 +312,11 @@
     "type": "int",
     "default": 3,
     "hint": "市场轮询默认 20 秒一轮，填 3 = 每 60 秒扫一次。填 1 = 每轮都扫（请求会多）"
+  },
+  "asset_url": {
+    "description": "图标素材包地址（可选）",
+    "type": "string",
+    "default": "",
+    "hint": "安装包不含图标 PNG（包体从 7.6MB 降到 0.4MB）。首次运行会先向控制台 /api/plugin-assets/zip 取，取不到再用这里的地址。填 GitHub Release 上的 icons.zip 链接即可；留空也行。"
   }
 }
