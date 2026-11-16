@@ -4,6 +4,94 @@
 > `页面更新`（控制台 8777 那套，要重启控制台）。没有改动的那节写成「无」，不许省。
 > 对应推送的更新文档：`洛克王国蛋神助手\更新说明-vX.Y.Z.md`。
 
+## v2.1.28
+
+### 插件更新
+
+#### 从 Biligame Wiki 补全素材（蛋图映射 +281）
+
+写了个抓取器，按 wiki 页面上 `文件:` 列的图名把立绘 / 异色立绘 / 蛋图 / 异色蛋图全部拉下来：
+
+```
+精灵页 https://wiki.biligame.com/nrc/<名字>
+  ├─ PetPortrait xxx.png        → 立绘（1024×1024）
+  ├─ PetPortrait xxx yise.png   → 异色立绘
+  ├─ Item 107xxx / 108xxx.png   → 蛋图
+  └─ Item 15xxxx.png            → 异色蛋图
+再走 api.php?prop=imageinfo 批量换 patchwiki 真实地址（一次 50 个标题）
+```
+
+实测：708 只精灵跑完 **203 秒**，更新 pet 4 / egg 280 / egg_shiny 219，
+148 只没有 wiki 页（多为新赛季/形态页还没建）。
+
+抓完补映射后：
+
+| 分组 | 之前 | 之后 |
+|---|---|---|
+| `egg` 映射 | 890（有图 690，78%） | **1171（有图 940，100%）** |
+| `pet` 映射 | 466 | **504** |
+| 素材张数 | 1541 | **1930** |
+
+#### 控制台侧（页面更新）
+
+`POST /api/plugin-assets/sync` 新增 wiki 支路：
+
+```json
+{"wiki": true}            // 现抓 wiki 全部精灵，抓完自动重打包 icons.zip
+{"wiki": true, "limit": 6} // 只抓 6 只（调试）
+```
+
+控制台会调 `洛克王国蛋神助手/_脚本/抓_wiki素材.py`，跑完把 `icons_src/` 打回
+`data/plugin_assets/icons.zip`，插件下次启动（或 `洛克素材 更新`）就能拿到。
+
+### 页面更新
+
+上面那条 `/api/plugin-assets/sync {"wiki": true}` 支路，需**重启控制台**。
+
+## v2.1.28
+
+### 插件更新
+
+#### 从 Biligame Wiki 补全素材（蛋图映射 +281）
+
+写了个抓取器，按 wiki 页面上 `文件:` 列的图名把立绘 / 异色立绘 / 蛋图 / 异色蛋图全部拉下来：
+
+```
+精灵页 https://wiki.biligame.com/nrc/<名字>
+  ├─ PetPortrait xxx.png        → 立绘（1024×1024）
+  ├─ PetPortrait xxx yise.png   → 异色立绘
+  ├─ Item 107xxx / 108xxx.png   → 蛋图
+  └─ Item 15xxxx.png            → 异色蛋图
+再走 api.php?prop=imageinfo 批量换 patchwiki 真实地址（一次 50 个标题）
+```
+
+实测：708 只精灵跑完 **203 秒**，更新 pet 4 / egg 280 / egg_shiny 219，
+148 只没有 wiki 页（多为新赛季/形态页还没建）。
+
+抓完补映射后：
+
+| 分组 | 之前 | 之后 |
+|---|---|---|
+| `egg` 映射 | 890（有图 690，78%） | **1171（有图 940，100%）** |
+| `pet` 映射 | 466 | **504** |
+| 素材张数 | 1541 | **1930** |
+
+#### 控制台侧（页面更新）
+
+`POST /api/plugin-assets/sync` 新增 wiki 支路：
+
+```json
+{"wiki": true}            // 现抓 wiki 全部精灵，抓完自动重打包 icons.zip
+{"wiki": true, "limit": 6} // 只抓 6 只（调试）
+```
+
+控制台会调 `洛克王国蛋神助手/_脚本/抓_wiki素材.py`，跑完把 `icons_src/` 打回
+`data/plugin_assets/icons.zip`，插件下次启动（或 `洛克素材 更新`）就能拿到。
+
+### 页面更新
+
+上面那条 `/api/plugin-assets/sync {"wiki": true}` 支路，需**重启控制台**。
+
 ## v2.1.27
 
 ### 插件更新
