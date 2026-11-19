@@ -61,14 +61,18 @@ class AssetStore:
 
     def __init__(self, data_root: Path, plugin_dir: Path,
                  console_base: str = "http://127.0.0.1:8777",
-                 asset_url: str = "", timeout: float = 60.0,
-                 logger: Any = None) -> None:
+                 asset_url: str = "", timeout: float = 10.0,
+                 logger: Any = None,
+                 console_guard: Optional[Callable[[], bool]] = None) -> None:
         self.data_root = Path(data_root)          # 一般是插件 data/ 目录
         self.plugin_dir = Path(plugin_dir)        # 插件安装目录（包内 icons/index.json 在这）
         self.console_base = (console_base or "").rstrip("/")
         self.asset_url = (asset_url or "").strip()
         self.timeout = float(timeout)
         self.logger = logger
+        #: 控制台可用性探针。市场暂停 / 控制台已被判定不可达时返回 False，
+        #: 直接跳过控制台这一路，省掉一次 10 秒的等待。asset_url 兜底照常走。
+        self.console_guard = console_guard
         self._lock = asyncio.Lock()
         self._done = False
 
@@ -194,6 +198,12 @@ class AssetStore:
     async def _from_console(self) -> Optional[bytes]:
         if not self.console_base:
             return None
+        if self.console_guard is not None:
+            try:
+                if not self.console_guard():
+                    return None
+            except Exception:
+                return None
         url = f"{self.console_base}/api/plugin-assets/zip"
         return await self._http_get(url)
 

@@ -167,7 +167,7 @@ def _strip_emoji(text: str) -> str:
 
 _PLUGIN_DIR = Path(__file__).resolve().parent
 _PLUGIN_NAME = "astrbot_plugin_lk_egg"
-VERSION = "2.1.28"
+VERSION = "2.1.29"
 
 
 def _cand_dirs() -> List[Path]:
@@ -399,7 +399,7 @@ def _hard_save_state(state: Dict[str, Any]) -> None:
     "astrbot_plugin_lk_egg",
     "MIKU013970 & DeepSeek",
     "洛克小肥鱼全功能 + 炫彩花种订阅",
-    "2.1.28",
+    "2.1.29",
 )
 class LkMarketNotify(Star):
     def __init__(self, context: Context, config: AstrBotConfig = None):
@@ -413,6 +413,12 @@ class LkMarketNotify(Star):
         self.state.setdefault("marks", {})
         self.ranges = self._load_ranges()
         self.stats = {"polls": 0, "sent": 0, "skipped": 0, "errors": 0, "last_at": 0}
+        # 控制台(蛋神助手)不可达熔断。
+        # 地址填错 / 换了宽带 IP 变了 / AstrBot 和控制台不在同一网段时，
+        # 每个功能各自去等 6~60 秒超时，查蛋出图就会被拖到没法看。
+        # 这里统一收口：连续失败 2 次 → 冷却 api_cooldown 秒内所有请求直接短路。
+        self._api_down_until = 0.0
+        self._api_fail_streak = 0
         # 运行时图标仓库：包内只有 icons/index.json，PNG 首次运行从控制台/asset_url 拉一次
         self.assets = None
         try:
@@ -422,6 +428,8 @@ class LkMarketNotify(Star):
                     data_root=_data_dir(), plugin_dir=_PLUGIN_DIR,
                     console_base=self.api_base,
                     asset_url=str(self._cfg("asset_url", "") or ""),
+                    timeout=10.0,
+                    console_guard=lambda: not self._api_blocked(),
                     logger=logger)
         except Exception as e:
             logger.warning(f"[素材] 初始化失败: {type(e).__name__}: {e}")
@@ -444,6 +452,57 @@ class LkMarketNotify(Star):
 
     def _market_paused(self) -> bool:
         return bool(self._cfg("market_paused", True))
+
+    # ---------------------------------------------------------------- 控制台熔断
+    @property
+    def api_timeout(self) -> float:
+        """单次请求控制台的超时（秒）。控制台在本机时 2 秒都够；跨设备给 4 秒。"""
+        try:
+            return max(1.0, float(self._cfg("api_timeout", 4)))
+        except (TypeError, ValueError):
+            return 4.0
+
+    @property
+    def api_cooldown(self) -> float:
+        """判定控制台不可达后，多久之内不再尝试（秒）。"""
+        try:
+            return max(10.0, float(self._cfg("api_cooldown", 120)))
+        except (TypeError, ValueError):
+            return 120.0
+
+    def _api_blocked(self) -> bool:
+        """市场暂停 / 控制台刚被判定不可达 → 这次请求直接短路，不碰网络。
+
+        存在的意义：插件里访问控制台的出口一共有十来处（行情、头像、花种、
+        商家、素材、状态页……），逐个补 market_paused 判断既容易漏，新加功能
+        还会继续漏。收口到出口这一层，任何出口只要走这里就自动受控。
+        """
+        if self._market_paused():
+            return True
+        return time.time() < self._api_down_until
+
+    def _api_mark(self, ok: bool) -> None:
+        """记录一次控制台请求结果，用于熔断。"""
+        if ok:
+            self._api_fail_streak = 0
+            self._api_down_until = 0.0
+            return
+        self._api_fail_streak += 1
+        if self._api_fail_streak >= 2:
+            cool = self.api_cooldown
+            now = time.time()
+            if self._api_down_until < now + cool - 1:
+                logger.warning(
+                    f"[控制台] 连续 {self._api_fail_streak} 次连不上 {self.api_base}，"
+                    f"{int(cool)} 秒内不再尝试（查蛋出图不会再被拖住）")
+            self._api_down_until = now + cool
+
+    def _api_down_hint(self) -> str:
+        """给状态页/报错用的熔断说明。"""
+        left = self._api_down_until - time.time()
+        if left <= 0:
+            return ""
+        return f"控制台不可达，{int(left)} 秒后重试"
 
     @property
     def interval(self) -> float:
@@ -481,27 +540,37 @@ class LkMarketNotify(Star):
 
     async def _api_post(self, path: str, body: str) -> Optional[Dict[str, Any]]:
         """向控制台发 POST 请求（市场补货等）"""
+        if self._api_blocked():
+            return None
         try:
             sess = await self._session_get()
             async with sess.post(self.api_base + path, data=body,
-                                 headers={"Content-Type": "application/json"}) as resp:
+                                 headers={"Content-Type": "application/json"},
+                                 timeout=aiohttp.ClientTimeout(total=self.api_timeout)) as resp:
+                self._api_mark(True)
                 if resp.status != 200:
                     logger.warning(f"[市集推送] POST {path} → HTTP {resp.status}")
                     return None
                 return await resp.json(content_type=None)
         except Exception as e:
+            self._api_mark(False)
             logger.warning(f"[市集推送] POST {path} 失败: {type(e).__name__}: {e}")
             return None
 
     async def _api(self, path: str) -> Optional[Dict[str, Any]]:
+        if self._api_blocked():
+            return None
         try:
             sess = await self._session_get()
-            async with sess.get(self.api_base + path) as resp:
+            async with sess.get(self.api_base + path,
+                                timeout=aiohttp.ClientTimeout(total=self.api_timeout)) as resp:
+                self._api_mark(True)
                 if resp.status != 200:
                     logger.warning(f"[市集推送] {path} → HTTP {resp.status}")
                     return None
                 return await resp.json(content_type=None)
         except Exception as e:
+            self._api_mark(False)
             logger.warning(f"[市集推送] {path} 请求失败: {type(e).__name__}: {e}")
             return None
 
@@ -1311,7 +1380,7 @@ class LkMarketNotify(Star):
         走控制台的 GET /api/market/quote，控制台那边负责多账号轮询 + 按蛋种缓存。
         拿不到（超时 / 控制台没起 / 接口报错）就返回空字典，绝不抛出去卡住查蛋。
         """
-        if self._market_paused():
+        if self._api_blocked():
             return {}
         if not bool(self._cfg("market_quote_enabled", True)):
             return {}
@@ -1326,17 +1395,20 @@ class LkMarketNotify(Star):
             timeout = max(1.0, float(self._cfg("market_quote_timeout", 6)))
         except (TypeError, ValueError):
             timeout = 6.0
+        timeout = min(timeout, self.api_timeout)
         path = (f"/api/market/quote?q={urllib.parse.quote(nm)}"
                 f"&cache_min={max(0, cache_min)}")
         try:
             sess = await self._session_get()
             async with sess.get(self.api_base + path,
                                 timeout=aiohttp.ClientTimeout(total=timeout)) as resp:
+                self._api_mark(True)
                 if resp.status != 200:
                     logger.warning(f"[查蛋行情] {nm} → HTTP {resp.status}")
                     return {}
                 data = await resp.json(content_type=None)
         except Exception as e:
+            self._api_mark(False)
             logger.warning(f"[查蛋行情] {nm} 取失败: {type(e).__name__}: {e}")
             return {}
         if not isinstance(data, dict) or not data.get("ok"):
@@ -1811,15 +1883,20 @@ class LkMarketNotify(Star):
 
     async def _fetch_bytes(self, path: str, timeout: float = 8.0):
         """从控制台取二进制（头像用）。"""
+        if self._api_blocked():
+            return None
         try:
             sess = await self._session_get()
             async with sess.get(self.api_base + path,
-                                timeout=aiohttp.ClientTimeout(total=timeout)) as resp:
+                                timeout=aiohttp.ClientTimeout(
+                                    total=min(timeout, self.api_timeout))) as resp:
+                self._api_mark(True)
                 if resp.status != 200:
                     logger.warning(f"[头像] {path[:40]} → HTTP {resp.status}")
                     return None
                 return await resp.read()
         except Exception as e:
+            self._api_mark(False)
             logger.warning(f"[头像] 取失败: {type(e).__name__}: {e}")
             return None
 
@@ -3316,11 +3393,13 @@ class LkMarketNotify(Star):
         return rows[0] if rows else {}
 
     async def _live_merchant(self, q: str) -> Optional[Dict[str, Any]]:
-        """实时查商家（和网页版同一接口），20 秒超时，失败再退回本地索引。"""
+        """实时查商家（和网页版同一接口），失败再退回本地索引。"""
+        if self._api_blocked():
+            return None
         try:
             data = await asyncio.wait_for(
                 self._api("/api/merchant?q=" + urllib.parse.quote(str(q))),
-                timeout=20)
+                timeout=min(20.0, self.api_timeout))
             if data and data.get("ok"):
                 return data
         except Exception as e:
@@ -6139,15 +6218,19 @@ class LkMarketNotify(Star):
         hit = self._CHROMA_CACHE.get(key)
         if hit is not None:
             return hit
+        if self._api_blocked():
+            return None
         try:
             sess = await self._session_get()
             async with sess.get(
                     f"{self.api_base}/api/chroma/card/{p}/{c}",
-                    timeout=aiohttp.ClientTimeout(total=8)) as resp:
+                    timeout=aiohttp.ClientTimeout(total=self.api_timeout)) as resp:
+                self._api_mark(True)
                 if resp.status != 200:
                     return None
                 data = await resp.read()
         except Exception as e:
+            self._api_mark(False)
             logger.warning(f"[花种] 取色卡图失败 {p}/{c}: {type(e).__name__}: {e}")
             return None
         if not data or len(data) < 200:
