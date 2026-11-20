@@ -167,7 +167,7 @@ def _strip_emoji(text: str) -> str:
 
 _PLUGIN_DIR = Path(__file__).resolve().parent
 _PLUGIN_NAME = "astrbot_plugin_lk_egg"
-VERSION = "2.1.33"
+VERSION = "2.1.34"
 
 
 def _cand_dirs() -> List[Path]:
@@ -399,7 +399,7 @@ def _hard_save_state(state: Dict[str, Any]) -> None:
     "astrbot_plugin_lk_egg",
     "MIKU013970 & DeepSeek",
     "洛克小肥鱼全功能 + 炫彩花种订阅",
-    "2.1.33",
+    "2.1.34",
 )
 class LkMarketNotify(Star):
     def __init__(self, context: Context, config: AstrBotConfig = None):
@@ -1569,28 +1569,24 @@ class LkMarketNotify(Star):
                 if show_body:
                     lines += body_lines(v, prefix=f"{i}. ")
 
-        # ---- 全阶段：一阶段 → 最高阶段的体重过线值 / 极限值
+        # ---- 孵化：普通 / 风场 / 5 倍 / 风场+5 倍
         if bool(self._cfg("hatch_time_enabled", True)):
             _ht = self._hatch_rows(r)
-            if _ht:
-                lines.append("")
-                for _k, _v in _ht:
-                    lines.append(f"{_k}　{_v}" if _k else f"　　{_v}")
+            for _k, _v in _ht:
+                if _k:
+                    lines.append(f"{_k}　{_v}")
+                else:
+                    # 分组标题（—— xxx ——）顶格，普通内容缩进两格
+                    lines.append(str(_v) if str(_v).startswith("——") else f"　　{_v}")
         if bool(self._cfg("chain_stages_enabled", True)):
             _stages = self._chain_stage_rows(r)
             if len(_stages) > 2:                     # 只有本体的就别重复了
                 lines.append("")
-                lines.append("—— 全阶段体重（小不点 / 大块头）——")
+                lines.append("—— 全阶段体型（过线 / 极限）——")
                 for _k, _v in _stages:
                     lines.append(f"{_k}　{_v}" if _k else f"　　{_v}")
 
-        # ---- 技能：自学 / 技能石 / 血脉
-        if bool(self._cfg("skills_enabled", True)):
-            _sk = self._skill_rows(str(r.get("精灵") or ""))
-            if _sk:
-                lines.append("")
-                for _k, _v in _sk:
-                    lines.append(f"{_k}　{_v}" if _k else str(_v))
+        # ---- 技能不在这里：技能走独立查询「技能 呆呆铃」
 
         return "\n".join(lines)
 
@@ -5285,8 +5281,19 @@ class LkMarketNotify(Star):
         s = f"{v:.4f}".rstrip("0").rstrip(".")
         return s or "0"
 
+    @staticmethod
+    def _fmt_cm(v: float) -> str:
+        """米 → 厘米字符串：0.4 → '40'，0.88 → '88'，1.755 → '175.5'。"""
+        cm = float(v) * 100.0
+        if abs(cm - round(cm)) < 0.05:
+            return str(int(round(cm)))
+        return f"{cm:.1f}"
+
     def _chain_stage_rows(self, rec: Dict[str, Any]) -> List[tuple]:
-        """一阶段 → 最高阶段，每一阶段的体重过线值 / 极限值。
+        """一阶段 → 最高阶段，每一阶段的 身高/体重 + 小不点/大块头 过线值与极限值。
+
+        格式和蛋那几行完全统一（身高一律 cm、体重一律 kg、连接符一律 ~）：
+            身高：17~23 cm      体重：0.6650~1.5320 kg
 
         官方规律（从 206 条区间数据反推，全部命中）：
             过线偏移 Δ = (体重上限 - 体重下限) × 0.02
@@ -5299,26 +5306,23 @@ class LkMarketNotify(Star):
         for i, n in enumerate(names, 1):
             info = pets.get(n) or {}
             if not info:
-                # 图鉴里查不到这只（活动形态之类），只留个名字占位
                 rows.append((f"{i}. {n}", "（无体型数据）"))
                 continue
             h = str(info.get("height") or "").strip()
             w = str(info.get("weight") or "").strip()
-            lo, hi = self._parse_range(w)
-            head = f"{i}. {n}"
-            if h:
-                head_body = f"{h} m"
-            else:
-                head_body = ""
-            if lo is None:
-                rows.append((head, head_body or "—"))
+            h_lo, h_hi = self._parse_range(h)
+            w_lo, w_hi = self._parse_range(w)
+            bits: List[str] = []
+            if h_lo is not None:
+                bits.append(f"{self._fmt_cm(h_lo)}~{self._fmt_cm(h_hi)} cm")
+            if w_lo is not None:
+                bits.append(f"{self._fmt_num(w_lo)}~{self._fmt_num(w_hi)} kg")
+            rows.append((f"{i}. {n}", " · ".join(bits) or "—"))
+            if w_lo is None:
                 continue
-            span = hi - lo
-            delta = span * 0.02
-            rows.append((head, f"{self._fmt_num(lo)}~{self._fmt_num(hi)} kg"
-                               + (f" · {head_body}" if head_body else "")))
-            rows.append(("", f"小不点 ≤{self._fmt_num(lo + delta)} · "
-                             f"大块头 ≥{self._fmt_num(hi - delta)}"))
+            delta = (w_hi - w_lo) * 0.02
+            rows.append(("", f"小不点 ≤{self._fmt_num(w_lo + delta)} · "
+                             f"大块头 ≥{self._fmt_num(w_hi - delta)}"))
         return rows
 
     _SKILL_TABLE: Optional[Dict[str, Dict[str, List[Dict[str, Any]]]]] = None
@@ -5356,41 +5360,56 @@ class LkMarketNotify(Star):
     #: 三种学习来源 → 中文名（顺序就是显示顺序）
     SKILL_SOURCES = (("level", "自学"), ("machine", "技能石"), ("blood", "血脉"))
 
-    def _skill_rows(self, name: str) -> List[tuple]:
-        """技能行，按 自学 / 技能石 / 血脉 三段分组。"""
+    def _skill_sections(self, name: str) -> List[tuple]:
+        """[(段名, [技能, ...]), ...]，只保留有内容的段（自学 / 技能石 / 血脉）。"""
         sk = self._skills_of(name)
-        if not sk or not any(sk.values()):
+        if not sk:
             return []
-        try:
-            lim = int(self._cfg("skills_max", 0) or 0)
-        except (TypeError, ValueError):
-            lim = 0
-        rows: List[tuple] = []
-        for key, label in self.SKILL_SOURCES:
+        out: List[tuple] = []
+        for key, label in (("level", "自学"), ("machine", "技能石"), ("blood", "血脉")):
             items = [x for x in (sk.get(key) or []) if isinstance(x, dict)]
-            if not items:
-                continue
+            if items:
+                out.append((label, items))
+        return out
+
+    @staticmethod
+    def _skill_line(it: Dict[str, Any]) -> tuple:
+        """一条技能 → (左侧, 右侧)。状态技能不印威力（数据里是 -1）。"""
+        label = ""
+        lv = it.get("level")
+        try:
+            lvn = int(lv)
+        except (TypeError, ValueError):
+            lvn = None
+        # 999 = 没有学习等级（技能石 / 血脉），不印
+        if lvn is not None and lvn != 999:
+            label = f"Lv.{lvn}"
+        meta = " · ".join(str(x) for x in (it.get("type"), it.get("category")) if x)
+        bits: List[str] = []
+        pw = it.get("power")
+        try:
+            pwn = int(pw)
+        except (TypeError, ValueError):
+            pwn = 0
+        if pwn and pwn > 0:
+            bits.append(f"威力{pwn}")
+        en = it.get("energy")
+        if en not in (None, ""):
+            bits.append(f"能耗{en}")
+        v = str(it.get("name") or "")
+        if meta:
+            v += f"　{meta}"
+        if bits:
+            v += "　" + " ".join(bits)
+        return label, v
+
+    def _skill_rows(self, name: str) -> List[tuple]:
+        """技能行（带分段标题）。分段标题会被 card.render_card 画成细分割线。"""
+        rows: List[tuple] = []
+        for label, items in self._skill_sections(name):
             rows.append(("", f"—— {label}（{len(items)}）——"))
-            shown = items[:lim] if lim > 0 else items
-            for it in shown:
-                lv = it.get("level")
-                k = f"Lv.{lv}" if lv not in (None, "") else ""
-                bits = [str(it.get("type") or ""), str(it.get("category") or "")]
-                meta = " · ".join(x for x in bits if x)
-                pw, en = it.get("power"), it.get("energy")
-                tail = ""
-                if pw not in (None, "", 0):
-                    tail += f"威力{pw} "
-                if en not in (None, ""):
-                    tail += f"能耗{en}"
-                v = str(it.get("name") or "")
-                if meta:
-                    v += f"　{meta}"
-                if tail.strip():
-                    v += f"　{tail.strip()}"
-                rows.append((k, v))
-            if lim > 0 and len(items) > lim:
-                rows.append(("", f"　…还有 {len(items) - lim} 个"))
+            for it in items:
+                rows.append(self._skill_line(it))
         return rows
 
     # ---------------------------------------------------------------- 星光 / 回顾 / 孵化
@@ -5498,16 +5517,17 @@ class LkMarketNotify(Star):
         return self._parse_hatch_seconds(rec.get("孵蛋时间"))
 
     def _hatch_rows(self, rec: Dict[str, Any]) -> List[tuple]:
-        """孵化时间四种口径：普通 / 挂风场 / 周末 5 倍 / 风场 + 5 倍。"""
+        """孵化时间：普通 / 挂风场 / 周末 5 倍 / 风场 + 5 倍（压成两行，卡片不臃肿）。"""
         base = self._hatch_base_seconds(rec)
         if not base:
             return []
         wind = self.hatch_wind_mult
         return [
-            ("孵化", f"普通 {self._fmt_duration(base)}"),
-            ("", f"挂风场（×{wind:g}） {self._fmt_duration(base / wind)}"),
-            ("", f"周末 5 倍速 {self._fmt_duration(base / 5)}"),
-            ("", f"风场 + 5 倍速（×{wind * 5:g}） {self._fmt_duration(base / (wind * 5))}"),
+            ("", "—— 孵化 ——"),
+            ("", f"普通 {self._fmt_duration(base)}"
+                 f"　·　挂风场（×{wind:g}） {self._fmt_duration(base / wind)}"),
+            ("", f"周末 5 倍速 {self._fmt_duration(base / 5)}"
+                 f"　·　风场 + 5 倍速（×{wind * 5:g}） {self._fmt_duration(base / (wind * 5))}"),
         ]
 
     def _shiny_grid_cards(self, rows: List[Dict[str, Any]]) -> List[Dict[str, Any]]:
@@ -7952,6 +7972,80 @@ class LkMarketNotify(Star):
             return r
         return event.plain_result(text)
 
+    # ---------------------------------------------------------------- 技能独立查询
+    #: 「技能 曜星光」「查技能 曜星光」「技能池 曜星光」
+    _SKILL_PREFIX_RE = re.compile(r"^\s*[/#]?\s*(?:查|看)?(?:技能池|技能表|技能)\s*(.+?)\s*$")
+    #: 「曜星光 技能」「曜星光技能」「曜星光 技能池」
+    _SKILL_SUFFIX_RE = re.compile(r"^\s*[/#]?\s*(.+?)\s*(?:的)?(?:技能池|技能表|技能)\s*$")
+
+    def _match_skill_query(self, q: str) -> Optional[str]:
+        """技能独立查询 → 精灵名；不是就 None。"""
+        s = str(q or "").strip()
+        if not s:
+            return None
+        m = self._SKILL_PREFIX_RE.match(s)
+        if m and m.group(1).strip() and m.group(1).strip() not in ("池", "表"):
+            return m.group(1).strip()
+        m = self._SKILL_SUFFIX_RE.match(s)
+        if m and m.group(1).strip():
+            head = m.group(1).strip()
+            # 「技能池」单独一个词（不带精灵名）不算查询
+            if head not in ("查", "看", "所有", "全部"):
+                return head
+        return None
+
+    def _skill_reply_text(self, name: str, sections: List[tuple]) -> str:
+        total = sum(len(items) for _, items in sections)
+        lines = [f"📖 {name} · 技能 {total} 个"]
+        for label, items in sections:
+            lines.append("")
+            lines.append(f"—— {label}（{len(items)}）——")
+            for it in items:
+                left, right = self._skill_line(it)
+                lines.append(f"{left}　{right}".strip() if left else right)
+        return "\n".join(lines)
+
+    async def _skill_reply(self, event: Any, name: str):
+        """技能查询：一段一页出图（自学 / 技能石 / 血脉），出不了图发文字。"""
+        rec = self._find_species(name)
+        nm = str((rec or {}).get("精灵") or name).strip()
+        sections = self._skill_sections(nm)
+        if not sections:
+            alt = self._skills_table()
+            near = [k for k in alt if nm and nm in k][:5]
+            tip = ("\n相近的：" + " / ".join(near)) if near else ""
+            return await self._say(
+                event,
+                f"「{nm}」暂时没有技能数据（wiki 页面可能还没建）。{tip}")
+
+        text = self._skill_reply_text(nm, sections)
+        c = _card()
+        if not (self._grid_enabled() and self._image_reply_on()
+                and c is not None and c.available()):
+            return await self._say(event, text)
+        pngs: List[bytes] = []
+        try:
+            for label, items in sections:
+                rows = [self._skill_line(it) for it in items]
+                png = await asyncio.to_thread(
+                    c.render_card,
+                    title=_strip_emoji(nm),
+                    subtitle=_strip_emoji(f"技能 · {label}"),
+                    tag=_strip_emoji(f"{len(items)} 个"),
+                    rows=[(_strip_emoji(a), _strip_emoji(b)) for a, b in rows],
+                    **self._card_kwargs())
+                if png:
+                    pngs.append(png)
+        except Exception as e:                               # noqa: BLE001
+            logger.warning(f"[技能] 出图失败: {type(e).__name__}: {e}")
+            return await self._say(event, text)
+        if not pngs:
+            return await self._say(event, text)
+        r = self._result_images(event, pngs)
+        if r is not None:
+            return r
+        return event.plain_result(text)
+
     def _sp_split_mode(self, arg: str):
         """'红绒十字 最近' / '红绒十字历史' → ('红绒十字', 'recent')"""
         a = str(arg or "").strip()
@@ -8049,28 +8143,31 @@ class LkMarketNotify(Star):
         return rows
 
     def _extra_species_rows(self, rec: Dict[str, Any]) -> List[tuple]:
-        """星光/回顾 + 孵化时间 + 全阶段体重 + 技能，追加在图鉴行末尾。"""
+        """星光/回顾 + 孵化时间 + 全阶段体型，追加在图鉴行末尾。
+
+        技能不在这里 —— 技能是独立查询（「技能 呆呆铃」），
+        不然一张卡塞四十多个技能，谁看谁晕。
+        """
         rows: List[tuple] = []
         _nm = str(rec.get("精灵") or "")
-        # 星光值 / 基础回顾值
+        # 星光值 / 基础回顾值（并成一行，卡片更紧凑）
         _star, _review = self._star_review_of(_nm)
-        if _star is not None:
-            rows.append(("星光值", f"★{_star}"))
-        if _review is not None:
-            rows.append(("基础回顾", f"{_review}"))
+        if _star is not None or _review is not None:
+            _bits: List[str] = []
+            if _star is not None:
+                _bits.append(f"★{_star}")
+            if _review is not None:
+                _bits.append(f"回顾 {_review}")
+            rows.append(("星光 / 回顾", "　·　".join(_bits)))
         # 孵化时间（普通 / 风场 / 5 倍 / 风场+5 倍）
         if bool(self._cfg("hatch_time_enabled", True)):
             rows += self._hatch_rows(rec)
+        # 全阶段体型（含一阶段成体，所以上面不再单独列「成体身高/成体重」）
         if bool(self._cfg("chain_stages_enabled", True)):
             st = self._chain_stage_rows(rec)
             if len(st) > 2:                       # 只有本体就不重复一遍
-                rows.append(("", "—— 全阶段体重（小不点 / 大块头）——"))
+                rows.append(("", "—— 全阶段体型（过线 / 极限）——"))
                 rows += st
-        if bool(self._cfg("skills_enabled", True)):
-            sk = self._skill_rows(_nm)
-            if sk:
-                rows.append(("", "—— 技能 ——"))
-                rows += sk
         return rows
 
     def _species_rows_core(self, rec: Dict[str, Any], dex: str = "",
@@ -8087,16 +8184,10 @@ class LkMarketNotify(Star):
         rows: List[tuple] = [("蛋组", _eg),
                              ("公母", _gd),
                              ("进化链", rec.get("进化链") or "")]
-        # 成体身高/体重（roco.world 补的，和蛋的区间不是一回事，单独标清楚）
-        _info = self._pets_table().get(str(rec.get("精灵") or "")) or {}
-        _h = str(rec.get("height") or _info.get("height") or "").strip()
-        _w = str(rec.get("weight") or _info.get("weight") or "").strip()
-        if _h:
-            rows.append(("成体身高", f"{_h} m"))
-        if _w:
-            rows.append(("成体重", f"{_w} kg"))
+        _egg_head = ("", "—— 蛋 ——")
         if len(variants) <= 1:
             v = variants[0] if variants else {}
+            rows.append(_egg_head)
             rows += [("身高区间", v.get("身高区间") or ""),
                      ("体重区间", v.get("体重区间") or "")]
 
@@ -8111,6 +8202,7 @@ class LkMarketNotify(Star):
         if len(_real_forms) <= 1:
             # 只有普通（或普通+异色）：按单形态展示，别把区间/过线值丢了
             _v = _real_forms[0] if _real_forms else {}
+            rows.append(_egg_head)
             rows += [("身高区间", _v.get("身高区间") or ""),
                      ("体重区间", _v.get("体重区间") or "")]
             return rows
@@ -8164,6 +8256,9 @@ class LkMarketNotify(Star):
         tpool = self._match_type_pool(q)
         if tpool is not None:
             return await self._type_pool_reply(event, tpool)
+        _sk = self._match_skill_query(q)
+        if _sk:
+            return await self._skill_reply(event, _sk)
         name, mode = self._sp_split_mode(q)
         hw = self._parse_hw(q) if mode == "info" else None
         rec = None if hw else self._find_species(name if mode == "recent" else q)
