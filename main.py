@@ -153,11 +153,19 @@ _EMOJI_RE = re.compile(
 
 
 def _strip_emoji(text: str) -> str:
-    """把 emoji 去掉，顺便把多余空格收拢，避免图片里出现豆腐块。"""
+    """把 emoji 去掉，顺便把多余空格收拢，避免图片里出现豆腐块。
+
+    ★（U+2605）要留着 —— 星光值靠它显示，别被「杂项符号」那条规则顺手删了。
+    """
     s = str(text or "")
     if not s:
         return s
+    # 这三个要留着：★ 是星光值，♂/♀ 是公母（card 还要按它们分段着色）
+    for _ch, _ph in (("★", "\ue000"), ("♂", "\ue001"), ("♀", "\ue002")):
+        s = s.replace(_ch, _ph)
     s2 = _EMOJI_RE.sub("", s)
+    for _ch, _ph in (("★", "\ue000"), ("♂", "\ue001"), ("♀", "\ue002")):
+        s2 = s2.replace(_ph, _ch)
     # 标签行前面留的空格清一下（"  已订阅" → "已订阅"）
     s2 = re.sub(r"[ \t]{2,}", " ", s2)
     s2 = re.sub(r"^[ \t]+", "", s2, flags=re.M)
@@ -167,7 +175,7 @@ def _strip_emoji(text: str) -> str:
 
 _PLUGIN_DIR = Path(__file__).resolve().parent
 _PLUGIN_NAME = "astrbot_plugin_lk_egg"
-VERSION = "2.1.38"
+VERSION = "2.1.39"
 
 
 def _cand_dirs() -> List[Path]:
@@ -399,7 +407,7 @@ def _hard_save_state(state: Dict[str, Any]) -> None:
     "astrbot_plugin_lk_egg",
     "MIKU013970 & DeepSeek",
     "洛克小肥鱼全功能 + 炫彩花种订阅",
-    "2.1.38",
+    "2.1.39",
 )
 class LkMarketNotify(Star):
     def __init__(self, context: Context, config: AstrBotConfig = None):
@@ -1725,6 +1733,20 @@ class LkMarketNotify(Star):
                            str(it.get("listed", 0))) for it in items[:6]],
             }
         dex = v.get("图鉴编号") or rec.get("图鉴编号") or ""
+        # 蛋的小块头 / 大块头框：插到「体重区间」行后面（留在「蛋」这一段里），
+        # 不能挂在卡片末尾 —— 那样会跑到「全阶段体型」下面，看着像是最高阶段的数据。
+        if boxes:
+            _ins = None
+            for _i, _x in enumerate(rows):
+                if _x and str(_x[0]) == "体重区间":
+                    _ins = _i
+            if _ins is None:
+                for _i, _x in enumerate(rows):
+                    if _x and str(_x[0]) == "身高区间":
+                        _ins = _i
+            _at = (_ins + 1) if _ins is not None else len(rows)
+            rows = list(rows[:_at]) + [("", "", {"boxes": boxes})] + list(rows[_at:])
+            boxes = None
         _real_v = [x for x in variants
                    if "异色" not in str(x.get("蛋名") or "")
                    and not self._form_own_dex(rec, x)]
@@ -7093,6 +7115,11 @@ class LkMarketNotify(Star):
     async def cmd_help(self, event: AstrMessageEvent):
         yield await self._say(event, await self._menu_for(event))
 
+    @filter.command("菜单")
+    async def cmd_menu(self, event: AstrMessageEvent):
+        """和 /帮助 同一张卡片（以前只注册了「帮助」，「菜单」发出去一点反应都没有）。"""
+        yield await self._say(event, await self._menu_for(event))
+
     @filter.regex(r"^\s*[\u4e00-\u9fa5A-Za-z0-9·]{2,12}\s*$")
     async def on_bare_species(self, event: AstrMessageEvent):
         """私聊里直接发精灵名字也能查；群里必须带 /"""
@@ -7101,6 +7128,10 @@ class LkMarketNotify(Star):
         if not self._is_private(event):
             return                      # 群聊不响应
         raw = (getattr(event, "message_str", "") or "").strip()
+        # 私聊里直接发「帮助」「菜单」也出菜单（群里仍然要带 /，防止刷屏）
+        if raw in ("帮助", "菜单", "help", "Help", "HELP"):
+            yield await self._say(event, await self._menu_for(event))
+            return
         if not raw or self._looks_like_command(raw):
             return
         rec = self._find_species(raw)
@@ -7877,22 +7908,32 @@ class LkMarketNotify(Star):
 
     async def _group_reply(self, event: Any, group: str):
         """查蛋组：**一张网格图装下这个组的全部精灵**，出不了图就发文字清单。"""
-        text = self._group_reply_text(group)
-        if not group or not (self._grid_enabled() and self._image_reply_on()
-                             and _grid() is not None):
-            return await self._say(event, text)
-        cards = self._group_cards(group)
-        if not cards:
-            return await self._say(event, text)
-        pngs, _pages, _want, total = await self._paginate_pngs(
-            header=f"蛋组 · {group} · {len(cards)} 只",
-            cards_res=cards, cards_enc=[], per=len(cards), all_pages=True)
-        if not pngs:
-            return await self._say(event, text)
-        r = self._result_images(event, pngs)          # 不发「蛋组 · xx｜共 N 只」这行字
-        if r is not None:
-            return r
-        return event.plain_result(text)
+        text = ""
+        try:
+            text = self._group_reply_text(group)
+            if not group or not (self._grid_enabled() and self._image_reply_on()
+                                 and _grid() is not None):
+                return await self._say(event, text)
+            cards = self._group_cards(group)
+            if not cards:
+                return await self._say(event, text)
+            pngs, _pages, _want, total = await self._paginate_pngs(
+                header=f"蛋组 · {group} · {len(cards)} 只",
+                cards_res=cards, cards_enc=[], per=len(cards), all_pages=True)
+            if not pngs:
+                return await self._say(event, text)
+            r = self._result_images(event, pngs)          # 不发「蛋组 · xx｜共 N 只」这行字
+            if r is not None:
+                return r
+            return event.plain_result(text)
+        except Exception as e:                               # noqa: BLE001
+            logger.warning(f"[蛋组] {group} 出图失败，退回文字: "
+                           f"{type(e).__name__}: {e}")
+        try:
+            return await self._say(event, text or f"「{group}」查询出错了，稍后再试")
+        except Exception as e2:                              # noqa: BLE001
+            logger.error(f"[蛋组] 文字回复也失败: {type(e2).__name__}: {e2}")
+            return None
 
     # ---------------------------------------------------------------- 系别池
     #: 「查询 火系」「查询 火池」「查询 火」都认；带了这些尾巴的也认
@@ -8016,23 +8057,37 @@ class LkMarketNotify(Star):
         return val
 
     async def _type_pool_reply(self, event: Any, tname: str):
-        """查系别池：一张网格图装下这一系的全部精灵，出不了图就发文字清单。"""
-        text = self._type_pool_reply_text(tname)
-        if not tname or not (self._grid_enabled() and self._image_reply_on()
-                             and _grid() is not None):
-            return await self._say(event, text)
-        cards = self._type_pool_cards(tname)
-        if not cards:
-            return await self._say(event, text)
-        pngs, _pages, _want, total = await self._paginate_pngs(
-            header=f"系别池 · {tname} · {len(cards)} 只",
-            cards_res=cards, cards_enc=[], per=len(cards), all_pages=True)
-        if not pngs:
-            return await self._say(event, text)
-        r = self._result_images(event, pngs)
-        if r is not None:
-            return r
-        return event.plain_result(text)
+        """查系别池：一张网格图装下这一系的全部精灵，出不了图就发文字清单。
+
+        整段用 try 包住 —— 出图链路上任何一环炸了都要退到文字，
+        绝不能静默失败（不然用户发「查询 水系」看到的就是「没有任何返回」）。
+        """
+        text = ""
+        try:
+            text = self._type_pool_reply_text(tname)
+            if not tname or not (self._grid_enabled() and self._image_reply_on()
+                                 and _grid() is not None):
+                return await self._say(event, text)
+            cards = self._type_pool_cards(tname)
+            if not cards:
+                return await self._say(event, text)
+            pngs, _pages, _want, total = await self._paginate_pngs(
+                header=f"系别池 · {tname} · {len(cards)} 只",
+                cards_res=cards, cards_enc=[], per=len(cards), all_pages=True)
+            if not pngs:
+                return await self._say(event, text)
+            r = self._result_images(event, pngs)
+            if r is not None:
+                return r
+            return event.plain_result(text)
+        except Exception as e:                               # noqa: BLE001
+            logger.warning(f"[系别池] {tname} 出图失败，退回文字: "
+                           f"{type(e).__name__}: {e}")
+        try:
+            return await self._say(event, text or f"「{tname}」查询出错了，稍后再试")
+        except Exception as e2:                              # noqa: BLE001
+            logger.error(f"[系别池] 文字回复也失败: {type(e2).__name__}: {e2}")
+            return None
 
     # ---------------------------------------------------------------- 技能独立查询
     #: 「技能 曜星光」「查技能 曜星光」「技能池 曜星光」
