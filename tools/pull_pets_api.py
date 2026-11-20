@@ -34,6 +34,15 @@ PETS = PLUGIN / "pets.json"
 ROSTER = PLUGIN / "season_roster.json"
 ELEMENTS = PLUGIN / "elements.json"
 
+#: 同乘（ride）人工校正表。
+#: wegame 镜像的 has_ride_talent 与 wiki 特长概率表有个别不一致：
+#: wiki 里能同乘的精灵，天赋表会多出一项「同乘 x%」，不能的则少这一项、
+#: 其余项比例相应抬高（对比：锥尾羊 5.8%×5 +同乘 / 迪莫 6.9%×5 无同乘）。
+#: 下面这些是「wiki 有同乘、但镜像标 false」的，按 wiki 改真。
+RIDE_OVERRIDE_TRUE = {
+    "呆呆铃",     # wiki 同乘 5.8%，与锥尾羊逐项一致
+}
+
 #: 拿不到官方配色的系（官方系名 → 兜底色），正常都从 wiki CSS 取
 FALLBACK_ACCENT = {
     "普通": "#9aa0a6", "草": "#4caf50", "火": "#f4633a", "水": "#3ea0f7",
@@ -139,7 +148,8 @@ def main() -> int:
             "season": si,
             "stage": stage,
             "has_shiny": bool(it.get("has_shiny")),
-            "ride": bool(it.get("has_ride_talent")),
+            "ride": (True if nm in RIDE_OVERRIDE_TRUE
+                     else bool(it.get("has_ride_talent"))),
             "groups": [g for g in (it.get("egg_group_names") or []) if g],
             "types": [t for t in (it.get("type_names") or []) if t],
             "quality": it.get("quality"),
