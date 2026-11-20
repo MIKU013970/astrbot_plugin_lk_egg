@@ -167,7 +167,7 @@ def _strip_emoji(text: str) -> str:
 
 _PLUGIN_DIR = Path(__file__).resolve().parent
 _PLUGIN_NAME = "astrbot_plugin_lk_egg"
-VERSION = "2.1.36"
+VERSION = "2.1.37"
 
 
 def _cand_dirs() -> List[Path]:
@@ -399,7 +399,7 @@ def _hard_save_state(state: Dict[str, Any]) -> None:
     "astrbot_plugin_lk_egg",
     "MIKU013970 & DeepSeek",
     "洛克小肥鱼全功能 + 炫彩花种订阅",
-    "2.1.36",
+    "2.1.37",
 )
 class LkMarketNotify(Star):
     def __init__(self, context: Context, config: AstrBotConfig = None):
@@ -5477,6 +5477,43 @@ class LkMarketNotify(Star):
             review = None
         return star, review
 
+    def _final_stage_of(self, name: str) -> str:
+        """进化链最高阶段的名字；查不到链就返回自己。
+
+        蛋组 / 系别池的卡片是按一阶段聚合的，但星光值和回顾值按**最高阶段**展示
+        （幽星光 → 曜星光 → 暮星辰 取 暮星辰 的 ★40 / 3000）。
+        """
+        nm = str(name or "").strip()
+        if not nm:
+            return nm
+        chains = self._chains_json()
+        chain = chains.get(nm)
+        if not chain:
+            head = self._chain_map().get(nm) or nm
+            chain = chains.get(head) or chains.get(nm)
+        if chain:
+            return str(chain[-1])
+        return nm
+
+    def _star_review_chain(self, name: str) -> str:
+        """蛋组 / 系别池卡片用：按进化链**从最高阶段往回**取第一个有数据的星光/回顾。
+
+        wiki 只在部分阶段填了这两项 —— 二三阶段页面常有，但最高阶段（女王蜂、
+        风暴战犬、武斗酷猫、铃兰夫人…）反而没有，所以不能死取链尾，得逐个往回找。
+        """
+        nm = str(name or "").strip()
+        if not nm:
+            return ""
+        chains = self._chains_json()
+        chain = (chains.get(nm)
+                 or chains.get(self._chain_map().get(nm) or nm)
+                 or [nm])
+        for cand in reversed(list(chain)):
+            s = self._star_review_short(cand)
+            if s:
+                return s
+        return self._star_review_short(nm)
+
     def _star_review_short(self, name: str) -> str:
         """一行短标签：'★3 · 回顾1200'。两个都没有就空串（面板卡片用）。"""
         star, review = self._star_review_of(name)
@@ -5652,8 +5689,8 @@ class LkMarketNotify(Star):
                     sub_parts.append("/".join(shown) + (f"+{extra}" if extra > 0 else ""))
             if grp.get("leader"):
                 sub_parts.append("首领化")
-            # 星光值 / 基础回顾值（有数据才加；star_review.json 没填就整段不出现）
-            _sr = self._star_review_short(nm)
+            # 星光值 / 基础回顾值：面板按进化链从最高阶段往回取（取第一个有数据的）
+            _sr = self._star_review_chain(nm)
             if _sr:
                 sub_parts.append(_sr)
             out.append(g.card(
