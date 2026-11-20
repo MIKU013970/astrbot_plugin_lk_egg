@@ -115,6 +115,24 @@
     white-space: nowrap;
   }
 
+  /* 星光值 / 回顾值：贴在精灵图左右两侧，带 wiki 图标 */
+  .fact {
+    position: absolute;
+    top: 56px;
+    display: flex; align-items: center; gap: 2px;
+    padding: 1px 6px;
+    border-radius: 999px;
+    font-size: {{ base - 6 }}px; font-weight: 800; line-height: 1.5;
+    color: var(--title);
+    background: var(--card-bg, #fff);
+    box-shadow: 0 0 0 1.5px var(--card-line, #E5E7EB);
+    white-space: nowrap;
+    z-index: 2;
+  }
+  .fact img { width: 14px; height: 14px; object-fit: contain; flex: 0 0 auto; }
+  .fact.star { left: 3px; }
+  .fact.review { right: 3px; }
+
   /* 环绕头像的四角小徽标 */
   .sat {
     position: absolute;
@@ -192,6 +210,8 @@
               {% if c.img %}<img src="{{ c.img }}" alt="{{ c.name }}">{% else %}<span class="q">?</span>{% endif %}
               {% if c.elem %}<span class="elem" style="background: {{ c.elem_bg or c.elem_color }};">{{ c.elem }}</span>{% endif %}
               {% if c.bins %}<span class="bins" style="--bins-bg: {{ c.bins_bg }};">区间 {{ c.bins }}</span>{% endif %}
+              {% if c.star %}<span class="fact star">{% if c.star_img %}<img src="{{ c.star_img }}" alt="">{% endif %}{{ c.star }}</span>{% endif %}
+              {% if c.review %}<span class="fact review">{% if c.review_img %}<img src="{{ c.review_img }}" alt="">{% endif %}{{ c.review }}</span>{% endif %}
               {% for s in c.sats %}
               <div class="sat s{{ loop.index }}" style="--ring: {{ s.ring or c.ring }};">
                 {% if s.img %}<img src="{{ s.img }}" alt="">{% elif s.text %}<span style="color: {{ s.color }};">{{ s.text }}</span>{% endif %}

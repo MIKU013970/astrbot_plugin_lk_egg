@@ -356,6 +356,14 @@ def type_icon(name: str) -> Optional[str]:
     return _icon_file("types", n)
 
 
+def fact_icon(name: str) -> Optional[str]:
+    """基础资料图标：'星光值' / '回顾' → icons/facts/<名字>.png（wiki 的 Item_6 / Item_1）。"""
+    n = str(name or "").strip()
+    if not n:
+        return None
+    return _icon_file("facts", n)
+
+
 def has_icons() -> bool:
     """图标库装了没（打包时可能没带）。"""
     return bool((_icon_index().get("egg") or {}) or (_icon_index().get("pet") or {}))
@@ -658,6 +666,13 @@ def render_card(
             draw_boxes(_extra["boxes"], y + 4)
             y += _row_h(item)
             continue
+        # 行首图标：{"icon": 路径} → 在左边画个小图标，标签文字右移
+        _icon_off = 0
+        if isinstance(_extra, dict) and _extra.get("icon"):
+            _ic = _load_icon(_extra["icon"], 20)
+            if _ic is not None:
+                img.paste(_ic, (int(x0), int(y + 3)), _ic)
+                _icon_off = 24
         # 分组标题行：(左栏空, "—— 自学（13）——") → 画成一条带文字的细分割线
         if not k and v:
             _lab = _divider_label(str(v))
@@ -677,7 +692,7 @@ def render_card(
                 y += lh_row
                 continue
         if k:
-            dr.text((x0, y + 3), _fit(dr, k, fonts["次要"], key_w - 8),
+            dr.text((x0 + _icon_off, y + 3), _fit(dr, k, fonts["次要"], key_w - 8 - _icon_off),
                     font=fonts["次要"], fill=colors["次要"])
         if v is not None and str(v) != "":
             _vt = _fit(dr, v, fonts["正文"], inner - key_w)

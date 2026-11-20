@@ -184,11 +184,16 @@ def card(name: str, sub: str = "", icon: Optional[str] = None,
          sats: Optional[Sequence[Dict[str, Any]]] = None,
          elem: str = "", elem_color: str = "",
          bg: str = "", border: str = "", sub_fg: str = "",
-         bins: Optional[int] = None) -> Dict[str, Any]:
+         bins: Optional[int] = None,
+         star: Optional[int] = None, review: Optional[int] = None,
+         star_icon: str = "", review_icon: str = "") -> Dict[str, Any]:
     """造一张卡片。tags 可以传 dict（tag() 造的）、(文字, 类型) 元组或纯文字。
 
     elem / elem_color —— 系别文字（如 `龙/翼`）和系别主色（如 `#e64c62`）。
     给了系别色，卡片底色和头像外圈就跟着它走；bg / border 可以再显式指定。
+
+    star / review —— 星光值和回顾值，画在精灵图**左边**和**右边**；
+    star_icon / review_icon 是对应的 wiki 图标路径（会转成 data URI 内联）。
     """
     out_tags: List[Dict[str, str]] = []
     for t in (tags or []):
@@ -212,6 +217,10 @@ def card(name: str, sub: str = "", icon: Optional[str] = None,
         "border": str(border or ""),
         "sub_fg": str(sub_fg or ""),
         "bins": int(bins) if bins not in (None, "") else None,
+        "star": int(star) if star not in (None, "") else 0,
+        "review": int(review) if review not in (None, "") else 0,
+        "star_img": data_uri(str(star_icon or "")),
+        "review_img": data_uri(str(review_icon or "")),
     }
 
 
@@ -882,6 +891,11 @@ def html_data(
                 "img": data_uri(str(c.get("icon") or "")),
                 "tags": tags,
                 "sats": sats,
+                # 星光值 / 回顾值：贴在精灵图左右两侧（图标转 data URI 内联）
+                "star": int(c.get("star") or 0),
+                "review": int(c.get("review") or 0),
+                "star_img": str(c.get("star_img") or ""),
+                "review_img": str(c.get("review_img") or ""),
             })
         return out_cards
 

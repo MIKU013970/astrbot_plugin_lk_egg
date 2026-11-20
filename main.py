@@ -175,7 +175,7 @@ def _strip_emoji(text: str) -> str:
 
 _PLUGIN_DIR = Path(__file__).resolve().parent
 _PLUGIN_NAME = "astrbot_plugin_lk_egg"
-VERSION = "2.1.39"
+VERSION = "2.1.40"
 
 
 def _cand_dirs() -> List[Path]:
@@ -407,7 +407,7 @@ def _hard_save_state(state: Dict[str, Any]) -> None:
     "astrbot_plugin_lk_egg",
     "MIKU013970 & DeepSeek",
     "洛克小肥鱼全功能 + 炫彩花种订阅",
-    "2.1.39",
+    "2.1.40",
 )
 class LkMarketNotify(Star):
     def __init__(self, context: Context, config: AstrBotConfig = None):
@@ -1523,6 +1523,11 @@ class LkMarketNotify(Star):
                  f"公母比例：{r.get('公母') or '未知'}"]
         if _types:
             lines.append(f"系别：{' / '.join(_types)}")
+        _star, _review = self._star_review_of(str(r.get("精灵") or ""))
+        if _star is not None:
+            lines.append(f"星光值：★{_star}")
+        if _review is not None:
+            lines.append(f"回顾：{_review}")
         lines.append(f"进化链：{r['进化链']}")
 
         def egg_lines(v, prefix="") -> list:
@@ -5536,6 +5541,21 @@ class LkMarketNotify(Star):
                 return s
         return self._star_review_short(nm)
 
+    def _star_review_chain_vals(self, name: str) -> tuple:
+        """链上从最高阶段往回找第一个有值的阶段 → (星光值, 回顾值)。"""
+        nm = str(name or "").strip()
+        if not nm:
+            return None, None
+        chains = self._chains_json()
+        chain = (chains.get(nm)
+                 or chains.get(self._chain_map().get(nm) or nm)
+                 or [nm])
+        for cand in reversed(list(chain)):
+            s, r = self._star_review_of(cand)
+            if s is not None or r is not None:
+                return s, r
+        return None, None
+
     def _star_review_short(self, name: str) -> str:
         """一行短标签：'★3 · 回顾1200'。两个都没有就空串（面板卡片用）。"""
         star, review = self._star_review_of(name)
@@ -5711,10 +5731,17 @@ class LkMarketNotify(Star):
                     sub_parts.append("/".join(shown) + (f"+{extra}" if extra > 0 else ""))
             if grp.get("leader"):
                 sub_parts.append("首领化")
-            # 星光值 / 基础回顾值：面板按进化链从最高阶段往回取（取第一个有数据的）
-            _sr = self._star_review_chain(nm)
-            if _sr:
-                sub_parts.append(_sr)
+            # 星光值 / 回顾值：画在精灵图左右两侧（带 wiki 图标），不再写进小字
+            _sn, _rn = self._star_review_chain_vals(nm)
+            _fi_star = ""
+            _fi_rev = ""
+            _cc = _card()
+            if _cc is not None and hasattr(_cc, "fact_icon"):
+                try:
+                    _fi_star = _cc.fact_icon("星光值") or ""
+                    _fi_rev = _cc.fact_icon("回顾") or ""
+                except Exception:                            # noqa: BLE001
+                    pass
             out.append(g.card(
                 name=nm,
                 sub=" · ".join(sub_parts),
@@ -5730,6 +5757,10 @@ class LkMarketNotify(Star):
                 bg=card_bg,
                 border=card_line,
                 sub_fg=sub_fg,
+                star=_sn,
+                review=_rn,
+                star_icon=_fi_star,
+                review_icon=_fi_rev,
             ))
         return out
 
@@ -8267,6 +8298,21 @@ class LkMarketNotify(Star):
         """
         rows: List[tuple] = []
         _nm = str(rec.get("精灵") or "")
+        # 星光值 / 回顾值：两个独立的行，各自带 wiki 的 Item 图标
+        _star, _review = self._star_review_of(_nm)
+        _c = _card()
+
+        def _fact_icon(lbl: str) -> str:
+            try:
+                return (_c.fact_icon(lbl) if (_c is not None and hasattr(_c, "fact_icon"))
+                        else "") or ""
+            except Exception:                                # noqa: BLE001
+                return ""
+
+        if _star is not None:
+            rows.append(("星光值", f"★{_star}", {"icon": _fact_icon("星光值")}))
+        if _review is not None:
+            rows.append(("回顾", str(_review), {"icon": _fact_icon("回顾")}))
         # 孵化时间（普通 / 风场 / 5 倍 / 风场+5 倍）
         if bool(self._cfg("hatch_time_enabled", True)):
             rows += self._hatch_rows(rec)
