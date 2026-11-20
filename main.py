@@ -167,7 +167,7 @@ def _strip_emoji(text: str) -> str:
 
 _PLUGIN_DIR = Path(__file__).resolve().parent
 _PLUGIN_NAME = "astrbot_plugin_lk_egg"
-VERSION = "2.1.34"
+VERSION = "2.1.35"
 
 
 def _cand_dirs() -> List[Path]:
@@ -399,7 +399,7 @@ def _hard_save_state(state: Dict[str, Any]) -> None:
     "astrbot_plugin_lk_egg",
     "MIKU013970 & DeepSeek",
     "洛克小肥鱼全功能 + 炫彩花种订阅",
-    "2.1.34",
+    "2.1.35",
 )
 class LkMarketNotify(Star):
     def __init__(self, context: Context, config: AstrBotConfig = None):
@@ -1515,11 +1515,6 @@ class LkMarketNotify(Star):
                  f"公母比例：{r.get('公母') or '未知'}"]
         if _types:
             lines.append(f"系别：{' / '.join(_types)}")
-        _star, _review = self._star_review_of(str(r.get("精灵") or ""))
-        if _star is not None:
-            lines.append(f"星光值：★{_star}")
-        if _review is not None:
-            lines.append(f"基础回顾值：{_review}")
         lines.append(f"进化链：{r['进化链']}")
 
         def egg_lines(v, prefix="") -> list:
@@ -1580,7 +1575,7 @@ class LkMarketNotify(Star):
                     lines.append(str(_v) if str(_v).startswith("——") else f"　　{_v}")
         if bool(self._cfg("chain_stages_enabled", True)):
             _stages = self._chain_stage_rows(r)
-            if len(_stages) > 2:                     # 只有本体的就别重复了
+            if _stages:
                 lines.append("")
                 lines.append("—— 全阶段体型（过线 / 极限）——")
                 for _k, _v in _stages:
@@ -5317,6 +5312,15 @@ class LkMarketNotify(Star):
                 bits.append(f"{self._fmt_cm(h_lo)}~{self._fmt_cm(h_hi)} cm")
             if w_lo is not None:
                 bits.append(f"{self._fmt_num(w_lo)}~{self._fmt_num(w_hi)} kg")
+            # 星光值 / 回顾值是**每个阶段各自不同**的，所以跟着阶段走，不放基础资料里
+            _star, _review = self._star_review_of(n)
+            _sr: List[str] = []
+            if _star is not None:
+                _sr.append(f"★{_star}")
+            if _review is not None:
+                _sr.append(f"回顾 {_review}")
+            if _sr:
+                bits.append(" / ".join(_sr))
             rows.append((f"{i}. {n}", " · ".join(bits) or "—"))
             if w_lo is None:
                 continue
@@ -8150,22 +8154,13 @@ class LkMarketNotify(Star):
         """
         rows: List[tuple] = []
         _nm = str(rec.get("精灵") or "")
-        # 星光值 / 基础回顾值（并成一行，卡片更紧凑）
-        _star, _review = self._star_review_of(_nm)
-        if _star is not None or _review is not None:
-            _bits: List[str] = []
-            if _star is not None:
-                _bits.append(f"★{_star}")
-            if _review is not None:
-                _bits.append(f"回顾 {_review}")
-            rows.append(("星光 / 回顾", "　·　".join(_bits)))
         # 孵化时间（普通 / 风场 / 5 倍 / 风场+5 倍）
         if bool(self._cfg("hatch_time_enabled", True)):
             rows += self._hatch_rows(rec)
-        # 全阶段体型（含一阶段成体，所以上面不再单独列「成体身高/成体重」）
+        # 全阶段体型 + 每个阶段各自的星光值/回顾值（这两个值逐阶段不同，不放在基础资料里）
         if bool(self._cfg("chain_stages_enabled", True)):
             st = self._chain_stage_rows(rec)
-            if len(st) > 2:                       # 只有本体就不重复一遍
+            if st:
                 rows.append(("", "—— 全阶段体型（过线 / 极限）——"))
                 rows += st
         return rows
