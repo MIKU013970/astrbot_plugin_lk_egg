@@ -98,6 +98,24 @@
     "type": "bool",
     "default": false
   },
+  "chain_stages_enabled": {
+    "description": "查蛋时显示全阶段体重过线值/极限值",
+    "type": "bool",
+    "default": true,
+    "hint": "从一阶段列到最高阶段（呆呆铃 → 跳跳铃 → 铃兰夫人），每只都给 小不点/大块头 的过线值和极限值"
+  },
+  "skills_enabled": {
+    "description": "查蛋时显示技能（自学 / 技能石 / 血脉）",
+    "type": "bool",
+    "default": true,
+    "hint": "数据来自 wiki 精灵页的技能面板，按学习来源分三段。查不到就不显示"
+  },
+  "skills_max": {
+    "description": "每类技能最多显示几个",
+    "type": "int",
+    "default": 0,
+    "hint": "0 = 全部显示（呆呆铃这种 44 个技能的卡片会很长）；填 10 就每类只列前 10 个，其余写「还有 N 个」"
+  },
   "market_quote_enabled": {
     "description": "查蛋时附带实时行情",
     "type": "bool",

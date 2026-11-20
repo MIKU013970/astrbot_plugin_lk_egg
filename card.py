@@ -343,6 +343,19 @@ def icon_path(kind: str, name: str, form: str = "") -> Optional[str]:
     return _icon_file(kind, slug)
 
 
+def type_icon(name: str) -> Optional[str]:
+    """系别球图标：'萌系' / '草系' / '火系' … → icons/types/<系别>.png。
+
+    wiki 的 Type_N.png（40px 版），随插件打包，不进运行时素材同步。
+    """
+    n = str(name or "").strip()
+    if not n:
+        return None
+    if not n.endswith("系"):
+        n += "系"
+    return _icon_file("types", n)
+
+
 def has_icons() -> bool:
     """图标库装了没（打包时可能没带）。"""
     return bool((_icon_index().get("egg") or {}) or (_icon_index().get("pet") or {}))
@@ -439,16 +452,19 @@ def render_card(
     head_icon: int = 0,
     card_version: str = "",
     hits: Optional[Sequence[Sequence[Any]]] = None,
+    type_badges: Optional[Sequence[Sequence[Any]]] = None,
 ) -> bytes:
     """画一张卡片，返回 PNG bytes。
 
     rows  : [(左, 右), ...]                       普通键值行
+            左栏为空、右栏是「—— 标题 ——」这类 → 画成分组标题行
     boxes : [(标签, 内容, (r,g,b)), ...]          两列色块（大小头那种）
     table : {"columns": [...], "items": [...]}    行情表
     head_icons : 标题**前面**的图（精灵图 / 蛋图），最多 4 张
     tiles : [(图标路径, [说明行...]), ...]         图标格（货架用，说明最多 3 行）
     hits  : [(图标路径, 名字, 首行值, [子行...]), ...]
             名字在左栏，图标塞在**名字下面**那块空白里，子行排在右边
+    type_badges : [(图标路径, 文字), ...]          标题行下面的系别球（萌系 / 草系…）
     """
     pil = _pil()
     if not pil:
@@ -472,6 +488,10 @@ def render_card(
     hi = [x for x in (head_icons or []) if x][:4]
     tl = [x for x in (tiles or []) if x]
     hl = [x for x in (hits or []) if x]
+    tb = [x for x in (type_badges or []) if x]
+    #: 系别球边长 + 这一行占的高度
+    type_ico = max(18, min(30, int(sizes["正文"] * 1.5)))
+    type_h = type_ico if tb else 0
 
     tile_ico = int(tile_icon)
     # 头部图标：默认用 head_icon（不受多形态 tile_icon=140 影响），
@@ -506,6 +526,8 @@ def render_card(
     def measure(_d) -> int:
         y = pad
         y += title_h
+        if tb:
+            y += type_h + 6
         if rows or boxes or titems or tl or hl:
             y += 10
         y += lh_row * len(rows)
@@ -574,6 +596,24 @@ def render_card(
         dr.text((x1 - tgw + 10, y + 8), str(tag), font=fonts["次要"], fill=colors["强调"])
     y += title_h
 
+    # ---- 系别球行：标题下面一排「⚪萌系 ⚪草系」，球就是 wiki 的系别圆标
+    if tb:
+        _cx = x0
+        _f = fonts["次要"]
+        for item in tb:
+            ipath = item[0] if len(item) > 0 else None
+            label = str(item[1]) if len(item) > 1 else ""
+            ic = _load_icon(ipath, type_ico) if ipath else None
+            if ic is not None:
+                # paste 的 box 只吃 int；textlength 返回 float，累加后必须取整
+                img.paste(ic, (int(_cx), int(y)), ic)
+                _cx += type_ico + 6
+            if label:
+                _ty = y + max(0, (type_ico - sizes["次要"]) // 2)
+                dr.text((_cx, _ty), label, font=_f, fill=colors["正文"])
+                _cx += int(dr.textlength(label, font=_f)) + 16
+        y += type_h + 6
+
     if rows or boxes or titems or tl or hl:
         dr.line([x0, y, x1, y], fill=colors["边框"], width=1)
         y += 10
@@ -581,6 +621,24 @@ def render_card(
     for item in rows:
         k = item[0] if len(item) > 0 else ""
         v = item[1] if len(item) > 1 else ""
+        # 分组标题行：(左栏空, "—— 自学（13）——") → 画成一条带文字的细分割线
+        if not k and v:
+            _lab = _divider_label(str(v))
+            if _lab is not None:
+                _mid = (x0 + x1) / 2
+                _cy = int(y + lh_row / 2)
+                if _lab:
+                    _lw = dr.textlength(_lab, font=fonts["更小"]) if fonts["更小"] else 0
+                    dr.line([int(x0), _cy, int(_mid - _lw / 2 - 12), _cy],
+                            fill=colors["边框"], width=1)
+                    dr.line([int(_mid + _lw / 2 + 12), _cy, int(x1), _cy],
+                            fill=colors["边框"], width=1)
+                    dr.text((int(_mid), int(y + 2)), _lab, font=fonts["更小"],
+                            fill=colors["强调"], anchor="ma")
+                else:
+                    dr.line([int(x0), _cy, int(x1), _cy], fill=colors["边框"], width=1)
+                y += lh_row
+                continue
         if k:
             dr.text((x0, y + 3), _fit(dr, k, fonts["次要"], key_w - 8),
                     font=fonts["次要"], fill=colors["次要"])

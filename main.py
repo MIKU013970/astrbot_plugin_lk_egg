@@ -167,7 +167,7 @@ def _strip_emoji(text: str) -> str:
 
 _PLUGIN_DIR = Path(__file__).resolve().parent
 _PLUGIN_NAME = "astrbot_plugin_lk_egg"
-VERSION = "2.1.30"
+VERSION = "2.1.31"
 
 
 def _cand_dirs() -> List[Path]:
@@ -399,7 +399,7 @@ def _hard_save_state(state: Dict[str, Any]) -> None:
     "astrbot_plugin_lk_egg",
     "MIKU013970 & DeepSeek",
     "洛克小肥鱼全功能 + 炫彩花种订阅",
-    "2.1.30",
+    "2.1.31",
 )
 class LkMarketNotify(Star):
     def __init__(self, context: Context, config: AstrBotConfig = None):
@@ -1509,10 +1509,13 @@ class LkMarketNotify(Star):
             if bins not in (None, "", 0):
                 head += f" · 区间 {bins}"
 
+        _types = self._types_of(str(r.get("精灵") or ""))
         lines = [head,
                  f"蛋组：{r['蛋组']}",
-                 f"公母比例：{r.get('公母') or '未知'}",
-                 f"进化链：{r['进化链']}"]
+                 f"公母比例：{r.get('公母') or '未知'}"]
+        if _types:
+            lines.append(f"系别：{' / '.join(_types)}")
+        lines.append(f"进化链：{r['进化链']}")
 
         def egg_lines(v, prefix="") -> list:
             out = []
@@ -1560,6 +1563,23 @@ class LkMarketNotify(Star):
                 lines += egg_lines(v, prefix=f"{i}. ")
                 if show_body:
                     lines += body_lines(v, prefix=f"{i}. ")
+
+        # ---- 全阶段：一阶段 → 最高阶段的体重过线值 / 极限值
+        if bool(self._cfg("chain_stages_enabled", True)):
+            _stages = self._chain_stage_rows(r)
+            if len(_stages) > 2:                     # 只有本体的就别重复了
+                lines.append("")
+                lines.append("—— 全阶段体重（小不点 / 大块头）——")
+                for _k, _v in _stages:
+                    lines.append(f"{_k}　{_v}" if _k else f"　　{_v}")
+
+        # ---- 技能：自学 / 技能石 / 血脉
+        if bool(self._cfg("skills_enabled", True)):
+            _sk = self._skill_rows(str(r.get("精灵") or ""))
+            if _sk:
+                lines.append("")
+                for _k, _v in _sk:
+                    lines.append(f"{_k}　{_v}" if _k else str(_v))
 
         return "\n".join(lines)
 
@@ -1754,7 +1774,17 @@ class LkMarketNotify(Star):
             rows=[(_strip_emoji(a), _strip_emoji(b)) for a, b in rows],
             boxes=boxes, table=table, tiles=tiles,
             tile_icon=_tile_icon, head_icon=_head_icon,
+            type_badges=self._type_badges(pet_name),
             head_icons=self._spe_icons(rec, v), **self._card_kwargs())
+
+    def _type_badges(self, pet_name: str) -> List[tuple]:
+        """系别球：[(图标路径, '萌系'), ...]。图标缺了就只留文字（不报错）。"""
+        c = _card()
+        out: List[tuple] = []
+        for t in self._types_of(pet_name):
+            path = c.type_icon(t) if (c is not None and hasattr(c, "type_icon")) else None
+            out.append((path or "", t))
+        return [x for x in out if x[1]]
 
     def _icon_grid(self, paths: List[str], cell: int = 74) -> Optional[str]:
         """把最多 4 张图标拼成 2×2 一张小图（渲染器每个结果只吃一个图标路径）。
@@ -5166,6 +5196,192 @@ class LkMarketNotify(Star):
                     pass
         return None
 
+    # ---------------------------------------------------------------- 系别 / 全阶段 / 技能
+    def _types_of(self, name: str) -> List[str]:
+        """系别列表（统一带「系」）：['萌系', '草系']。来自官方精灵表。"""
+        info = self._pets_table().get(str(name or "").strip()) or {}
+        out: List[str] = []
+        for t in (info.get("types") or []):
+            t = str(t or "").strip()
+            if not t:
+                continue
+            out.append(t if t.endswith("系") else t + "系")
+        return out
+
+    _CHAINS_JSON: Optional[Dict[str, List[str]]] = None
+
+    @classmethod
+    def _chains_json(cls) -> Dict[str, List[str]]:
+        """chains.json → 完整进化链（比图鉴的「进化链」字段全，含没收录的二三阶段）。"""
+        if cls._CHAINS_JSON is not None:
+            return cls._CHAINS_JSON
+        out: Dict[str, List[str]] = {}
+        try:
+            fp = _PLUGIN_DIR / "chains.json"
+            if fp.is_file():
+                d = json.loads(fp.read_text(encoding="utf-8-sig"))
+                for k, v in (d.get("chains") or {}).items():
+                    if not isinstance(v, list) or not v:
+                        continue
+                    seen, chain = set(), []
+                    for x in v:
+                        x = str(x or "").strip()
+                        if x and x not in seen:
+                            seen.add(x)
+                            chain.append(x)
+                    if chain:
+                        out[str(k)] = chain
+        except Exception as e:
+            logger.warning(f"[进化链] chains.json 读取失败: {type(e).__name__}: {e}")
+        cls._CHAINS_JSON = out
+        return out
+
+    def _chain_stage_list(self, rec: Dict[str, Any]) -> List[str]:
+        """这条记录对应的进化链，一阶段 → 最高阶段，去重保序。"""
+        nm = str(rec.get("精灵") or "").strip()
+        raw = self._chains_json().get(nm)
+        if not raw:
+            chain = str(rec.get("进化链") or "").strip()
+            if chain:
+                raw = [x.strip() for x in re.split(r"→|->|>|、", chain) if x.strip()]
+        names: List[str] = []
+        for x in (raw or []):
+            x = str(x or "").strip()
+            if x and x not in names:
+                names.append(x)
+        if not names and nm:
+            names = [nm]
+        return names
+
+    @staticmethod
+    def _parse_range(text: Any) -> tuple:
+        """'1.9 - 3.83' / '40~56' / '0.6650-1.5320' → (1.9, 3.83)；解析不了 → (None, None)。"""
+        s = str(text or "").replace("～", "~").replace("—", "-").replace("－", "-")
+        nums = re.findall(r"\d+(?:\.\d+)?", s)
+        if len(nums) < 2:
+            return None, None
+        try:
+            a, b = float(nums[0]), float(nums[1])
+        except (TypeError, ValueError):
+            return None, None
+        if b < a:
+            a, b = b, a
+        return a, b
+
+    @staticmethod
+    def _fmt_num(v: float) -> str:
+        """去尾零：1.9000 → 1.9，50.4000 → 50.4，18 → 18。"""
+        s = f"{v:.4f}".rstrip("0").rstrip(".")
+        return s or "0"
+
+    def _chain_stage_rows(self, rec: Dict[str, Any]) -> List[tuple]:
+        """一阶段 → 最高阶段，每一阶段的体重过线值 / 极限值。
+
+        官方规律（从 206 条区间数据反推，全部命中）：
+            过线偏移 Δ = (体重上限 - 体重下限) × 0.02
+            小不点过线 = 下限 + Δ · 极限 = 下限
+            大块头过线 = 上限 - Δ · 极限 = 上限
+        """
+        names = self._chain_stage_list(rec)
+        pets = self._pets_table()
+        rows: List[tuple] = []
+        for i, n in enumerate(names, 1):
+            info = pets.get(n) or {}
+            if not info:
+                # 图鉴里查不到这只（活动形态之类），只留个名字占位
+                rows.append((f"{i}. {n}", "（无体型数据）"))
+                continue
+            h = str(info.get("height") or "").strip()
+            w = str(info.get("weight") or "").strip()
+            lo, hi = self._parse_range(w)
+            head = f"{i}. {n}"
+            if h:
+                head_body = f"{h} m"
+            else:
+                head_body = ""
+            if lo is None:
+                rows.append((head, head_body or "—"))
+                continue
+            span = hi - lo
+            delta = span * 0.02
+            rows.append((head, f"{self._fmt_num(lo)}~{self._fmt_num(hi)} kg"
+                               + (f" · {head_body}" if head_body else "")))
+            rows.append(("", f"小不点 ≤{self._fmt_num(lo + delta)} · "
+                             f"大块头 ≥{self._fmt_num(hi - delta)}"))
+        return rows
+
+    _SKILL_TABLE: Optional[Dict[str, Dict[str, List[Dict[str, Any]]]]] = None
+
+    @classmethod
+    def _skills_table(cls) -> Dict[str, Dict[str, List[Dict[str, Any]]]]:
+        """skills.json：精灵名 → {level:[自学], machine:[技能石], blood:[血脉]}。"""
+        if cls._SKILL_TABLE is not None:
+            return cls._SKILL_TABLE
+        out: Dict[str, Dict[str, List[Dict[str, Any]]]] = {}
+        try:
+            fp = _PLUGIN_DIR / "skills.json"
+            if fp.is_file():
+                d = json.loads(fp.read_text(encoding="utf-8-sig"))
+                for nm, v in (d.get("skills") or {}).items():
+                    if isinstance(v, dict):
+                        out[str(nm)] = v
+        except Exception as e:
+            logger.warning(f"[技能] skills.json 读取失败: {type(e).__name__}: {e}")
+        cls._SKILL_TABLE = out
+        return out
+
+    def _skills_of(self, name: str) -> Dict[str, List[Dict[str, Any]]]:
+        """这只精灵的技能表；按名字查不到就退回进化链一阶段的（技能是同一套图鉴页）。"""
+        tbl = self._skills_table()
+        nm = str(name or "").strip()
+        for cand in (nm, re.sub(r"[（(].*?[)）]", "", nm).strip()):
+            if cand and cand in tbl:
+                return tbl[cand] or {}
+        head = self._chain_map().get(nm)
+        if head and head in tbl:
+            return tbl[head] or {}
+        return {}
+
+    #: 三种学习来源 → 中文名（顺序就是显示顺序）
+    SKILL_SOURCES = (("level", "自学"), ("machine", "技能石"), ("blood", "血脉"))
+
+    def _skill_rows(self, name: str) -> List[tuple]:
+        """技能行，按 自学 / 技能石 / 血脉 三段分组。"""
+        sk = self._skills_of(name)
+        if not sk or not any(sk.values()):
+            return []
+        try:
+            lim = int(self._cfg("skills_max", 0) or 0)
+        except (TypeError, ValueError):
+            lim = 0
+        rows: List[tuple] = []
+        for key, label in self.SKILL_SOURCES:
+            items = [x for x in (sk.get(key) or []) if isinstance(x, dict)]
+            if not items:
+                continue
+            rows.append(("", f"—— {label}（{len(items)}）——"))
+            shown = items[:lim] if lim > 0 else items
+            for it in shown:
+                lv = it.get("level")
+                k = f"Lv.{lv}" if lv not in (None, "") else ""
+                bits = [str(it.get("type") or ""), str(it.get("category") or "")]
+                meta = " · ".join(x for x in bits if x)
+                pw, en = it.get("power"), it.get("energy")
+                tail = ""
+                if pw not in (None, "", 0):
+                    tail += f"威力{pw} "
+                if en not in (None, ""):
+                    tail += f"能耗{en}"
+                v = str(it.get("name") or "")
+                if meta:
+                    v += f"　{meta}"
+                if tail.strip():
+                    v += f"　{tail.strip()}"
+                rows.append((k, v))
+            if lim > 0 and len(items) > lim:
+                rows.append(("", f"　…还有 {len(items) - lim} 个"))
+        return rows
+
     def _shiny_grid_cards(self, rows: List[Dict[str, Any]]) -> List[Dict[str, Any]]:
         """名单行 → 网格图卡片。
 
@@ -7549,6 +7765,34 @@ class LkMarketNotify(Star):
 
     def _species_rows(self, rec: Dict[str, Any], dex: str = "",
                       query: str = "") -> List[tuple]:
+        """图鉴卡的行 = 原有行 + 系别 + 全阶段体重 + 技能。"""
+        rows = self._species_rows_core(rec, dex, query)
+        # 系别紧跟蛋组（用户要求：系别右边跟系别球，球画在卡片标题下面）
+        _ty = self._types_of(str(rec.get("精灵") or ""))
+        if _ty:
+            _at = next((i for i, x in enumerate(rows) if x and x[0] == "蛋组"), None)
+            rows.insert(_at + 1 if _at is not None else 0,
+                        ("系别", " / ".join(_ty)))
+        rows += self._extra_species_rows(rec)
+        return rows
+
+    def _extra_species_rows(self, rec: Dict[str, Any]) -> List[tuple]:
+        """全阶段体重 + 技能，追加在图鉴行末尾。"""
+        rows: List[tuple] = []
+        if bool(self._cfg("chain_stages_enabled", True)):
+            st = self._chain_stage_rows(rec)
+            if len(st) > 2:                       # 只有本体就不重复一遍
+                rows.append(("", "—— 全阶段体重（小不点 / 大块头）——"))
+                rows += st
+        if bool(self._cfg("skills_enabled", True)):
+            sk = self._skill_rows(str(rec.get("精灵") or ""))
+            if sk:
+                rows.append(("", "—— 技能 ——"))
+                rows += sk
+        return rows
+
+    def _species_rows_core(self, rec: Dict[str, Any], dex: str = "",
+                           query: str = "") -> List[tuple]:
         """图鉴卡的行。多形态会列全部形态（以前只显示第一个）。"""
         variants = rec.get("variants") or [rec]
         _gd = str(rec.get("公母") or "未知")
