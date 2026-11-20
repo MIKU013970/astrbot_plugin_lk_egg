@@ -167,7 +167,7 @@ def _strip_emoji(text: str) -> str:
 
 _PLUGIN_DIR = Path(__file__).resolve().parent
 _PLUGIN_NAME = "astrbot_plugin_lk_egg"
-VERSION = "2.1.31"
+VERSION = "2.1.32"
 
 
 def _cand_dirs() -> List[Path]:
@@ -399,7 +399,7 @@ def _hard_save_state(state: Dict[str, Any]) -> None:
     "astrbot_plugin_lk_egg",
     "MIKU013970 & DeepSeek",
     "洛克小肥鱼全功能 + 炫彩花种订阅",
-    "2.1.31",
+    "2.1.32",
 )
 class LkMarketNotify(Star):
     def __init__(self, context: Context, config: AstrBotConfig = None):
@@ -1515,6 +1515,11 @@ class LkMarketNotify(Star):
                  f"公母比例：{r.get('公母') or '未知'}"]
         if _types:
             lines.append(f"系别：{' / '.join(_types)}")
+        _star, _review = self._star_review_of(str(r.get("精灵") or ""))
+        if _star is not None:
+            lines.append(f"星光值：★{_star}")
+        if _review is not None:
+            lines.append(f"基础回顾值：{_review}")
         lines.append(f"进化链：{r['进化链']}")
 
         def egg_lines(v, prefix="") -> list:
@@ -1565,6 +1570,12 @@ class LkMarketNotify(Star):
                     lines += body_lines(v, prefix=f"{i}. ")
 
         # ---- 全阶段：一阶段 → 最高阶段的体重过线值 / 极限值
+        if bool(self._cfg("hatch_time_enabled", True)):
+            _ht = self._hatch_rows(r)
+            if _ht:
+                lines.append("")
+                for _k, _v in _ht:
+                    lines.append(f"{_k}　{_v}" if _k else f"　　{_v}")
         if bool(self._cfg("chain_stages_enabled", True)):
             _stages = self._chain_stage_rows(r)
             if len(_stages) > 2:                     # 只有本体的就别重复了
@@ -5382,6 +5393,123 @@ class LkMarketNotify(Star):
                 rows.append(("", f"　…还有 {len(items) - lim} 个"))
         return rows
 
+    # ---------------------------------------------------------------- 星光 / 回顾 / 孵化
+    _STAR_TABLE: Optional[Dict[str, Dict[str, Any]]] = None
+
+    @classmethod
+    def _star_table(cls) -> Dict[str, Dict[str, Any]]:
+        """star_review.json：精灵名 → {"star": 星光值, "review": 基础回顾值}。
+
+        这两个值官方 wiki / 开放 API / 控制台 state 里都没有现成字段，
+        所以做成独立数据文件：填了就在卡片和查询里显示，没填就整段跳过。
+        """
+        if cls._STAR_TABLE is not None:
+            return cls._STAR_TABLE
+        out: Dict[str, Dict[str, Any]] = {}
+        try:
+            fp = _PLUGIN_DIR / "star_review.json"
+            if fp.is_file():
+                d = json.loads(fp.read_text(encoding="utf-8-sig"))
+                for nm, v in (d.get("pets") or {}).items():
+                    if isinstance(v, dict):
+                        out[str(nm)] = v
+        except Exception as e:
+            logger.warning(f"[星光] star_review.json 读取失败: {type(e).__name__}: {e}")
+        cls._STAR_TABLE = out
+        return out
+
+    def _star_review_of(self, name: str) -> tuple:
+        """(星光值, 基础回顾值)；没有就 (None, None)。"""
+        v = self._star_table().get(str(name or "").strip()) or {}
+        try:
+            star = v.get("star")
+            star = int(star) if star not in (None, "") else None
+        except (TypeError, ValueError):
+            star = None
+        try:
+            review = v.get("review")
+            review = int(review) if review not in (None, "") else None
+        except (TypeError, ValueError):
+            review = None
+        return star, review
+
+    def _star_review_short(self, name: str) -> str:
+        """一行短标签：'★3 · 回顾1200'。两个都没有就空串（面板卡片用）。"""
+        star, review = self._star_review_of(name)
+        bits = []
+        if star is not None:
+            bits.append("★" + str(star))
+        if review is not None:
+            bits.append(f"回顾{review}")
+        return " · ".join(bits)
+
+    _HATCH_RE = re.compile(r"(\d+(?:\.\d+)?)\s*(小时|时|h|H|分钟|分|min|秒|s|S)")
+
+    @classmethod
+    def _parse_hatch_seconds(cls, text: Any) -> Optional[int]:
+        """'8小时' / '20小时' / '5 分钟' / '300秒' → 秒数。"""
+        s = str(text or "")
+        total = 0.0
+        hit = False
+        for num, unit in cls._HATCH_RE.findall(s):
+            try:
+                v = float(num)
+            except (TypeError, ValueError):
+                continue
+            hit = True
+            if unit in ("小时", "时", "h", "H"):
+                total += v * 3600
+            elif unit in ("分钟", "分", "min"):
+                total += v * 60
+            else:
+                total += v
+        return int(round(total)) if hit else None
+
+    @staticmethod
+    def _fmt_duration(sec: float) -> str:
+        """秒 → '8小时' / '1小时36分' / '48分' / '30秒'。"""
+        sec = max(0, int(round(sec)))
+        h, rem = divmod(sec, 3600)
+        m, s = divmod(rem, 60)
+        if h and m:
+            return f"{h}小时{m}分"
+        if h:
+            return f"{h}小时"
+        if m:
+            return f"{m}分"
+        return f"{s}秒"
+
+    @property
+    def hatch_wind_mult(self) -> float:
+        """风场孵化加速倍率（默认 2 倍；按你服实测改）。"""
+        try:
+            return max(1.0, float(self._cfg("hatch_wind_mult", 2)))
+        except (TypeError, ValueError):
+            return 2.0
+
+    def _hatch_base_seconds(self, rec: Dict[str, Any]) -> Optional[int]:
+        """这只精灵的蛋基础孵化时长（秒）。取第一个非异色形态的「孵蛋时间」。"""
+        for v in (rec.get("variants") or [rec]):
+            if "异色" in str(v.get("蛋名") or ""):
+                continue
+            n = self._parse_hatch_seconds(v.get("孵蛋时间"))
+            if n:
+                return n
+        return self._parse_hatch_seconds(rec.get("孵蛋时间"))
+
+    def _hatch_rows(self, rec: Dict[str, Any]) -> List[tuple]:
+        """孵化时间四种口径：普通 / 挂风场 / 周末 5 倍 / 风场 + 5 倍。"""
+        base = self._hatch_base_seconds(rec)
+        if not base:
+            return []
+        wind = self.hatch_wind_mult
+        return [
+            ("孵化", f"普通 {self._fmt_duration(base)}"),
+            ("", f"挂风场（×{wind:g}） {self._fmt_duration(base / wind)}"),
+            ("", f"周末 5 倍速 {self._fmt_duration(base / 5)}"),
+            ("", f"风场 + 5 倍速（×{wind * 5:g}） {self._fmt_duration(base / (wind * 5))}"),
+        ]
+
     def _shiny_grid_cards(self, rows: List[Dict[str, Any]]) -> List[Dict[str, Any]]:
         """名单行 → 网格图卡片。
 
@@ -5479,6 +5607,10 @@ class LkMarketNotify(Star):
                     sub_parts.append("/".join(shown) + (f"+{extra}" if extra > 0 else ""))
             if grp.get("leader"):
                 sub_parts.append("首领化")
+            # 星光值 / 基础回顾值（有数据才加；star_review.json 没填就整段不出现）
+            _sr = self._star_review_short(nm)
+            if _sr:
+                sub_parts.append(_sr)
             out.append(g.card(
                 name=nm,
                 sub=" · ".join(sub_parts),
@@ -5615,7 +5747,7 @@ class LkMarketNotify(Star):
         ]
         stamps = []
         for n in ("elements.json", "pets.json", "chains.json", "shiny_book.json",
-                  "season_roster.json", "ranges.json"):
+                  "season_roster.json", "ranges.json", "star_review.json"):
             try:
                 stamps.append(Path(_PLUGIN_DIR / n).stat().st_mtime)
             except Exception:
@@ -7680,6 +7812,146 @@ class LkMarketNotify(Star):
             return r
         return event.plain_result(text)
 
+    # ---------------------------------------------------------------- 系别池
+    #: 「查询 火系」「查询 火池」「查询 火」都认；带了这些尾巴的也认
+    TYPE_TAILS = ("系池", "系别", "系", "池")
+    TYPE_LIST_WORDS = {"系", "系别", "系池", "属性", "所有系", "全部系", "系列表", "系别池"}
+
+    def _main_type(self, name: str) -> str:
+        """主系别（只取第一个）：'萌系'。双系精灵第二系不参与分池。"""
+        ts = self._types_of(name)
+        return ts[0] if ts else ""
+
+    def _all_type_pools(self) -> Dict[str, List[str]]:
+        """系别 → 主系别是该系的精灵名列表（按官方精灵表，一阶段）。"""
+        cached = getattr(self, "_type_pool_cache", None)
+        if cached is not None:
+            return cached
+        out: Dict[str, List[str]] = {}
+        for nm in (self._pets_table() or {}):
+            t = self._main_type(nm)
+            if t:
+                out.setdefault(t, []).append(nm)
+        for t in out:
+            out[t].sort()
+        try:
+            self._type_pool_cache = out
+        except Exception:
+            pass
+        return out
+
+    def _match_type_pool(self, q: str) -> Optional[str]:
+        """把查询词归一成系别名：火系 / 火 / 火池 / 火系池 都行。"""
+        s = str(q or "").strip()
+        if not s:
+            return None
+        pools = self._all_type_pools()
+        if s in self.TYPE_LIST_WORDS:
+            return ""                        # 空串 = 要一份系别清单
+        if s in pools:
+            return s
+        for tail in self.TYPE_TAILS:
+            if s.endswith(tail) and len(s) > len(tail):
+                head = s[: -len(tail)].strip()
+                if head and (head + "系") in pools:
+                    return head + "系"
+        if (s + "系") in pools:
+            return s + "系"
+        return None
+
+    def _type_pool_heads(self, tname: str) -> Dict[str, Optional[str]]:
+        """系内精灵：一阶段名 → 图鉴号（同一条进化链只留一条）。"""
+        heads: Dict[str, Optional[str]] = {}
+        pets = self._pets_table()
+        for nm in (self._all_type_pools().get(tname) or []):
+            rec = (self.ranges.get("species") or {}).get(nm) or {}
+            head = self._chain_head(rec) if rec else nm
+            if not head:
+                continue
+            if head not in heads:
+                info = pets.get(head) or pets.get(nm) or {}
+                heads[head] = str(info.get("no") or "") or None
+        return heads
+
+    def _type_pool_reply_text(self, tname: str) -> str:
+        if tname == "":
+            pools = self._all_type_pools()
+            rows = sorted(((t, len(v)) for t, v in pools.items()),
+                          key=lambda kv: (-kv[1], kv[0]))
+            body = " · ".join(f"{t} {n}" for t, n in rows)
+            return (f"🔥 系别池一共 {len(rows)} 个（只按主系别算）：\n{body}\n\n"
+                    f"查法：查询 火系 / 查询 火池 / 查询 火")
+        heads = self._type_pool_heads(tname)
+        if not heads:
+            return f"「{tname}」这个系别池暂时没有收录的精灵。"
+        lines = [f"🔥 {tname}池 · {len(heads)} 只（主系别）"]
+        for i, (nm, d) in enumerate(sorted(heads.items()), 1):
+            lines.append(f"{i:>2}. {nm}{(('  ' + str(d)) if d else '')}")
+        lines.append("")
+        lines.append(f"发「查询 {tname}」随时看这一池；发「查询 名字」看单只的蛋数据")
+        return "\n".join(lines)
+
+    def _type_pool_rows(self, tname: str) -> List[Dict[str, Any]]:
+        """系别池的网格行 —— 结构和蛋组完全一样，卡片画法复用。"""
+        heads = self._type_pool_heads(tname)
+        pets = self._pets_table()
+        sp = self.ranges.get("species") or {}
+        out: List[Dict[str, Any]] = []
+        for nm, dex in heads.items():
+            info = pets.get(nm) or {}
+            rec = sp.get(nm) or {}
+            book_sid = str((self._book_by_name().get(nm) or {}).get("season") or "")
+            if book_sid:
+                sid_txt = "S0" if book_sid in ("none", "S0") else book_sid
+            else:
+                try:
+                    sid = int(info.get("season") or 0)
+                except (TypeError, ValueError):
+                    sid = 0
+                sid_txt = f"S{sid}" if sid >= 1 else "S0"
+            out.append({
+                "season": sid_txt,
+                "name": nm,
+                "group": " / ".join(info.get("groups") or []) or tname,
+                "groups": [g for g in (info.get("groups") or []) if g],
+                "marks": (["异色", "异色蛋"] if info.get("has_shiny") else []),
+                "leader": int(info.get("stage") or 0) >= 4,
+                "ride": info.get("ride"),
+                "no": str(info.get("no") or dex or ""),
+                "stage": int(info.get("stage") or 0),
+                "egg": str(rec.get("蛋名") or f"{nm}的蛋"),
+            })
+        return out
+
+    def _type_pool_cards(self, tname: str) -> List[Dict[str, Any]]:
+        key = f"t|{tname}|{self._grid_sig()}"
+        hit = self._grid_cards_cache_get(key)
+        if hit is not None:
+            return hit
+        rows = self._type_pool_rows(tname)
+        val = self._shiny_grid_cards(sorted(rows, key=self._grid_sort_key))
+        self._grid_cards_cache_put(key, val)
+        return val
+
+    async def _type_pool_reply(self, event: Any, tname: str):
+        """查系别池：一张网格图装下这一系的全部精灵，出不了图就发文字清单。"""
+        text = self._type_pool_reply_text(tname)
+        if not tname or not (self._grid_enabled() and self._image_reply_on()
+                             and _grid() is not None):
+            return await self._say(event, text)
+        cards = self._type_pool_cards(tname)
+        if not cards:
+            return await self._say(event, text)
+        pngs, _pages, _want, total = await self._paginate_pngs(
+            header=f"系别池 · {tname} · {len(cards)} 只",
+            cards_res=cards, cards_enc=[], per=len(cards), all_pages=True)
+        if not pngs:
+            return await self._say(event, text)
+        r = self._result_images(event, pngs)
+        if r is not None:
+            return r
+        return event.plain_result(text)
+
     def _sp_split_mode(self, arg: str):
         """'红绒十字 最近' / '红绒十字历史' → ('红绒十字', 'recent')"""
         a = str(arg or "").strip()
@@ -7777,15 +8049,25 @@ class LkMarketNotify(Star):
         return rows
 
     def _extra_species_rows(self, rec: Dict[str, Any]) -> List[tuple]:
-        """全阶段体重 + 技能，追加在图鉴行末尾。"""
+        """星光/回顾 + 孵化时间 + 全阶段体重 + 技能，追加在图鉴行末尾。"""
         rows: List[tuple] = []
+        _nm = str(rec.get("精灵") or "")
+        # 星光值 / 基础回顾值
+        _star, _review = self._star_review_of(_nm)
+        if _star is not None:
+            rows.append(("星光值", f"★{_star}"))
+        if _review is not None:
+            rows.append(("基础回顾", f"{_review}"))
+        # 孵化时间（普通 / 风场 / 5 倍 / 风场+5 倍）
+        if bool(self._cfg("hatch_time_enabled", True)):
+            rows += self._hatch_rows(rec)
         if bool(self._cfg("chain_stages_enabled", True)):
             st = self._chain_stage_rows(rec)
             if len(st) > 2:                       # 只有本体就不重复一遍
                 rows.append(("", "—— 全阶段体重（小不点 / 大块头）——"))
                 rows += st
         if bool(self._cfg("skills_enabled", True)):
-            sk = self._skill_rows(str(rec.get("精灵") or ""))
+            sk = self._skill_rows(_nm)
             if sk:
                 rows.append(("", "—— 技能 ——"))
                 rows += sk
@@ -7879,6 +8161,9 @@ class LkMarketNotify(Star):
         grp = self._match_group(q)
         if grp is not None:
             return await self._group_reply(event, grp)
+        tpool = self._match_type_pool(q)
+        if tpool is not None:
+            return await self._type_pool_reply(event, tpool)
         name, mode = self._sp_split_mode(q)
         hw = self._parse_hw(q) if mode == "info" else None
         rec = None if hw else self._find_species(name if mode == "recent" else q)

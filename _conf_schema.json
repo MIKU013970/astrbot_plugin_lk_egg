@@ -116,6 +116,18 @@
     "default": 0,
     "hint": "0 = 全部显示（呆呆铃这种 44 个技能的卡片会很长）；填 10 就每类只列前 10 个，其余写「还有 N 个」"
   },
+  "hatch_time_enabled": {
+    "description": "显示孵化时间（普通 / 风场 / 5 倍 / 风场+5 倍）",
+    "type": "bool",
+    "default": true,
+    "hint": "基础时长取图鉴的孵蛋时间，四种口径自动换算"
+  },
+  "hatch_wind_mult": {
+    "description": "风场孵化加速倍率",
+    "type": "int",
+    "default": 2,
+    "hint": "挂风场能把孵化时间缩到几分之一。默认按 2 倍算；你服实测是几倍就填几"
+  },
   "market_quote_enabled": {
     "description": "查蛋时附带实时行情",
     "type": "bool",
