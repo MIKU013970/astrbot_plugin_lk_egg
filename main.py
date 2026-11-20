@@ -167,7 +167,7 @@ def _strip_emoji(text: str) -> str:
 
 _PLUGIN_DIR = Path(__file__).resolve().parent
 _PLUGIN_NAME = "astrbot_plugin_lk_egg"
-VERSION = "2.1.35"
+VERSION = "2.1.36"
 
 
 def _cand_dirs() -> List[Path]:
@@ -399,7 +399,7 @@ def _hard_save_state(state: Dict[str, Any]) -> None:
     "astrbot_plugin_lk_egg",
     "MIKU013970 & DeepSeek",
     "洛克小肥鱼全功能 + 炫彩花种订阅",
-    "2.1.35",
+    "2.1.36",
 )
 class LkMarketNotify(Star):
     def __init__(self, context: Context, config: AstrBotConfig = None):
@@ -1578,7 +1578,14 @@ class LkMarketNotify(Star):
             if _stages:
                 lines.append("")
                 lines.append("—— 全阶段体型（过线 / 极限）——")
-                for _k, _v in _stages:
+                for item in _stages:
+                    _k = item[0] if len(item) > 0 else ""
+                    _v = item[1] if len(item) > 1 else ""
+                    _x = item[2] if len(item) > 2 else None
+                    if isinstance(_x, dict) and _x.get("boxes"):
+                        for _b in _x["boxes"]:
+                            lines.append(f"　　{_b[0]}：{_b[1]}")
+                        continue
                     lines.append(f"{_k}　{_v}" if _k else f"　　{_v}")
 
         # ---- 技能不在这里：技能走独立查询「技能 呆呆铃」
@@ -1773,11 +1780,20 @@ class LkMarketNotify(Star):
                 (f"图鉴 {_dex_txt}" if _dex_txt else ""),
                 ("\x01可同乘" if rec.get("同乘") else "")) if x)),
             tag=_strip_emoji(f"区间 {bins}" if bins not in (None, "", 0) else ""),
-            rows=[(_strip_emoji(a), _strip_emoji(b)) for a, b in rows],
+            rows=[self._clean_row(x) for x in rows],
             boxes=boxes, table=table, tiles=tiles,
             tile_icon=_tile_icon, head_icon=_head_icon,
             type_badges=self._type_badges(pet_name),
             head_icons=self._spe_icons(rec, v), **self._card_kwargs())
+
+    @staticmethod
+    def _clean_row(item) -> tuple:
+        """卡片行 → render_card 的入参；带 {"boxes": ...} 的行把第三项原样传下去。"""
+        a = _strip_emoji(item[0]) if len(item) > 0 else ""
+        b = _strip_emoji(item[1]) if len(item) > 1 else ""
+        if len(item) > 2 and isinstance(item[2], dict):
+            return (a, b, item[2])
+        return (a, b)
 
     def _type_badges(self, pet_name: str) -> List[tuple]:
         """系别球：[(图标路径, '萌系'), ...]。图标缺了就只留文字（不报错）。"""
@@ -5325,8 +5341,13 @@ class LkMarketNotify(Star):
             if w_lo is None:
                 continue
             delta = (w_hi - w_lo) * 0.02
-            rows.append(("", f"小不点 ≤{self._fmt_num(w_lo + delta)} · "
-                             f"大块头 ≥{self._fmt_num(w_hi - delta)}"))
+            # 过线值 / 极限值用和蛋数据一模一样的两个色块框（render_card 的行内 boxes）
+            rows.append(("", "", {"boxes": [
+                ("小块头", f"过线 ≤{self._fmt_num(w_lo + delta)}"
+                           f"  极限 {self._fmt_num(w_lo)}", (78, 138, 186)),
+                ("大块头", f"过线 ≥{self._fmt_num(w_hi - delta)}"
+                           f"  极限 {self._fmt_num(w_hi)}", (194, 88, 40)),
+            ]}))
         return rows
 
     _SKILL_TABLE: Optional[Dict[str, Dict[str, List[Dict[str, Any]]]]] = None

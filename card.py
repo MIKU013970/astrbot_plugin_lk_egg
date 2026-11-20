@@ -523,6 +523,16 @@ def render_card(
     probe = Image.new("RGB", (width, 10), colors["背景"])
     pd = ImageDraw.Draw(probe)
 
+    bw_box = (inner - 14) // 2
+
+    def _row_h(item) -> int:
+        """一行占的高度。带 inline boxes 的行按框组算。"""
+        extra = item[2] if len(item) > 2 else None
+        if isinstance(extra, dict) and extra.get("boxes"):
+            n = len(extra["boxes"])
+            return box_h * ((n + 1) // 2) + 8
+        return lh_row
+
     def measure(_d) -> int:
         y = pad
         y += title_h
@@ -530,7 +540,7 @@ def render_card(
             y += type_h + 6
         if rows or boxes or titems or tl or hl:
             y += 10
-        y += lh_row * len(rows)
+        y += sum(_row_h(x) for x in rows)
         if boxes:
             y += 10 + box_h * ((len(boxes) + 1) // 2)
         if tcols or titems:
@@ -618,9 +628,36 @@ def render_card(
         dr.line([x0, y, x1, y], fill=colors["边框"], width=1)
         y += 10
 
+    def draw_boxes(box_list, top: int) -> None:
+        """画一组两列色块（小块头 / 大块头那种）。"""
+        bw = bw_box
+        for i in range(0, len(box_list), 2):
+            cy = top + (i // 2) * box_h
+            for j, box in enumerate(box_list[i:i + 2]):
+                lbl = box[0] if len(box) > 0 else ""
+                txt = box[1] if len(box) > 1 else ""
+                col = _to_rgb(box[2]) if len(box) > 2 else colors["强调"]
+                bx = x0 + j * (bw + 14)
+                dr.rounded_rectangle([bx, cy, bx + bw, cy + box_h - 6], 9,
+                                     fill=colors["标签底"], outline=colors["边框"])
+                lw = (dr.textlength(str(lbl), font=fonts["次要"]) + 10
+                      if fonts["次要"] else 40)
+                dr.text((bx + 10, cy + 5), _fit(dr, lbl, fonts["次要"], bw * 0.4),
+                        font=fonts["次要"], fill=col or colors["强调"])
+                dr.text((bx + lw + 10, cy + 5),
+                        _fit(dr, txt, fonts["更小"], bw - lw - 22),
+                        font=fonts["更小"], fill=colors["正文"])
+
     for item in rows:
         k = item[0] if len(item) > 0 else ""
         v = item[1] if len(item) > 1 else ""
+        _extra = item[2] if len(item) > 2 else None
+        # 行内色块组：(左栏空, 右栏空, {"boxes": [...]}) → 就地画一组框
+        # （多阶段每只精灵的「小不点 / 大块头」用这个，样式和蛋数据那两个框一致）
+        if isinstance(_extra, dict) and _extra.get("boxes"):
+            draw_boxes(_extra["boxes"], y + 4)
+            y += _row_h(item)
+            continue
         # 分组标题行：(左栏空, "—— 自学（13）——") → 画成一条带文字的细分割线
         if not k and v:
             _lab = _divider_label(str(v))
@@ -658,22 +695,7 @@ def render_card(
 
     if boxes:
         y += 10
-        bw = (inner - 14) // 2
-        for i in range(0, len(boxes), 2):
-            cy = y + (i // 2) * box_h
-            for j, box in enumerate(boxes[i:i + 2]):
-                lbl = box[0] if len(box) > 0 else ""
-                txt = box[1] if len(box) > 1 else ""
-                col = _to_rgb(box[2]) if len(box) > 2 else colors["强调"]
-                bx = x0 + j * (bw + 14)
-                dr.rounded_rectangle([bx, cy, bx + bw, cy + box_h - 6], 9,
-                                     fill=colors["标签底"], outline=colors["边框"])
-                lw = dr.textlength(str(lbl), font=fonts["次要"]) + 10 if fonts["次要"] else 40
-                dr.text((bx + 10, cy + 5), _fit(dr, lbl, fonts["次要"], bw * 0.4),
-                        font=fonts["次要"], fill=col or colors["强调"])
-                dr.text((bx + lw + 10, cy + 5),
-                        _fit(dr, txt, fonts["更小"], bw - lw - 22),
-                        font=fonts["更小"], fill=colors["正文"])
+        draw_boxes(boxes, y)
         y += box_h * ((len(boxes) + 1) // 2)
 
     if tcols or titems:
