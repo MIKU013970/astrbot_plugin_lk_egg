@@ -175,7 +175,7 @@ def _strip_emoji(text: str) -> str:
 
 _PLUGIN_DIR = Path(__file__).resolve().parent
 _PLUGIN_NAME = "astrbot_plugin_lk_egg"
-VERSION = "2.1.40"
+VERSION = "2.1.41"
 
 
 def _cand_dirs() -> List[Path]:
@@ -407,7 +407,7 @@ def _hard_save_state(state: Dict[str, Any]) -> None:
     "astrbot_plugin_lk_egg",
     "MIKU013970 & DeepSeek",
     "洛克小肥鱼全功能 + 炫彩花种订阅",
-    "2.1.40",
+    "2.1.41",
 )
 class LkMarketNotify(Star):
     def __init__(self, context: Context, config: AstrBotConfig = None):
@@ -2030,7 +2030,42 @@ class LkMarketNotify(Star):
                 return None
         return None
 
-    def _temp_png(self, png: bytes) -> str:
+    @staticmethod
+    def _sanitize_png(png: bytes, max_side: int = 3000,
+                      max_bytes: int = 2_500_000) -> tuple:
+        """发之前重新编码一遍，返回 (字节, 后缀)。
+
+        为什么要重编：QQ 的 highway 上传对 PNG 的 ancillary chunk / 元数据比较挑，
+        偶发 `highway upload error_code=921`（分片传完了服务器还是不收）。
+        用 Pillow 读进来再存一次能把这些块洗掉；顺带把超尺寸的缩到 3000px 以内，
+        过大的转 JPEG —— QQ 对 JPEG 明显更宽容。
+        """
+        try:
+            import io as _io
+            from PIL import Image
+            im = Image.open(_io.BytesIO(png))
+            im.load()
+            w, h = im.size
+            scale = min(1.0, float(max_side) / float(max(w, h) or 1))
+            if scale < 1.0:
+                im = im.resize((max(1, int(w * scale)), max(1, int(h * scale))),
+                               Image.LANCZOS)
+            if im.mode not in ("RGB", "RGBA"):
+                im = im.convert("RGBA" if "A" in im.getbands() else "RGB")
+            buf = _io.BytesIO()
+            im.save(buf, "PNG", optimize=True)
+            out = buf.getvalue()
+            if len(out) > max_bytes:
+                im2 = im.convert("RGB")
+                buf2 = _io.BytesIO()
+                im2.save(buf2, "JPEG", quality=88, optimize=True)
+                return buf2.getvalue(), ".jpg"
+            return out, ".png"
+        except Exception as e:                               # noqa: BLE001
+            logger.warning(f"[出图] 重编码失败，按原图发: {type(e).__name__}: {e}")
+            return png, ".png"
+
+    def _temp_png(self, png: bytes, ext: str = ".png") -> str:
         """落到临时文件（协议端要按路径读），顺手清掉 1 小时前的旧图。
 
         清理不用每次都做：攒够 50 次再扫一遍目录，省掉每次的 glob。
@@ -2046,7 +2081,7 @@ class LkMarketNotify(Star):
         if _TEMP_CLEAN_TICK % 50 == 1:
             try:
                 now = time.time()
-                for f in d.glob("card-*.png"):
+                for f in list(d.glob("card-*.png")) + list(d.glob("card-*.jpg")):
                     if now - f.stat().st_mtime > 3600:
                         f.unlink(missing_ok=True)
             except Exception:
@@ -2055,8 +2090,9 @@ class LkMarketNotify(Star):
         # 会互相覆盖，第二页把第一页顶掉 —— 现在加序号 + 随机尾巴
         global _TEMP_PNG_SEQ
         _TEMP_PNG_SEQ = (globals().get("_TEMP_PNG_SEQ") or 0) + 1
+        _ext = ext if ext in (".png", ".jpg") else ".png"
         fp = d / (f"card-{int(time.time() * 1000)}-{os.getpid() % 999:03d}"
-                  f"-{_TEMP_PNG_SEQ}-{uuid.uuid4().hex[:6]}.png")
+                  f"-{_TEMP_PNG_SEQ}-{uuid.uuid4().hex[:6]}{_ext}")
         fp.write_bytes(png)
         return str(fp)
 
@@ -2065,7 +2101,8 @@ class LkMarketNotify(Star):
 
         caption 非空时优先用 chain 把「图 + 一行字」一起发出去。
         """
-        path = self._temp_png(png)
+        png, _ext = self._sanitize_png(png)
+        path = self._temp_png(png, _ext)
         fn = getattr(event, "image_result", None)
         if caption:
             # 图 + 文字的链式结果（出图耗时就是这么带出来的）
@@ -2114,7 +2151,10 @@ class LkMarketNotify(Star):
             return self._result_image(event, pics[0], caption)
         try:
             from astrbot.api.message_components import Image as _Image, Plain
-            paths = [self._temp_png(p) for p in pics]
+            paths = []
+            for p in pics:
+                _b, _e = self._sanitize_png(p)
+                paths.append(self._temp_png(_b, _e))
             parts: List[Any] = [_Image.fromFileSystem(p) for p in paths]
             if caption:
                 parts.append(Plain(caption))
