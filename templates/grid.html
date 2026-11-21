@@ -115,10 +115,11 @@
     white-space: nowrap;
   }
 
-  /* 星光值 / 回顾值：贴在精灵图左右两侧，带 wiki 图标 */
+  /* 星光值 / 回顾值：和「系别」「区间」同列，画在它们**上方一行**
+     左列对齐 .elem、右列对齐 .bins，不居中悬浮 */
   .fact {
     position: absolute;
-    top: 56px;
+    bottom: 28px;                 /* TODO: 根据实际图片尺寸微调坐标（比 .elem 高一行） */
     display: flex; align-items: center; gap: 2px;
     padding: 1px 6px;
     border-radius: 999px;
@@ -129,9 +130,9 @@
     white-space: nowrap;
     z-index: 2;
   }
-  .fact img { width: 14px; height: 14px; object-fit: contain; flex: 0 0 auto; }
-  .fact.star { left: 3px; }
-  .fact.review { right: 3px; }
+  .fact img { width: 13px; height: 13px; object-fit: contain; flex: 0 0 auto; }
+  .fact.star { left: -12px; }     /* TODO: 与 .elem 的 left 保持一致 */
+  .fact.review { right: -12px; }  /* TODO: 与 .bins 的 right 保持一致 */
 
   /* 环绕头像的四角小徽标 */
   .sat {

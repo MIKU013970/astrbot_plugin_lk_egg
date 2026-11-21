@@ -692,6 +692,42 @@ def render_grid(
                         draw.text((px - tw_ / 2.0, py - fs_tag * 0.68), s_text,
                                   font=f_sat, fill=s_color)
 
+            # 左列 / 右列两个锚点：系别章、区间章、星光、回顾全部对齐到这两列
+            # TODO: 根据实际图片尺寸微调坐标
+            ecx = cx - avatar_d * 0.38          # 左列中心（和「系别」章同列）
+            ecy = ay + avatar_d * 0.92          # 下排（系别 / 区间 所在行）
+            bcx = cx + avatar_d * 0.38          # 右列中心（和「区间」章同列）
+            bcy = ay + avatar_d * 0.92
+
+            # 星光值（左列）/ 回顾值（右列）：画在系别 / 区间**上方一行**，
+            # 和它们同列贴边 —— 图标 + 数值作为一个整体画进胶囊，不会错位
+            f_fa = _font(font_path, max(9, fs_tag), bold=True)
+            fh_fa = max(16, fs_tag + 8)
+            for _val, _ip, _is_left in (
+                    (c.get("star"), str(c.get("star_icon") or ""), True),
+                    (c.get("review"), str(c.get("review_icon") or ""), False)):
+                if _val in (None, "", 0):       # 没数据就整条不画（不留空图标）
+                    continue
+                _txt = str(_val)
+                _ico = _fit_icon(_ip, int(fh_fa * 0.72)) if _ip else None
+                _tw_t = _tw(draw, _txt, f_fa)
+                _iw = (fh_fa * 0.72 + 4) if _ico is not None else 0
+                _bw = int(_tw_t + _iw + 14)
+                _cx0 = ecx if _is_left else bcx
+                # TODO: 根据实际图片尺寸微调坐标（-8 是两行之间的间距）
+                _cy0 = ecy - fh_fa - 8
+                _fx0 = _cx0 - _bw / 2.0
+                _fy0 = _cy0 - fh_fa / 2.0
+                draw.rounded_rectangle(
+                    [_fx0, _fy0, _fx0 + _bw, _fy0 + fh_fa], radius=fh_fa / 2.0,
+                    fill=(card_fill[0], card_fill[1], card_fill[2], 255),
+                    outline=th["边框"], width=2)
+                _tx0 = _fx0 + 7
+                if _ico is not None:
+                    _paste_center(img, _ico, int(_tx0 + fh_fa * 0.36 - 2), int(_cy0))
+                    _tx0 += _iw
+                draw.text((_tx0, _cy0 - fs_tag * 0.66), _txt, font=f_fa, fill=th["正文"])
+
             # 系别标签：贴在精灵图**左下角**（骑在圆圈边上，像给图角盖的章）
             elem_txt = str(c.get("elem") or "").strip()
             if elem_txt:
@@ -701,8 +737,6 @@ def render_grid(
                 # 章用系别色的**深一档**（主色留给外圈），加粗白边 —— 这样章和外圈
                 # 分得开，不会糊成一坨让人以为头像不圆
                 ecol = accent or th["强调"]
-                ecx = cx - avatar_d * 0.38
-                ecy = ay + avatar_d * 0.92
                 ex0, ey0 = ecx - bw / 2.0, ecy - bh / 2.0
                 draw.rounded_rectangle([ex0, ey0, ex0 + bw, ey0 + bh], radius=bh / 2.0,
                                        fill=ecol,
@@ -720,8 +754,6 @@ def render_grid(
                 bh2 = max(16, fs_tag + 8)
                 bw2 = int(_tw(draw, btxt, f_b) + 12)
                 bcol = accent or th["强调"]                          # 和系别章同色
-                bcx = cx + avatar_d * 0.38
-                bcy = ay + avatar_d * 0.92
                 pbx = bcx - bw2 / 2.0
                 pby = bcy - bh2 / 2.0
                 draw.rounded_rectangle([pbx, pby, pbx + bw2, pby + bh2],

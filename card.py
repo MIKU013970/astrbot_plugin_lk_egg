@@ -673,6 +673,21 @@ def render_card(
             if _ic is not None:
                 img.paste(_ic, (int(x0), int(y + 3)), _ic)
                 _icon_off = 24
+        # 一行多组「图标 + 数值」：{"facts": [(图标路径, 文字), ...]}
+        # 多阶段每只精灵的 星光值 / 回顾值 用这个，图标和数值当整体画，逐行左对齐
+        if isinstance(_extra, dict) and _extra.get("facts"):
+            _fx = float(x0)
+            for _ip, _tx in _extra["facts"]:
+                _fic = _load_icon(_ip, 18) if _ip else None
+                if _fic is not None:
+                    img.paste(_fic, (int(_fx), int(y + 5)), _fic)
+                    _fx += 22
+                if _tx:
+                    dr.text((int(_fx), y + 3), str(_tx), font=fonts["更小"],
+                            fill=colors["正文"])
+                    _fx += int(dr.textlength(str(_tx), font=fonts["更小"])) + 16
+            y += lh_row
+            continue
         # 分组标题行：(左栏空, "—— 自学（13）——") → 画成一条带文字的细分割线
         if not k and v:
             _lab = _divider_label(str(v))

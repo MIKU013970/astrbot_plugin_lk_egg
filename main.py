@@ -175,7 +175,7 @@ def _strip_emoji(text: str) -> str:
 
 _PLUGIN_DIR = Path(__file__).resolve().parent
 _PLUGIN_NAME = "astrbot_plugin_lk_egg"
-VERSION = "2.1.41"
+VERSION = "2.1.42"
 
 
 def _cand_dirs() -> List[Path]:
@@ -407,7 +407,7 @@ def _hard_save_state(state: Dict[str, Any]) -> None:
     "astrbot_plugin_lk_egg",
     "MIKU013970 & DeepSeek",
     "洛克小肥鱼全功能 + 炫彩花种订阅",
-    "2.1.41",
+    "2.1.42",
 )
 class LkMarketNotify(Star):
     def __init__(self, context: Context, config: AstrBotConfig = None):
@@ -5395,26 +5395,26 @@ class LkMarketNotify(Star):
                 bits.append(f"{self._fmt_cm(h_lo)}~{self._fmt_cm(h_hi)} cm")
             if w_lo is not None:
                 bits.append(f"{self._fmt_num(w_lo)}~{self._fmt_num(w_hi)} kg")
-            # 星光值 / 回顾值是**每个阶段各自不同**的，所以跟着阶段走，不放基础资料里
-            _star, _review = self._star_review_of(n)
-            _sr: List[str] = []
-            if _star is not None:
-                _sr.append(f"★{_star}")
-            if _review is not None:
-                _sr.append(f"回顾 {_review}")
-            if _sr:
-                bits.append(" / ".join(_sr))
             rows.append((f"{i}. {n}", " · ".join(bits) or "—"))
-            if w_lo is None:
-                continue
-            delta = (w_hi - w_lo) * 0.02
-            # 过线值 / 极限值用和蛋数据一模一样的两个色块框（render_card 的行内 boxes）
-            rows.append(("", "", {"boxes": [
-                ("小块头", f"过线 ≤{self._fmt_num(w_lo + delta)}"
-                           f"  极限 {self._fmt_num(w_lo)}", (78, 138, 186)),
-                ("大块头", f"过线 ≥{self._fmt_num(w_hi - delta)}"
-                           f"  极限 {self._fmt_num(w_hi)}", (194, 88, 40)),
-            ]}))
+            # 过线值 / 极限值：和蛋数据同一套色块框
+            if w_lo is not None:
+                delta = (w_hi - w_lo) * 0.02
+                rows.append(("", "", {"boxes": [
+                    ("小块头", f"过线 ≤{self._fmt_num(w_lo + delta)}"
+                               f"  极限 {self._fmt_num(w_lo)}", (78, 138, 186)),
+                    ("大块头", f"过线 ≥{self._fmt_num(w_hi - delta)}"
+                               f"  极限 {self._fmt_num(w_hi)}", (194, 88, 40)),
+                ]}))
+            # 星光值 / 回顾值：图标 + 数值（不再拼成「★16 / 回顾 1200」纯文字）
+            # 每个阶段各自不同，跟着阶段走；缺数据就整条不画，不留空图标
+            _facts: List[tuple] = []
+            _star, _review = self._star_review_of(n)
+            if _star is not None:
+                _facts.append((self._fact_icon_path("星光值"), str(_star)))
+            if _review is not None:
+                _facts.append((self._fact_icon_path("回顾"), str(_review)))
+            if _facts:
+                rows.append(("", "", {"facts": _facts}))
         return rows
 
     _SKILL_TABLE: Optional[Dict[str, Dict[str, List[Dict[str, Any]]]]] = None
@@ -8330,6 +8330,17 @@ class LkMarketNotify(Star):
         rows += self._extra_species_rows(rec)
         return rows
 
+    @staticmethod
+    def _fact_icon_path(lbl: str) -> str:
+        """星光值 / 回顾 的 wiki 图标路径；没有就空串（调用方据此不画空图标）。"""
+        c = _card()
+        if c is None or not hasattr(c, "fact_icon"):
+            return ""
+        try:
+            return c.fact_icon(lbl) or ""
+        except Exception:                                    # noqa: BLE001
+            return ""
+
     def _extra_species_rows(self, rec: Dict[str, Any]) -> List[tuple]:
         """星光/回顾 + 孵化时间 + 全阶段体型，追加在图鉴行末尾。
 
@@ -8338,21 +8349,10 @@ class LkMarketNotify(Star):
         """
         rows: List[tuple] = []
         _nm = str(rec.get("精灵") or "")
-        # 星光值 / 回顾值：两个独立的行，各自带 wiki 的 Item 图标
+        # 星光值：带 wiki 图标（回顾值不在这里画 —— 它逐阶段不同，统一放在「全阶段体型」里）
         _star, _review = self._star_review_of(_nm)
-        _c = _card()
-
-        def _fact_icon(lbl: str) -> str:
-            try:
-                return (_c.fact_icon(lbl) if (_c is not None and hasattr(_c, "fact_icon"))
-                        else "") or ""
-            except Exception:                                # noqa: BLE001
-                return ""
-
         if _star is not None:
-            rows.append(("星光值", f"★{_star}", {"icon": _fact_icon("星光值")}))
-        if _review is not None:
-            rows.append(("回顾", str(_review), {"icon": _fact_icon("回顾")}))
+            rows.append(("星光值", f"★{_star}", {"icon": self._fact_icon_path("星光值")}))
         # 孵化时间（普通 / 风场 / 5 倍 / 风场+5 倍）
         if bool(self._cfg("hatch_time_enabled", True)):
             rows += self._hatch_rows(rec)
