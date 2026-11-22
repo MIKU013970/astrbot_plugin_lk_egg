@@ -253,6 +253,75 @@ class Genetics:
             out["egg_w_range"] = [wl, wh]
         return out
 
+    # ---------------------------------------------------------------- 多代推演
+    def generations(self, me: Dict[str, Any], target: str = "big",
+                    partner_h_pct: float = 100.0, partner_w_pct: float = 98.0,
+                    max_gen: int = 20) -> Dict[str, Any]:
+        """逐代模拟：每代「保留最优子代 → 配一个固定百分位的配偶」重复下去。
+
+        依据就是源 skill 的规则1：`p_child = (p父 + p母) / 2`。
+        把它反复应用就是迭代收敛：
+
+            p_n = 1 − (1 − p_0) / 2^n        （配偶固定 100% 时）
+
+        身高还要过**两段量化**（蛋档 → 蛋% → 个体档），所以是有限步跳档；
+        体重是连续量 + ±1pp 包络，判定标准放宽成「≥ 目标线」。
+
+        ⚠ 这是**由单代公式推导**出来的模型，源 skill 本身只实测过单代；
+        多代结论属于数学外推，已在此标注。
+        """
+        p_h = me["p_h"] if me["p_h"] is not None else 0.0
+        p_w = me["p_w"] if me["p_w"] is not None else 0.0
+        ph_partner = max(0.0, min(1.0, float(partner_h_pct) / 100.0))
+        pw_partner = max(0.0, min(1.0, float(partner_w_pct) / 100.0))
+        # 子代物种 = 母本基础形态；这里用「我」的 base 当子代尺子
+        base = me["rec"].get("base") or me["name"]
+        brec = self._species.get(base) or me["rec"] or {}
+        h_egg = brec.get("h_egg")
+        h_stage1 = brec.get("h_stage1")
+
+        steps: List[Dict[str, Any]] = []
+        hit_gen = None
+        for gen in range(1, max_gen + 1):
+            p_child_h = (p_h + ph_partner) / 2.0
+            hh = hatch_height(p_child_h, h_egg, h_stage1)
+            p_h = hh.get("hatch_pct", 0.0) / 100.0 if hh.get("hatch_slot") is not None else p_child_h
+
+            # 规则2：双亲身高都满 → 子代体重锁满端平台
+            both_max = p_h >= 0.985 and ph_partner >= 0.985
+            if both_max:
+                p_w = RULE2_TOP
+            else:
+                p_w = (p_w + pw_partner) / 2.0
+
+            at_max = (hh.get("hatch_slot") is not None
+                      and hh["hatch_slot"] == hh["hatch_slots"] - 1)
+            at_min = (hh.get("hatch_slot") == 0)
+            w_pct = p_w * 100.0
+            steps.append({
+                "gen": gen,
+                "h_pct": round(p_h * 100, 1),
+                "hatch_h": hh.get("hatch_h"),
+                "at_max": at_max, "at_min": at_min,
+                "w_pct": round(w_pct, 2),
+                "rule2": both_max,
+                "ok": (at_max and w_pct >= BIG_MIN) if target == "big"
+                      else (at_min and w_pct <= SMALL_MAX),
+                # ±1pp 包络下「有概率拿到」的判定
+                "maybe": (at_max and w_pct + NOISE >= BIG_MIN) if target == "big"
+                         else (at_min and w_pct - NOISE <= SMALL_MAX),
+            })
+            if steps[-1]["ok"] and hit_gen is None:
+                hit_gen = gen
+                break
+
+        return {
+            "target": target, "steps": steps, "gen": hit_gen,
+            "partner_h_pct": partner_h_pct, "partner_w_pct": partner_w_pct,
+            "base": base,
+            "note": "由单代公式 p=(父+母)/2 迭代推导；源 skill 只实测过单代",
+        }
+
     def partners(self, me: Dict[str, Any], gender: str = "公",
                  limit: int = 12) -> List[Dict[str, Any]]:
         """给一只精灵，列出能配的异性（蛋组有交集 + 能生蛋 + 只取基础形态）。"""

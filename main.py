@@ -222,7 +222,7 @@ def _strip_emoji(text: str) -> str:
 
 _PLUGIN_DIR = Path(__file__).resolve().parent
 _PLUGIN_NAME = "astrbot_plugin_lk_egg"
-VERSION = "2.1.43"
+VERSION = "2.1.44"
 
 
 def _cand_dirs() -> List[Path]:
@@ -454,7 +454,7 @@ def _hard_save_state(state: Dict[str, Any]) -> None:
     "astrbot_plugin_lk_egg",
     "MIKU013970 & DeepSeek",
     "洛克小肥鱼全功能 + 炫彩花种订阅",
-    "2.1.43",
+    "2.1.44",
 )
 class LkMarketNotify(Star):
     def __init__(self, context: Context, config: AstrBotConfig = None):
@@ -7247,6 +7247,9 @@ class LkMarketNotify(Star):
         "说明：奖牌是子代出生时按【身高档 + 体重%】判的，一次配对就能定，\n"
         "　　　这份规则里没有「繁育几代」的模型，所以算的是「这一对能不能出奖牌」。")
 
+    #: 规则2 触发时体重锁到的位置（大块头满端 / 小不点低端）
+    RULE2_TEXT = {"big": "99.17%", "small": "≤2%"}
+
     @filter.command("洛克")
     async def cmd_roco(self, event: AstrMessageEvent, arg: str = ""):
         """洛克 遗传 <精灵> <公|母> <体重>
@@ -7316,8 +7319,57 @@ class LkMarketNotify(Star):
                 lines.append(f"一阶段身高区间 {me['h_range'][0]}~{me['h_range'][1]} m")
             lines.append(f"蛋组 {' / '.join(me['egg']) if me['egg'] else '未知'}")
             lines.append("")
-            lines.append("⚠ 规则里没有「几代」：奖牌按子代出生时的【身高档 + 体重%】判定，")
-            lines.append("　一次配对就定生死。下面是可配对象的子代结果。")
+            lines.append("⚠ 奖牌不是「传」下来的：子代出生时按【身高档 + 体重%】当场判定。")
+            lines.append("　但身高% 每代按 (父+母)/2 迭代，所以「几代能堆到线」是可以算的。")
+
+            # ---- 多代推演：每代配一个「同方向的极值配偶」----
+            _iter = dict(me)
+            _h_note = ""
+            if _iter.get("p_h") is None:
+                _iter["p_h"] = 0.0           # 没给身高 → 按最低档保守推演
+                _h_note = "（没给身高，按最低档 0% 保守推演）"
+            # 体重在区间下半 → 冲小不点；上半 → 冲大块头
+            _target = "small" if (me.get("p_w") or 0) < 0.5 else "big"
+            if _target == "big":
+                _ph, _pw = 100.0, 98.0
+                _tname = "大块头"
+            else:
+                _ph, _pw = 0.0, 0.0
+                _tname = "小不点"
+            lines.append("")
+            lines.append(f"━━━ 多代推演 · 目标 {_tname} ━━━")
+            lines.append(f"前提：每代留最优子代，再配一个"
+                         f"「身高{_ph:g}% + 体重{_pw:g}%」的配偶{_h_note}")
+            try:
+                gi = g.generations(_iter, _target, partner_h_pct=_ph,
+                                   partner_w_pct=_pw, max_gen=20)
+                lines.append("代　身高%　　身高　　满档/空档　体重%　　规则2　达标")
+                for s in gi["steps"]:
+                    _edge = ("是" if (s["at_max"] if _target == "big" else s["at_min"])
+                             else "否")
+                    lines.append(
+                        f"{s['gen']}　{s['h_pct']:.1f}%　"
+                        f"{s['hatch_h'] if s['hatch_h'] is not None else '—'}m　"
+                        f"{_edge}　{s['w_pct']:.2f}%　"
+                        f"{'是' if s['rule2'] else '否'}　"
+                        f"{'✓' if s['ok'] else ''}")
+                if gi["gen"]:
+                    _s = gi["steps"][-1]
+                    _why = (f"规则2 触发：双亲身高都到端 → 体重锁至 "
+                            f"{self.RULE2_TEXT[_target]}" if _s.get("rule2")
+                            else "体重逐代累积到位")
+                    lines.append("")
+                    lines.append(f"→ 第 {gi['gen']} 代出{_tname}　（{_why}）")
+                else:
+                    lines.append("")
+                    lines.append(f"→ {len(gi['steps'])} 代内没堆到线，"
+                                 f"起始点离目标太远或该物种档数太少")
+                lines.append("⚠ 多代是按 p=(父+母)/2 反复迭代推的；"
+                             "源 skill 只实测过单代，属数学外推。")
+                lines.append("　现实成本：每代都得配到那一端的极值配偶。")
+            except Exception as e:                           # noqa: BLE001
+                logger.warning(f"[遗传] 多代推演失败: {type(e).__name__}: {e}")
+                lines.append("（多代推演失败，先看下面的单代结果）")
 
             rows = g.partners(me, gender, limit=8)
             if not rows:
