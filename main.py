@@ -222,7 +222,7 @@ def _strip_emoji(text: str) -> str:
 
 _PLUGIN_DIR = Path(__file__).resolve().parent
 _PLUGIN_NAME = "astrbot_plugin_lk_egg"
-VERSION = "2.1.57"
+VERSION = "2.1.58"
 
 
 def _cand_dirs() -> List[Path]:
@@ -454,7 +454,7 @@ def _hard_save_state(state: Dict[str, Any]) -> None:
     "astrbot_plugin_lk_egg",
     "MIKU013970 & DeepSeek",
     "洛克小肥鱼全功能 + 炫彩花种订阅",
-    "2.1.57",
+    "2.1.58",
 )
 class LkMarketNotify(Star):
     def __init__(self, context: Context, config: AstrBotConfig = None):
@@ -7289,8 +7289,20 @@ class LkMarketNotify(Star):
                           f"　体重 {x['w']:g}%{'（默认）' if x['w_default'] else ''}"
                           f"　声音 {x['db']}{'（默认）' if x['db_default'] else ''}")
         lines.append(f"🧬 遗传 · {a['name']} × {b['name']}")
-        lines.append(f"父　{a['name']}　{_fmt(a)}")
-        lines.append(f"母　{b['name']}　{_fmt(b)}")
+        def _real(x: Dict[str, Any]) -> str:
+            """按百分比反算成米/kg，挂在括号里方便对游戏面板。"""
+            _r = g.get(x["name"]) or {}
+            _h, _w = _r.get("h_stage1"), _r.get("w_mon")
+            _bits = []
+            if _h:
+                _v = _h[0] + (float(x["h"]) / 100.0) * (_h[1] - _h[0])
+                _bits.append(f"{_v:.2f}m")
+            if _w:
+                _v = _w[0] + (float(x["w"]) / 100.0) * (_w[1] - _w[0])
+                _bits.append(f"{_v:g}kg")
+            return f"（{' / '.join(_bits)}）" if _bits else ""
+        lines.append(f"父 {a['name']}　{_fmt(a)}{_real(a)}")
+        lines.append(f"母 {b['name']}　{_fmt(b)}{_real(b)}")
         for x in (a, b):
             for n in (x.get("notes") or []):
                 lines.append(f"　　· {x['name']}：{n}")
@@ -7346,20 +7358,16 @@ class LkMarketNotify(Star):
             _medals.append(f"大块头 {r['p_big'] * 100:.1f}%")
         lines.append("奖牌　" + ("　".join(_medals) if _medals else "不符合"))
 
-        # ---- 推演 ----
-        # 目标按【这一胎的身高%】分：<50 冲小不点，≥50 冲大块头。
-        # 特例：父母身高一个 0% 一个 100%（子代正好卡 50%）→ 两个方向都推。
+        # ---- 多代推演（一行式，含声音奖牌代数）----
         r2 = self._gen_pair(g, b, a) if a["name"] != b["name"] else None
-        _t1 = self._gen_targets(a, b, r)
-        _t2 = self._gen_targets(b, a, r2) if r2 else []
-        _multi = len(_t1) > 1 or len(_t2) > 1
         lines.append("")
-        lines.append("━━━ 推演 ━━━" if _multi
-                     else f"━━━ 推演 · 目标 {self._gen_tname(_t1[0])} ━━━")
-        lines.extend(self._gen_block(g, "①", a, b, r, _t1))
+        lines.append("━━━ 多代推演 ━━━")
+        lines.append(f" 父={a['name']}　母={b['name']} ")
+        lines.extend(self._gen_line(g, r))
         if r2 is not None:
             lines.append("")
-            lines.extend(self._gen_block(g, "②", b, a, r2, _t2))
+            lines.append(f" 父={b['name']}　母={a['name']} ")
+            lines.extend(self._gen_line(g, r2))
 
         lines.append("")
         lines.append("⚠ 推演是 p=(父+母)/2 反复迭代推的，源 skill 只实测过单代。")
@@ -7394,6 +7402,30 @@ class LkMarketNotify(Star):
         if abs(float(r.get("child_h_pct_mean", 0)) - 50.0) < 0.01:
             return ["big", "small"]
         return ["big" if r["child_h_pct_mean"] >= 50 else "small"]
+
+    def _gen_line(self, g: Any, r: Dict[str, Any]) -> List[str]:
+        """一行式推演：大块头/小不点各一行，后面带 100 和 −100 的声音代数。"""
+        out: List[str] = []
+        _db0 = int(r.get("child_db", 0) or 0)
+        for _t in ("big", "small"):
+            _ph, _pw = (100.0, 100.0) if _t == "big" else (0.0, 0.0)
+            _base = r.get("child_species") or ""
+            start = {
+                "name": _base, "rec": g.get(_base) or {},
+                "p_h": r["child_h_pct_mean"] / 100.0,
+                "p_w": r["child_w_pct_mean"] / 100.0,
+                "egg": list((g.get(_base) or {}).get("egg") or []),
+            }
+            gi = g.generations(start, _t, partner_h_pct=_ph,
+                               partner_w_pct=_pw, max_gen=20)
+            _g = gi["gen"]
+            _ok = f"第{_g}代 ✓" if _g else "未达"
+            _v1 = g.voice_need_gen(_db0, 100)
+            _v2 = g.voice_need_gen(_db0, -100)
+            _s1 = f"第{_v1}代" if _v1 else "未达"
+            _s2 = f"第{_v2}代" if _v2 else "未达"
+            out.append(f"{self._gen_tname(_t)}：{_ok}　100:{_s1}　-100:{_s2}")
+        return out
 
     def _gen_block(self, g: Any, tag: str, fa: Dict[str, Any],
                    mo: Dict[str, Any], r: Dict[str, Any],

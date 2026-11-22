@@ -576,6 +576,23 @@ class Genetics:
             return {"error": f"第二只「{name_b}」：{b['error']}", "looks_like": True}
         return {"ok": True, "a": a, "b": b}
 
+    @staticmethod
+    def voice_need_gen(start_db: int, target_db: int,
+                       max_gen: int = 20) -> Optional[int]:
+        """从 start_db 起，每代配一个 target_db 的配偶，几代能让 |分贝| ≥96。
+
+        子代分贝 = ⌊(父 + 母)/2⌋（向下取整），逐代迭代。
+        返回代数；max_gen 内没到就返回 None。
+        """
+        v = int(start_db)
+        if abs(v) >= VOICE_ABS:
+            return 0
+        for g in range(1, max_gen + 1):
+            v = int(math.floor((v + int(target_db)) / 2.0))
+            if abs(v) >= VOICE_ABS:
+                return g
+        return None
+
     def partners(self, me: Dict[str, Any], gender: str = "公",
                  limit: int = 12) -> List[Dict[str, Any]]:
         """给一只精灵，列出能配的异性（蛋组有交集 + 能生蛋 + 只取基础形态）。"""
