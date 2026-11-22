@@ -222,7 +222,7 @@ def _strip_emoji(text: str) -> str:
 
 _PLUGIN_DIR = Path(__file__).resolve().parent
 _PLUGIN_NAME = "astrbot_plugin_lk_egg"
-VERSION = "2.1.51"
+VERSION = "2.1.52"
 
 
 def _cand_dirs() -> List[Path]:
@@ -454,7 +454,7 @@ def _hard_save_state(state: Dict[str, Any]) -> None:
     "astrbot_plugin_lk_egg",
     "MIKU013970 & DeepSeek",
     "洛克小肥鱼全功能 + 炫彩花种订阅",
-    "2.1.51",
+    "2.1.52",
 )
 class LkMarketNotify(Star):
     def __init__(self, context: Context, config: AstrBotConfig = None):
@@ -7340,16 +7340,26 @@ class LkMarketNotify(Star):
                      f"　大块头 {r['p_big'] * 100:.1f}%"
                      f"　（身高{'到顶' if r['height_at_extreme'] == 'max' else '到底' if r['height_at_extreme'] == 'min' else '未到端'}）")
 
-        # ---- 多代推演（每代留最优子代 + 配理想配偶）----
+        # ---- 多代推演：从**这一胎的孩子**起步，每代再配一个同方向的极值配偶 ----
         _target = "small" if (r["child_w_pct_mean"] < 50) else "big"
         _ph, _pw = (0.0, 0.0) if _target == "small" else (100.0, 100.0)
         _tname = "小不点" if _target == "small" else "大块头"
         lines.append("")
         lines.append(f"━━━ 多代推演 · 目标 {_tname} ━━━")
+        lines.append(f"起点：这一胎（身高 {r['child_h_pct_mean']:.2f}% / "
+                     f"体重 {r['child_w_pct_mean']:.2f}%）")
         lines.append(f"前提：每代留最优子代，再配「身高{_ph:g}% + 体重{_pw:g}%」的配偶")
-        base = g.resolve(b["name"])          # 子代物种 = 母本基础形态
-        base["p_h"], base["p_w"] = b["h"] / 100.0, b["w"] / 100.0
-        gi = g.generations(base, _target, partner_h_pct=_ph,
+        # 起点必须是子代，不是母本 —— 否则第 1 代就成了「母本再配一次」，白跳一辈
+        _base_rec = g.get(b["name"]) or {}
+        _child_name = _base_rec.get("base") or b["name"]
+        start = {
+            "name": _child_name,
+            "rec": g.get(_child_name) or {},
+            "p_h": r["child_h_pct_mean"] / 100.0,
+            "p_w": r["child_w_pct_mean"] / 100.0,
+            "egg": list((g.get(_child_name) or {}).get("egg") or []),
+        }
+        gi = g.generations(start, _target, partner_h_pct=_ph,
                            partner_w_pct=_pw, max_gen=20)
         lines.append("代　身高%　身高　到端　体重%　规则2　达标")
         for s in gi["steps"]:

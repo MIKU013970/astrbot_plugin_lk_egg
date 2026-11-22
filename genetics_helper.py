@@ -291,12 +291,14 @@ class Genetics:
         steps: List[Dict[str, Any]] = []
         hit_gen = None
         for gen in range(1, max_gen + 1):
-            p_child_h = (p_h + ph_partner) / 2.0
+            # 亲本身高（迭代前的值）—— 规则2 判的是「双亲」，不是子代量化后的值
+            parent_h = p_h
+            p_child_h = (parent_h + ph_partner) / 2.0
             hh = hatch_height(p_child_h, h_egg, h_stage1)
             p_h = hh.get("hatch_pct", 0.0) / 100.0 if hh.get("hatch_slot") is not None else p_child_h
 
-            # 规则2：双亲身高都满 → 子代体重锁满端平台
-            both_max = p_h >= 0.985 and ph_partner >= 0.985
+            # 规则2：**双亲**身高都满（亲本 100% + 配偶 100%）→ 子代体重锁满端平台
+            both_max = parent_h >= 0.985 and ph_partner >= 0.985
             if both_max:
                 p_w = RULE2_TOP
             else:
