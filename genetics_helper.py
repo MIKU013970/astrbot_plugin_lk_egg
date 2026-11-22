@@ -410,38 +410,49 @@ class Genetics:
         return cls.VOICE_MIN <= fv <= cls.VOICE_MAX
 
     def _one(self, name: str, toks: List[str]) -> Dict[str, Any]:
-        """解析「名字后面那串 token」→ {h, w, db, notes}。"""
-        nums: List[float] = []
+        """解析「名字后面那串 token」→ {h, w, db, notes}。
+
+        **带 % 的按百分比**（0~100），**不带的按真实数据**（米 / kg）去比区间。
+        """
+        items: List[Tuple[float, bool]] = []
         for t in toks:
-            s = str(t).strip().rstrip("%")
+            s = str(t).strip()
+            is_pct = s.endswith("%")
             try:
-                nums.append(float(s))
+                items.append((float(s.rstrip("%")), is_pct))
             except ValueError:
                 return {"error": f"「{t}」不是数字"}
-        if len(nums) > 3:
+        if len(items) > 3:
             return {"error": "一只精灵最多跟 3 个数字（身高 体重 声音）"}
         h = w = db = None
         notes: List[str] = []
 
-        if len(nums) == 3:
+        if len(items) == 3:
             # 三个数：按顺序 身高 / 体重 / 声音，逐个校验
-            h, w, db = nums
+            h, w, db = items[0][0], items[1][0], items[2][0]
+            if items[2][1] and not (0 <= db <= 100):
+                return {"error": f"声音 {db:g}% 超出 0~100"}
             if not self.is_voice(db):
                 return {"error": f"声音 {db:g} 超出 −100~100（且必须是整数）"}
-        elif len(nums) == 2:
-            h, v = nums
-            # 第 2 个：优先体重；不像体重但像声音 → 声音
-            if self.fits_weight(name, v):
+        elif len(items) == 2:
+            h = items[0][0]
+            v, vpct = items[1]
+            if vpct:
+                w = v                      # 带 % → 直接当体重%
+                notes.append("第2个带 % 按体重%处理")
+            elif self.fits_weight(name, v):
                 w = v
             elif self.is_voice(v):
                 db = v
-                notes.append("第2个数按声音处理")
+                notes.append("第2个按声音处理")
             else:
                 return {"error": f"{v:g} 既不是该精灵的合法体重，也不是合法声音"}
-        elif len(nums) == 1:
-            v = nums[0]
-            # 顺序：身高 → 体重 → 声音
-            if self.fits_height(name, v):
+        elif len(items) == 1:
+            v, vpct = items[0]
+            if vpct:
+                h = v                      # 带 % → 直接当身高%
+                notes.append("带 % 按身高%处理")
+            elif self.fits_height(name, v):
                 h = v
             elif self.fits_weight(name, v):
                 w = v
@@ -453,7 +464,8 @@ class Genetics:
                 hs, ws = self._stage_ranges(name)
                 return {"error": (f"{v:g} 对不上「{name}」的身高/体重，也不是合法声音\n"
                                   f"　身高区间 {hs or '缺数据'}　体重区间 {ws or '缺数据'}"
-                                  f"　声音 −100~100 整数")}
+                                  f"　声音 −100~100 整数\n"
+                                  f"　（想按百分比就写 50%）")}
 
         return {"name": name,
                 # 一律填成实际生效值（默认 100 / 100 / 100），下游不用再判 None
@@ -479,7 +491,9 @@ class Genetics:
         if idx[0] > 1:
             return {"error": "", "looks_like": False}      # 前面还有别的词，别抢
         if len(idx) < 2:
-            # 只认出**一只**精灵：后面没有数字就交给「裸名查询」，有数字才提示
+            # 只认出**一只**精灵：
+            #   · 后面没数字 → 交给「裸名查询」
+            #   · 后面有数字 → 配偶自动补「同种精灵的满阶（100% / 100% / 100）」
             nm = self.real_name(toks[idx[0]])
             tail = toks[idx[0] + 1:]
             if not tail:
@@ -487,10 +501,14 @@ class Genetics:
             one = self._one(nm, tail)
             if one.get("error"):
                 return {"error": one["error"], "looks_like": True}
-            return {"error": (f"只解析出一只「{nm}」（身高 {one['h']:g} / "
-                              f"体重 {one['w']:g} / 声音 {one['db']}），要两只才能算子代\n"
-                              f"推荐写法：{nm} 100 12.5 50 {nm} 100 12.5 -20"),
-                    "looks_like": True}
+            mate = {
+                "name": nm,
+                "h": self.DEFAULT_PCT, "w": self.DEFAULT_PCT, "db": self.DEFAULT_DB,
+                "h_default": True, "w_default": True, "db_default": True,
+                "notes": ["配偶按同种满阶自动补（100% 身高 / 100% 体重 / 100 声音）"],
+                "auto_mate": True,
+            }
+            return {"ok": True, "a": one, "b": mate, "auto_mate": True}
         name_a = self.real_name(toks[idx[0]])
         name_b = self.real_name(toks[idx[1]])
         seg_a = toks[idx[0] + 1: idx[1]]
