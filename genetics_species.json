@@ -89,7 +89,8 @@
    "龙嵴金脉",
    "龙息帕尔"
   ],
-  "egg_unknown": []
+  "egg_unknown": [],
+  "base_fixed": "11 条二三阶段改用链首为 base（2026-11-22）"
  },
  "species": {
   "一窝蜂": {
@@ -1197,12 +1198,12 @@
    "attr": "幽/龙",
    "egg": [],
    "shiny": false,
-   "base": "冥古龙",
+   "base": "小冥龙",
    "src": [
     "species_weights",
     "species_size(height only)"
    ],
-   "lowest": true,
+   "lowest": false,
    "w_mon": [
     243.0,
     440.0
@@ -1475,23 +1476,16 @@
     "天空组"
    ],
    "shiny": true,
-   "base": "刨雪鹅",
+   "base": "豆粒鹅",
    "src": [
     "species_weights",
     "species_size(height only)"
    ],
-   "lowest": true,
+   "lowest": false,
    "w_mon": [
     97.3,
     175.0
    ],
-   "w_egg": [
-    0.28,
-    0.664
-   ],
-   "w_egg_slots": 385,
-   "w_egg_slot_pp": 0.26,
-   "w_egg_top_p_min": 99.74,
    "h_stage1": [
     1.39,
     1.6
@@ -4424,12 +4418,12 @@
    "attr": "冰",
    "egg": [],
    "shiny": false,
-   "base": "圣冠布鲁斯",
+   "base": "布鲁斯",
    "src": [
     "species_weights",
     "species_size(height only)"
    ],
-   "lowest": true,
+   "lowest": false,
    "w_mon": [
     172.0,
     270.0
@@ -4673,12 +4667,12 @@
    "attr": "地",
    "egg": [],
    "shiny": true,
-   "base": "地底银鳞",
+   "base": "地银链",
    "src": [
     "species_weights",
     "species_size(height only)"
    ],
-   "lowest": true,
+   "lowest": false,
    "w_mon": [
     65.0,
     105.0
@@ -4694,12 +4688,12 @@
    "attr": "地",
    "egg": [],
    "shiny": true,
-   "base": "地绡银龙",
+   "base": "地银链",
    "src": [
     "species_weights",
     "species_size(height only)"
    ],
-   "lowest": true,
+   "lowest": false,
    "w_mon": [
     340.0,
     770.0
@@ -13871,12 +13865,12 @@
    "attr": "水/毒",
    "egg": [],
    "shiny": false,
-   "base": "琉璃君主",
+   "base": "翡翠水母",
    "src": [
     "species_weights",
     "species_size(height only)"
    ],
-   "lowest": true,
+   "lowest": false,
    "w_mon": [
     133.0,
     215.0
@@ -17503,12 +17497,12 @@
    "attr": "龙",
    "egg": [],
    "shiny": false,
-   "base": "超能阿布",
+   "base": "阿布",
    "src": [
     "species_weights",
     "species_size(height only)"
    ],
-   "lowest": true,
+   "lowest": false,
    "w_mon": [
     13.3,
     39.9
@@ -17548,40 +17542,21 @@
     "拟人组"
    ],
    "shiny": false,
-   "base": "跳跳铃",
+   "base": "呆呆铃",
    "src": [
     "species_heights",
     "species_weights"
    ],
-   "lowest": true,
-   "h_egg": [
-    0.31,
-    0.53
-   ],
+   "lowest": false,
    "h_stage1": [
     0.72,
     1.25
    ],
    "season": 5,
-   "h_slots": 23,
-   "sum_max": 0.087,
-   "sum_min": 1.913,
-   "partner_hi_pct": 91.3,
-   "partner_lo_pct": 8.7,
-   "stage1_slots": 54,
-   "partner_hi_m": 1.21,
-   "partner_lo_m": 0.76,
    "w_mon": [
     21.0,
     35.8
    ],
-   "w_egg": [
-    0.665,
-    1.532
-   ],
-   "w_egg_slots": 868,
-   "w_egg_slot_pp": 0.115,
-   "w_egg_top_p_min": 99.885,
    "note": "蛋身高区间按 0.42 比例估算，待实测校正",
    "breedable": true
   },
@@ -18978,40 +18953,21 @@
     "拟人组"
    ],
    "shiny": false,
-   "base": "铃兰夫人",
+   "base": "呆呆铃",
    "src": [
     "species_heights",
     "species_weights"
    ],
-   "lowest": true,
-   "h_egg": [
-    0.75,
-    1.09
-   ],
+   "lowest": false,
    "h_stage1": [
     1.75,
     2.6
    ],
    "season": 5,
-   "h_slots": 35,
-   "sum_max": 0.0571,
-   "sum_min": 1.9429,
-   "partner_hi_pct": 94.29,
-   "partner_lo_pct": 5.71,
-   "stage1_slots": 86,
-   "partner_hi_m": 2.56,
-   "partner_lo_m": 1.79,
    "w_mon": [
     50.0,
     70.0
    ],
-   "w_egg": [
-    0.665,
-    1.532
-   ],
-   "w_egg_slots": 868,
-   "w_egg_slot_pp": 0.115,
-   "w_egg_top_p_min": 99.885,
    "note": "蛋身高区间按 0.42 比例估算，待实测校正",
    "breedable": true
   },
@@ -21618,12 +21574,12 @@
    "attr": "电",
    "egg": [],
    "shiny": true,
-   "base": "龙头金",
+   "base": "沉金兽",
    "src": [
     "species_weights",
     "species_size(height only)"
    ],
-   "lowest": true,
+   "lowest": false,
    "w_mon": [
     97.0,
     164.0
@@ -21639,12 +21595,12 @@
    "attr": "电",
    "egg": [],
    "shiny": true,
-   "base": "龙嵴金脉",
+   "base": "沉金兽",
    "src": [
     "species_weights",
     "species_size(height only)"
    ],
-   "lowest": true,
+   "lowest": false,
    "w_mon": [
     830.0,
     2000.0
