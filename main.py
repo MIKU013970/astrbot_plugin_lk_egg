@@ -222,7 +222,7 @@ def _strip_emoji(text: str) -> str:
 
 _PLUGIN_DIR = Path(__file__).resolve().parent
 _PLUGIN_NAME = "astrbot_plugin_lk_egg"
-VERSION = "2.1.68"
+VERSION = "2.1.69"
 
 
 def _cand_dirs() -> List[Path]:
@@ -454,7 +454,7 @@ def _hard_save_state(state: Dict[str, Any]) -> None:
     "astrbot_plugin_lk_egg",
     "MIKU013970 & DeepSeek",
     "洛克小肥鱼全功能 + 炫彩花种订阅",
-    "2.1.68",
+    "2.1.69",
 )
 class LkMarketNotify(Star):
     def __init__(self, context: Context, config: AstrBotConfig = None):
@@ -7459,46 +7459,28 @@ class LkMarketNotify(Star):
             # 体重奖牌代数（原有逻辑，不动）
             _bits = [f"第{_g_body}代"]
 
-            # 两条声音各自独立算到「达标那一刻的分贝值」
-            _vpos, _gpos = g.voice_reach(_db0, 100)     # 往 + 方向
-            _vneg, _gneg = g.voice_reach(_db0, -100)    # 往 − 方向
-            # 显示规则（用户口径）：
-            #   · 只显示数值，不带「婉转声/粗嗓门」这类标签
-            #   · 能到极值（100 / −100）就显示极值，否则显示实际能达到的值
-            #   · 两个都到极值才用 / 并列；有一个到不了极值就只显示那个较低值
-            _pos_txt = (f"{_vpos} ✓" if _vpos is not None else "")
-            _neg_txt = (f"{_vneg} ✓" if _vneg is not None else "")
-            _pos_ext = (_vpos == 100)
-            _neg_ext = (_vneg == -100)
-            # 主方向 = 这一胎声音的同号方向：正向优先给正的，负向优先给负的。
-            # 另一方向只有在「也顶到极值」时才并列；否则不并列，
-            # 免得出现「子代明明是 100，却显示 -97」这种看不懂的输出。
-            if _db0 >= 0:
-                _main, _other = _pos_txt, _neg_txt
-                _other_ext = _neg_ext
-            else:
-                _main, _other = _neg_txt, _pos_txt
-                _other_ext = _pos_ext
-            if _main:
-                _bits.append(_main + (f" / {_other}" if (_other and _other_ext) else ""))
-            elif _other:
-                _bits.append(_other)
+            # 声音在推演里**恒定不变**。
+            # 推演 = 同一支谱系反复生，配偶声音和这一支一样，
+            # 子代分贝 = ⌊(父 + 母)/2⌋ 每代都还是同一个数。
+            # 父母 −100 → 子代 −100 → 孙代 −100 … 一万代也不会变正。
+            # 所以「声音第几代达标」这件事不存在：要么这一胎就已经达标，要么永远不达标。
+            _v_snd = _db0
+            _snd_ok = abs(_v_snd) >= 96
+            if _snd_ok:
+                _bits.append(f"{_v_snd} ✓")
 
-            # 组合奖牌是 4 种（源 skill）：体型 × 声音方向
+            # 组合奖牌按声音方向四选一（源 skill）：
             #   大块头+婉转声=大腕　大块头+粗嗓门=大粗
             #   小不点+婉转声=小腕　小不点+粗嗓门=小粗
-            # 要跟**这一胎声音的同号方向**配对 ——
-            # 子代 −100（粗嗓门）配大块头是「大粗」，声音 0 代就达标，
-            # 不能拿婉转声的代数（要爬 6 代）去算 max。
-            if _db0 >= 0:
+            if _v_snd >= 96:
                 _cname = "大腕" if _t == "big" else "小腕"
-                _g_snd, _v_snd = _gpos, _vpos
-            else:
+            elif _v_snd <= -96:
                 _cname = "大粗" if _t == "big" else "小粗"
-                _g_snd, _v_snd = _gneg, _vneg
-            if (_g_body is not None and _v_snd is not None
-                    and _g_snd is not None):
-                _bits.append(f"→ {_cname} 第{max(_g_body, _g_snd)}代 ✓")
+            else:
+                _cname = ("大块头双牌" if _t == "big" else "小不点双牌")
+            # 双牌 = 体型代数（声音这一项要么 0 代，要么永远没有）
+            if _g_body is not None and _snd_ok:
+                _bits.append(f"→ {_cname} 第{_g_body}代 ✓")
             else:
                 _bits.append(f"→ {_cname} 不可达")
             out.append(f"{self._gen_tname(_t)}：" + "　".join(_bits))
