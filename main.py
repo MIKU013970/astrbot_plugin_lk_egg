@@ -222,7 +222,7 @@ def _strip_emoji(text: str) -> str:
 
 _PLUGIN_DIR = Path(__file__).resolve().parent
 _PLUGIN_NAME = "astrbot_plugin_lk_egg"
-VERSION = "2.1.66"
+VERSION = "2.1.67"
 
 
 def _cand_dirs() -> List[Path]:
@@ -454,7 +454,7 @@ def _hard_save_state(state: Dict[str, Any]) -> None:
     "astrbot_plugin_lk_egg",
     "MIKU013970 & DeepSeek",
     "洛克小肥鱼全功能 + 炫彩花种订阅",
-    "2.1.66",
+    "2.1.67",
 )
 class LkMarketNotify(Star):
     def __init__(self, context: Context, config: AstrBotConfig = None):
@@ -7456,18 +7456,43 @@ class LkMarketNotify(Star):
             _cs = (max(_g_body, _gr) if (_g_body is not None and _gr is not None)
                    else None)
 
-            # 达不到的项**直接不显示**（不再写「不可达」占位）
+            # 体重奖牌代数（原有逻辑，不动）
             _bits = [f"第{_g_body}代"]
-            if _gv is not None:
-                _bits.append("婉转声 已达标" if _gv == 0 else f"婉转声 第{_gv}代")
-            if _gr is not None:
-                _bits.append("粗嗓门 已达标" if _gr == 0 else f"粗嗓门 第{_gr}代")
+
+            # 两条声音各自独立算到「达标那一刻的分贝值」
+            _vpos, _gpos = g.voice_reach(_db0, 100)     # 往 + 方向
+            _vneg, _gneg = g.voice_reach(_db0, -100)    # 往 − 方向
+            # 显示规则（用户口径）：
+            #   · 只显示数值，不带「婉转声/粗嗓门」这类标签
+            #   · 能到极值（100 / −100）就显示极值，否则显示实际能达到的值
+            #   · 两个都到极值才用 / 并列；有一个到不了极值就只显示那个较低值
+            _pos_txt = (f"{_vpos} ✓" if _vpos is not None else "")
+            _neg_txt = (f"{_vneg} ✓" if _vneg is not None else "")
+            _pos_ext = (_vpos == 100)
+            _neg_ext = (_vneg == -100)
+            # 主方向 = 这一胎声音的同号方向：正向优先给正的，负向优先给负的。
+            # 另一方向只有在「也顶到极值」时才并列；否则不并列，
+            # 免得出现「子代明明是 100，却显示 -97」这种看不懂的输出。
+            if _db0 >= 0:
+                _main, _other = _pos_txt, _neg_txt
+                _other_ext = _neg_ext
+            else:
+                _main, _other = _neg_txt, _pos_txt
+                _other_ext = _pos_ext
+            if _main:
+                _bits.append(_main + (f" / {_other}" if (_other and _other_ext) else ""))
+            elif _other:
+                _bits.append(_other)
+
+            # 双牌：体型 + 对应方向的声音都达标才 ✓
             _cname = "大腕" if _t == "big" else "小粗"
-            _combo = _cb if _t == "big" else _cs
-            if _combo is not None:
-                _bits.append(f"→ {_cname} 第{_combo}代 ✓")
-            elif (_gv is not None) or (_gr is not None):
-                _bits.append(f"→ {_cname} 拿不到（声音那一项不够）")
+            _g_snd = _gpos if _t == "big" else _gneg
+            _v_snd = _vpos if _t == "big" else _vneg
+            if (_g_body is not None and _v_snd is not None
+                    and _g_snd is not None):
+                _bits.append(f"→ {_cname} 第{max(_g_body, _g_snd)}代 ✓")
+            else:
+                _bits.append(f"→ {_cname} 不可达")
             out.append(f"{self._gen_tname(_t)}：" + "　".join(_bits))
         return out
 

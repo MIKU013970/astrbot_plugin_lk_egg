@@ -588,6 +588,29 @@ class Genetics:
         return {"ok": True, "a": a, "b": b}
 
     @staticmethod
+    def voice_reach(start_db: int, target_db: int,
+                    max_gen: int = 50) -> Tuple[Optional[int], Optional[int]]:
+        """从 start_db 起每代配 target_db，返回「第一次达标时的分贝值, 代数」。
+
+        达标 = |分贝| ≥ 96。到达标那一代就停，所以拿到的就是**实际能达到的分贝**
+        （从 0 起手配 +100 → 50→75→87→93→**96**，返回 (96, 5)）。
+        到不了返回 (None, None)。
+        """
+        v = int(start_db)
+        _up = int(target_db) > 0
+
+        def _hit(x: int) -> bool:
+            return x >= VOICE_ABS if _up else x <= -VOICE_ABS
+
+        if _hit(v):
+            return v, 0
+        for g in range(1, max_gen + 1):
+            v = int(math.floor((v + int(target_db)) / 2.0))
+            if _hit(v):
+                return v, g
+        return None, None
+
+    @staticmethod
     def voice_need_gen(start_db: int, target_db: int, thr: Optional[int] = None,
                        max_gen: int = 20) -> Optional[int]:
         """从 start_db 起，每代配一个 target_db 的配偶，几代能冲到目标分贝。
