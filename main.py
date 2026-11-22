@@ -222,7 +222,7 @@ def _strip_emoji(text: str) -> str:
 
 _PLUGIN_DIR = Path(__file__).resolve().parent
 _PLUGIN_NAME = "astrbot_plugin_lk_egg"
-VERSION = "2.1.61"
+VERSION = "2.1.62"
 
 
 def _cand_dirs() -> List[Path]:
@@ -454,7 +454,7 @@ def _hard_save_state(state: Dict[str, Any]) -> None:
     "astrbot_plugin_lk_egg",
     "MIKU013970 & DeepSeek",
     "洛克小肥鱼全功能 + 炫彩花种订阅",
-    "2.1.61",
+    "2.1.62",
 )
 class LkMarketNotify(Star):
     def __init__(self, context: Context, config: AstrBotConfig = None):
@@ -7441,21 +7441,29 @@ class LkMarketNotify(Star):
                                partner_w_pct=_pw, max_gen=20)
             _g = gi["gen"]
             _ok = f"第{_g}代 ✓" if _g else "未达"
-            # 优先看能不能真正顶到极值（±100）；到不了再退回奖牌线（±96）。
-            # 正向 ⌊(x+100)/2⌋ 在 x<100 时永远到不了 100（卡 99），所以多数情况会显示 96。
-            def _lbl(db0: int, side: int) -> str:
+            # 声音方向跟着体型方向走：
+            #   大块头配满端配偶（声音 +100）→ 只会出婉转声
+            #   小不点配最低端配偶（声音 −100）→ 只会出粗嗓门
+            # 组合奖牌要【同一只】同时满足体型+声音，所以代数取两者的 max。
+            def _vg(db0: int, side: int):
                 _full = g.voice_need_gen(db0, side, thr=side)
                 if _full is not None:
-                    _tag, _gk = ("100" if side > 0 else "-100"), _full
-                else:
-                    _gk = g.voice_need_gen(db0, side)
-                    if _gk is None:
-                        return ("100" if side > 0 else "-100") + ":未达"
-                    _tag = ("96" if side > 0 else "-96")
-                _s = "已达标" if _gk == 0 else f"第{_gk}代"
-                return f"{_tag}:{_s}"
-            out.append(f"{self._gen_tname(_t)}：{_ok}　"
-                       f"{_lbl(_db0, 100)}　{_lbl(_db0, -100)}")
+                    return _full, ("100" if side > 0 else "-100")
+                _gv = g.voice_need_gen(db0, side)
+                return _gv, ("96" if side > 0 else "-96")
+
+            _side = 100 if _t == "big" else -100
+            _gv, _tag = _vg(_db0, _side)
+            _g_body = gi["gen"]
+            _combo = (max(_g_body, _gv)
+                      if (_g_body is not None and _gv is not None) else None)
+            _cname = "大腕" if _t == "big" else "小粗"
+            _vname = "婉转声" if _t == "big" else "粗嗓门"
+            if _combo is not None:
+                _cs = f"{_cname}（{_vname}{_tag}）：第{_combo}代 ✓"
+            else:
+                _cs = f"{_cname}（{_vname}{_tag}）：未达"
+            out.append(f"{self._gen_tname(_t)}：{_ok}　{_cs}")
         return out
 
     def _gen_block(self, g: Any, tag: str, fa: Dict[str, Any],
