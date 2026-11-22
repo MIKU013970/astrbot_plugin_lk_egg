@@ -222,7 +222,7 @@ def _strip_emoji(text: str) -> str:
 
 _PLUGIN_DIR = Path(__file__).resolve().parent
 _PLUGIN_NAME = "astrbot_plugin_lk_egg"
-VERSION = "2.1.54"
+VERSION = "2.1.55"
 
 
 def _cand_dirs() -> List[Path]:
@@ -454,7 +454,7 @@ def _hard_save_state(state: Dict[str, Any]) -> None:
     "astrbot_plugin_lk_egg",
     "MIKU013970 & DeepSeek",
     "洛克小肥鱼全功能 + 炫彩花种订阅",
-    "2.1.54",
+    "2.1.55",
 )
 class LkMarketNotify(Star):
     def __init__(self, context: Context, config: AstrBotConfig = None):
@@ -7335,23 +7335,20 @@ class LkMarketNotify(Star):
             _medals.append(f"大块头 {r['p_big'] * 100:.1f}%")
         lines.append("奖牌　" + ("　".join(_medals) if _medals else "不符合"))
 
-        # ---- 推演：目标按【这一胎的身高%】分，<50 冲小不点，≥50 冲大块头 ----
-        t1 = self._gen_target(r)
+        # ---- 推演 ----
+        # 目标按【这一胎的身高%】分：<50 冲小不点，≥50 冲大块头。
+        # 特例：父母身高一个 0% 一个 100%（子代正好卡 50%）→ 两个方向都推。
+        r2 = self._gen_pair(g, b, a) if a["name"] != b["name"] else None
+        _t1 = self._gen_targets(a, b, r)
+        _t2 = self._gen_targets(b, a, r2) if r2 else []
+        _multi = len(_t1) > 1 or len(_t2) > 1
         lines.append("")
-        lines.append(f"━━━ 推演 · 目标 {self._gen_tname(t1)} ━━━")
-        _c1 = (g.get(b["name"]) or {}).get("base") or b["name"]
-        lines.append(f"① 父={a['name']}　母={b['name']}　→ 子代 {_c1}")
-        lines.extend(self._gen_steps(g, a, b, r, t1))
-
-        # 第二种顺序：父母对调（子代物种会跟着母本变，结果可能不同）
-        if a["name"] != b["name"]:
-            r2 = self._gen_pair(g, b, a)
-            t2 = self._gen_target(r2)
+        lines.append("━━━ 推演 ━━━" if _multi
+                     else f"━━━ 推演 · 目标 {self._gen_tname(_t1[0])} ━━━")
+        lines.extend(self._gen_block(g, "①", a, b, r, _t1))
+        if r2 is not None:
             lines.append("")
-            _t2note = "" if t2 == t1 else f"（目标 {self._gen_tname(t2)}）"
-            _c2 = (g.get(a["name"]) or {}).get("base") or a["name"]
-            lines.append(f"② 父={b['name']}　母={a['name']}　→ 子代 {_c2}{_t2note}")
-            lines.extend(self._gen_steps(g, b, a, r2, t2))
+            lines.extend(self._gen_block(g, "②", b, a, r2, _t2))
 
         lines.append("")
         lines.append("⚠ 推演是 p=(父+母)/2 反复迭代推的，源 skill 只实测过单代。")
@@ -7368,9 +7365,41 @@ class LkMarketNotify(Star):
         return g.pair(_f, _m)
 
     @staticmethod
-    def _gen_target(r: Dict[str, Any]) -> str:
-        """目标按身高 50% 分：<50 小不点，≥50 大块头。"""
-        return "small" if r["child_h_pct_mean"] < 50 else "big"
+    def _gen_targets(fa: Dict[str, Any], mo: Dict[str, Any],
+                     r: Optional[Dict[str, Any]] = None) -> List[str]:
+        """目标方向列表。
+
+        常规按这一胎的身高分：<50 冲小不点，≥50 冲大块头。
+        特例：父母身高一个 0% 一个 100%（子代正好 50%）→ 两个方向都推。
+        """
+        try:
+            hs = {round(float(fa.get("h", 0)), 2), round(float(mo.get("h", 0)), 2)}
+        except (TypeError, ValueError):
+            hs = set()
+        if hs == {0.0, 100.0}:
+            return ["big", "small"]
+        if r is None:
+            return ["big"]
+        if abs(float(r.get("child_h_pct_mean", 0)) - 50.0) < 0.01:
+            return ["big", "small"]
+        return ["big" if r["child_h_pct_mean"] >= 50 else "small"]
+
+    def _gen_block(self, g: Any, tag: str, fa: Dict[str, Any],
+                   mo: Dict[str, Any], r: Dict[str, Any],
+                   targets: List[str]) -> List[str]:
+        """一个父母顺序的推演块（可能挂两个目标）。"""
+        out: List[str] = []
+        _c = (g.get(mo["name"]) or {}).get("base") or mo["name"]
+        out.append(f"{tag} 父={fa['name']}　母={mo['name']}　→ 子代 {_c}")
+        if len(targets) == 1:
+            out.extend(self._gen_steps(g, fa, mo, r, targets[0]))
+        else:
+            for i, _t in enumerate(targets):
+                if i:
+                    out.append("")
+                out.append(f"【目标 {self._gen_tname(_t)}】")
+                out.extend(self._gen_steps(g, fa, mo, r, _t))
+        return out
 
     @staticmethod
     def _gen_tname(t: str) -> str:
