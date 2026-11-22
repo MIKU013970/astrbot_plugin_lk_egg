@@ -222,7 +222,7 @@ def _strip_emoji(text: str) -> str:
 
 _PLUGIN_DIR = Path(__file__).resolve().parent
 _PLUGIN_NAME = "astrbot_plugin_lk_egg"
-VERSION = "2.1.75"
+VERSION = "2.1.76"
 
 
 def _cand_dirs() -> List[Path]:
@@ -454,7 +454,7 @@ def _hard_save_state(state: Dict[str, Any]) -> None:
     "astrbot_plugin_lk_egg",
     "MIKU013970 & DeepSeek",
     "洛克小肥鱼全功能 + 炫彩花种订阅",
-    "2.1.75",
+    "2.1.76",
 )
 class LkMarketNotify(Star):
     def __init__(self, context: Context, config: AstrBotConfig = None):
@@ -7375,7 +7375,8 @@ class LkMarketNotify(Star):
             _medals.append(f"小不点 {r['p_small'] * 100:.1f}%")
         if r["p_big"] > 0:
             _medals.append(f"大块头 {r['p_big'] * 100:.1f}%")
-        lines.append("奖牌　" + ("　".join(_medals) if _medals else "不符合"))
+        if _medals:
+            lines.append("奖牌　" + "　".join(_medals))
 
         # ---- 多代推演（一行式，含声音奖牌代数）----
         r2 = self._gen_pair(g, b, a) if a["name"] != b["name"] else None
@@ -7389,8 +7390,6 @@ class LkMarketNotify(Star):
             lines.extend(self._gen_line(g, r2))
 
         lines.append("")
-        lines.append("⚠ 推演是 p=(父+母)/2 反复迭代推的，源 skill 只实测过单代。")
-        lines.append("　每代体重还会 ±1.9pp 随机，越接近 98 越看运气。")
         return "\n".join(lines)
 
     @staticmethod
@@ -7483,20 +7482,35 @@ class LkMarketNotify(Star):
             #   双方 −100 → 搭档也是 −100，子代恒定 −100，不会变正。
             _fa_db = int(r.get("father_db") or 0)
             _mo_db = int(r.get("mother_db") or 0)
+            # 父母一正一负时，子代声音卡在中间 —— 两种牌子都要判
+            _mixed = (_fa_db > 0 > _mo_db) or (_fa_db < 0 < _mo_db)
             _pdb = _fa_db if abs(_fa_db) >= abs(_mo_db) else _mo_db
-            _v_snd, _sg = g.voice_iter(_db0, _pdb)
-            _snd_ok = _v_snd is not None
-            if _snd_ok:
-                # 声音第几代够 → 标出来（第1代就直接够就不标）
-                _sg_real = (_sg or 0) + 1
-                _bits.append(f"{_v_snd}dB ✓"
-                             + ("" if _sg_real <= 1 else f"（第{_sg_real}代够）"))
+            if _mixed:
+                # 一正一负：往两端各算一条
+                _vp, _gp = g.voice_iter(_db0, 100)
+                _vn, _gn = g.voice_iter(_db0, -100)
+                _parts = []
+                for _vv, _gg in ((_vp, _gp), (_vn, _gn)):
+                    if _vv is not None:
+                        _gr = (_gg or 0) + 1
+                        _parts.append(f"{_vv}dB ✓"
+                                      + ("" if _gr <= 1 else f"（第{_gr}代够）"))
+                _v_snd, _sg, _snd_ok = (_vp, _gp, bool(_parts))
+                if _parts:
+                    _bits.append(" / ".join(_parts))
+            else:
+                _v_snd, _sg = g.voice_iter(_db0, _pdb)
+                _snd_ok = _v_snd is not None
+                if _snd_ok:
+                    _sg_real = (_sg or 0) + 1
+                    _bits.append(f"{_v_snd}dB ✓"
+                                 + ("" if _sg_real <= 1 else f"（第{_sg_real}代够）"))
 
             # 组合奖牌按声音方向四选一（源 skill）：
-            #   大块头+婉转声=大腕　大块头+粗嗓门=大粗
-            #   小不点+婉转声=小腕　小不点+粗嗓门=小粗
+            #   大块头+婉转声=大婉　大块头+粗嗓门=大粗
+            #   小不点+婉转声=小婉　小不点+粗嗓门=小粗
             if _snd_ok and _v_snd >= 96:
-                _cname = "大腕" if _t == "big" else "小腕"
+                _cname = "大婉" if _t == "big" else "小婉"
             elif _snd_ok and _v_snd <= -96:
                 _cname = "大粗" if _t == "big" else "小粗"
             else:
@@ -7507,14 +7521,17 @@ class LkMarketNotify(Star):
                 _bits.append(f"→ {_cname} 第{_cg}代 ✓")
             else:
                 _bits.append(f"→ {_cname} 不可达")
-            # 「等效达标」提示：前面某一代已经身高到端、但体重没过线 → 不带牌
+            # 「等效达标」提示：前面某一代身高已到端、但体重没过线 → 不带牌
             _near = next((s for s in gi["steps"]
                           if _raw_g and s["gen"] != _raw_g and
                           ((s["at_max"] if _t == "big" else s["at_min"]))
                           and not s["ok"]), None)
             if _near is not None:
-                _bits.append(f"（第{_near['gen'] + 1}代已到端，体重"
-                             f"{_near['w_pct']:.2f}% 不够 → 无牌）")
+                _cn = "一二三四五六七八九十"
+                _n = _near["gen"] + 1
+                _ntxt = f"第{_cn[_n - 1]}代" if 1 <= _n <= 10 else f"第{_n}代"
+                _bits.append(f"（{_ntxt}等效"
+                             f"{'大块头' if _t == 'big' else '小不点'}）")
             out.append(f"{self._gen_tname(_t)}：" + "　".join(_bits))
         return out
 
