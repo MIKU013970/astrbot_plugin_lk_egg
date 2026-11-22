@@ -222,7 +222,7 @@ def _strip_emoji(text: str) -> str:
 
 _PLUGIN_DIR = Path(__file__).resolve().parent
 _PLUGIN_NAME = "astrbot_plugin_lk_egg"
-VERSION = "2.1.58"
+VERSION = "2.1.59"
 
 
 def _cand_dirs() -> List[Path]:
@@ -454,7 +454,7 @@ def _hard_save_state(state: Dict[str, Any]) -> None:
     "astrbot_plugin_lk_egg",
     "MIKU013970 & DeepSeek",
     "洛克小肥鱼全功能 + 炫彩花种订阅",
-    "2.1.58",
+    "2.1.59",
 )
 class LkMarketNotify(Star):
     def __init__(self, context: Context, config: AstrBotConfig = None):
@@ -7285,8 +7285,10 @@ class LkMarketNotify(Star):
                             b: Dict[str, Any]) -> str:
         """两只精灵 → 子代结果 + 两种父母顺序的推演。"""
         lines: List[str] = []
-        _fmt = lambda x: (f"身高 {x['h']:g}%{'（默认）' if x['h_default'] else ''}"
-                          f"　体重 {x['w']:g}%{'（默认）' if x['w_default'] else ''}"
+        # 百分比统一留 2 位（真实值换算过来会是 0.714286 这种长尾）
+        _num = lambda v: f"{round(float(v), 2):g}"
+        _fmt = lambda x: (f"身高 {_num(x['h'])}%{'（默认）' if x['h_default'] else ''}"
+                          f"　体重 {_num(x['w'])}%{'（默认）' if x['w_default'] else ''}"
                           f"　声音 {x['db']}{'（默认）' if x['db_default'] else ''}")
         lines.append(f"🧬 遗传 · {a['name']} × {b['name']}")
         def _real(x: Dict[str, Any]) -> str:
