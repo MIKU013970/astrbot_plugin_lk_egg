@@ -222,7 +222,7 @@ def _strip_emoji(text: str) -> str:
 
 _PLUGIN_DIR = Path(__file__).resolve().parent
 _PLUGIN_NAME = "astrbot_plugin_lk_egg"
-VERSION = "2.1.48"
+VERSION = "2.1.49"
 
 
 def _cand_dirs() -> List[Path]:
@@ -454,7 +454,7 @@ def _hard_save_state(state: Dict[str, Any]) -> None:
     "astrbot_plugin_lk_egg",
     "MIKU013970 & DeepSeek",
     "洛克小肥鱼全功能 + 炫彩花种订阅",
-    "2.1.48",
+    "2.1.49",
 )
 class LkMarketNotify(Star):
     def __init__(self, context: Context, config: AstrBotConfig = None):
@@ -5610,10 +5610,10 @@ class LkMarketNotify(Star):
         return nm
 
     def _star_review_chain(self, name: str) -> str:
-        """蛋组 / 系别池卡片用：按进化链**从最高阶段往回**取第一个有数据的星光/回顾。
+        """蛋组 / 系别池卡片用：按进化链**从最低阶段往上**取第一个有数据的星光/回顾。
 
-        wiki 只在部分阶段填了这两项 —— 二三阶段页面常有，但最高阶段（女王蜂、
-        风暴战犬、武斗酷猫、铃兰夫人…）反而没有，所以不能死取链尾，得逐个往回找。
+        用最低阶段（一阶段）的值做默认 —— 面板一格代表的就是一阶段那只、那颗蛋。
+        一阶段没有才往上看（wiki 只给部分阶段填了这两项）。
         """
         nm = str(name or "").strip()
         if not nm:
@@ -5622,7 +5622,7 @@ class LkMarketNotify(Star):
         chain = (chains.get(nm)
                  or chains.get(self._chain_map().get(nm) or nm)
                  or [nm])
-        for cand in reversed(list(chain)):
+        for cand in list(chain):          # 一阶段 → 最高阶段
             s = self._star_review_short(cand)
             if s:
                 return s
@@ -8703,12 +8703,7 @@ class LkMarketNotify(Star):
                       query: str = "") -> List[tuple]:
         """图鉴卡的行 = 原有行 + 系别 + 全阶段体重 + 技能。"""
         rows = self._species_rows_core(rec, dex, query)
-        # 系别紧跟蛋组（用户要求：系别右边跟系别球，球画在卡片标题下面）
-        _ty = self._types_of(str(rec.get("精灵") or ""))
-        if _ty:
-            _at = next((i for i, x in enumerate(rows) if x and x[0] == "蛋组"), None)
-            rows.insert(_at + 1 if _at is not None else 0,
-                        ("系别", " / ".join(_ty)))
+        # 系别不在这里重复列 —— 卡片标题下面已经有系别球（type_badges）了
         rows += self._extra_species_rows(rec)
         return rows
 
@@ -8731,10 +8726,8 @@ class LkMarketNotify(Star):
         """
         rows: List[tuple] = []
         _nm = str(rec.get("精灵") or "")
-        # 星光值：带 wiki 图标（回顾值不在这里画 —— 它逐阶段不同，统一放在「全阶段体型」里）
-        _star, _review = self._star_review_of(_nm)
-        if _star is not None:
-            rows.append(("星光值", f"★{_star}", {"icon": self._fact_icon_path("星光值")}))
+        # 星光/回顾不在这里再列一遍 —— 下面「全阶段体型」每个阶段都有自己的
+        # 图标+数值行，这里再写一次就是重复。
         # 孵化时间（普通 / 风场 / 5 倍 / 风场+5 倍）
         if bool(self._cfg("hatch_time_enabled", True)):
             rows += self._hatch_rows(rec)
