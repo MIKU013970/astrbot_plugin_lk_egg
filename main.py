@@ -222,7 +222,7 @@ def _strip_emoji(text: str) -> str:
 
 _PLUGIN_DIR = Path(__file__).resolve().parent
 _PLUGIN_NAME = "astrbot_plugin_lk_egg"
-VERSION = "2.1.76"
+VERSION = "2.1.77"
 
 
 def _cand_dirs() -> List[Path]:
@@ -454,7 +454,7 @@ def _hard_save_state(state: Dict[str, Any]) -> None:
     "astrbot_plugin_lk_egg",
     "MIKU013970 & DeepSeek",
     "洛克小肥鱼全功能 + 炫彩花种订阅",
-    "2.1.76",
+    "2.1.77",
 )
 class LkMarketNotify(Star):
     def __init__(self, context: Context, config: AstrBotConfig = None):
@@ -7363,13 +7363,8 @@ class LkMarketNotify(Star):
             lines.append(f"蛋重　{r['child_egg_w_kg']} kg")
         v = g.voice(a["db"], b["db"])
         if v:
-            _extra = []
-            if v["p_voice"]:
-                _extra.append("婉转声")
-            if v["p_rough"]:
-                _extra.append("粗嗓门")
-            lines.append(f"声音　⌊({a['db']}+{b['db']})/2⌋ = {v['child_db']}"
-                         + (f" {'/'.join(_extra)}" if _extra else ""))
+            # 只显示结果数字，不print公式、不带「婉转声/粗嗓门」标签
+            lines.append(f"声音　{v['child_db']}")
         _medals = []
         if r["p_small"] > 0:
             _medals.append(f"小不点 {r['p_small'] * 100:.1f}%")
