@@ -357,6 +357,152 @@ class Genetics:
         return {"target": "voice", "father_db": f, "need_min": need,
                 "thr": VOICE_ABS}
 
+    # ---------------------------------------------------------------- 输入解析
+    #: 默认值（用户口径：不填就是 100% / 100 / 100）
+    DEFAULT_PCT = 100.0
+    DEFAULT_DB = 100
+    VOICE_MIN, VOICE_MAX = -100, 100
+
+    def _stage_ranges(self, name: str) -> Tuple[List[Tuple[float, float]],
+                                                List[Tuple[float, float]]]:
+        """该精灵（含 base 基础形态）所有已知阶段的 (身高区间们, 体重区间们)。"""
+        hs: List[Tuple[float, float]] = []
+        ws: List[Tuple[float, float]] = []
+        seen = set()
+        for nm in (name, (self.get(name) or {}).get("base") or ""):
+            if not nm or nm in seen:
+                continue
+            seen.add(nm)
+            rec = self._species.get(nm) or {}
+            for key, bucket in (("h_stage1", hs), ("h_egg", hs), ("w_mon", ws),
+                                ("w_egg", ws)):
+                rng = rec.get(key)
+                if rng and len(rng) >= 2:
+                    bucket.append((float(rng[0]), float(rng[1])))
+        return hs, ws
+
+    @staticmethod
+    def _in(ranges: List[Tuple[float, float]], v: float) -> bool:
+        for lo, hi in ranges:
+            if lo - 1e-9 <= v <= hi + 1e-9:
+                return True
+        return False
+
+    def fits_height(self, name: str, v: float) -> bool:
+        hs, _ = self._stage_ranges(name)
+        return self._in(hs, v)
+
+    def fits_weight(self, name: str, v: float) -> bool:
+        _, ws = self._stage_ranges(name)
+        return self._in(ws, v)
+
+    @classmethod
+    def is_voice(cls, v) -> bool:
+        """声音必须是 −100~100 的整数。"""
+        if v is None:
+            return False
+        try:
+            fv = float(v)
+        except (TypeError, ValueError):
+            return False
+        if abs(fv - round(fv)) > 1e-9:
+            return False
+        return cls.VOICE_MIN <= fv <= cls.VOICE_MAX
+
+    def _one(self, name: str, toks: List[str]) -> Dict[str, Any]:
+        """解析「名字后面那串 token」→ {h, w, db, notes}。"""
+        nums: List[float] = []
+        for t in toks:
+            s = str(t).strip().rstrip("%")
+            try:
+                nums.append(float(s))
+            except ValueError:
+                return {"error": f"「{t}」不是数字"}
+        if len(nums) > 3:
+            return {"error": "一只精灵最多跟 3 个数字（身高 体重 声音）"}
+        h = w = db = None
+        notes: List[str] = []
+
+        if len(nums) == 3:
+            # 三个数：按顺序 身高 / 体重 / 声音，逐个校验
+            h, w, db = nums
+            if not self.is_voice(db):
+                return {"error": f"声音 {db:g} 超出 −100~100（且必须是整数）"}
+        elif len(nums) == 2:
+            h, v = nums
+            # 第 2 个：优先体重；不像体重但像声音 → 声音
+            if self.fits_weight(name, v):
+                w = v
+            elif self.is_voice(v):
+                db = v
+                notes.append("第2个数按声音处理")
+            else:
+                return {"error": f"{v:g} 既不是该精灵的合法体重，也不是合法声音"}
+        elif len(nums) == 1:
+            v = nums[0]
+            # 顺序：身高 → 体重 → 声音
+            if self.fits_height(name, v):
+                h = v
+            elif self.fits_weight(name, v):
+                w = v
+                notes.append("按体重处理")
+            elif self.is_voice(v):
+                db = v
+                notes.append("按声音处理")
+            else:
+                hs, ws = self._stage_ranges(name)
+                return {"error": (f"{v:g} 对不上「{name}」的身高/体重，也不是合法声音\n"
+                                  f"　身高区间 {hs or '缺数据'}　体重区间 {ws or '缺数据'}"
+                                  f"　声音 −100~100 整数")}
+
+        return {"name": name,
+                # 一律填成实际生效值（默认 100 / 100 / 100），下游不用再判 None
+                "h": float(h) if h is not None else self.DEFAULT_PCT,
+                "w": float(w) if w is not None else self.DEFAULT_PCT,
+                "db": int(round(db)) if db is not None else self.DEFAULT_DB,
+                "h_default": h is None, "w_default": w is None, "db_default": db is None,
+                "notes": notes}
+
+    def parse_pair(self, text: str) -> Dict[str, Any]:
+        """整条消息 → 两只精灵。成功 {"ok":True,"a":..,"b":..}；否则 {"error":..}。
+
+        分段方式：从左扫 token，第一个已知精灵名 = 第一只的起点，
+        下一个已知精灵名 = 第二只的起点。
+        """
+        raw = str(text or "").replace("+", " ").strip()
+        if not raw:
+            return {"error": "", "looks_like": False}
+        toks = [t for t in raw.replace("　", " ").split(" ") if t]
+        idx = [i for i, t in enumerate(toks) if self.get(t)]
+        if not idx:
+            return {"error": "", "looks_like": False}
+        if idx[0] > 1:
+            return {"error": "", "looks_like": False}      # 前面还有别的词，别抢
+        if len(idx) < 2:
+            # 只认出**一只**精灵：后面没有数字就交给「裸名查询」，有数字才提示
+            nm = self.real_name(toks[idx[0]])
+            tail = toks[idx[0] + 1:]
+            if not tail:
+                return {"error": "", "looks_like": False}
+            one = self._one(nm, tail)
+            if one.get("error"):
+                return {"error": one["error"], "looks_like": True}
+            return {"error": (f"只解析出一只「{nm}」（身高 {one['h']:g} / "
+                              f"体重 {one['w']:g} / 声音 {one['db']}），要两只才能算子代\n"
+                              f"推荐写法：{nm} 100 12.5 50 {nm} 100 12.5 -20"),
+                    "looks_like": True}
+        name_a = self.real_name(toks[idx[0]])
+        name_b = self.real_name(toks[idx[1]])
+        seg_a = toks[idx[0] + 1: idx[1]]
+        seg_b = toks[idx[1] + 1:]
+        a = self._one(name_a, seg_a)
+        if a.get("error"):
+            return {"error": f"第一只「{name_a}」：{a['error']}", "looks_like": True}
+        b = self._one(name_b, seg_b)
+        if b.get("error"):
+            return {"error": f"第二只「{name_b}」：{b['error']}", "looks_like": True}
+        return {"ok": True, "a": a, "b": b}
+
     def partners(self, me: Dict[str, Any], gender: str = "公",
                  limit: int = 12) -> List[Dict[str, Any]]:
         """给一只精灵，列出能配的异性（蛋组有交集 + 能生蛋 + 只取基础形态）。"""
