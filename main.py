@@ -222,7 +222,7 @@ def _strip_emoji(text: str) -> str:
 
 _PLUGIN_DIR = Path(__file__).resolve().parent
 _PLUGIN_NAME = "astrbot_plugin_lk_egg"
-VERSION = "2.1.67"
+VERSION = "2.1.68"
 
 
 def _cand_dirs() -> List[Path]:
@@ -454,7 +454,7 @@ def _hard_save_state(state: Dict[str, Any]) -> None:
     "astrbot_plugin_lk_egg",
     "MIKU013970 & DeepSeek",
     "洛克小肥鱼全功能 + 炫彩花种订阅",
-    "2.1.67",
+    "2.1.68",
 )
 class LkMarketNotify(Star):
     def __init__(self, context: Context, config: AstrBotConfig = None):
@@ -7484,10 +7484,18 @@ class LkMarketNotify(Star):
             elif _other:
                 _bits.append(_other)
 
-            # 双牌：体型 + 对应方向的声音都达标才 ✓
-            _cname = "大腕" if _t == "big" else "小粗"
-            _g_snd = _gpos if _t == "big" else _gneg
-            _v_snd = _vpos if _t == "big" else _vneg
+            # 组合奖牌是 4 种（源 skill）：体型 × 声音方向
+            #   大块头+婉转声=大腕　大块头+粗嗓门=大粗
+            #   小不点+婉转声=小腕　小不点+粗嗓门=小粗
+            # 要跟**这一胎声音的同号方向**配对 ——
+            # 子代 −100（粗嗓门）配大块头是「大粗」，声音 0 代就达标，
+            # 不能拿婉转声的代数（要爬 6 代）去算 max。
+            if _db0 >= 0:
+                _cname = "大腕" if _t == "big" else "小腕"
+                _g_snd, _v_snd = _gpos, _vpos
+            else:
+                _cname = "大粗" if _t == "big" else "小粗"
+                _g_snd, _v_snd = _gneg, _vneg
             if (_g_body is not None and _v_snd is not None
                     and _g_snd is not None):
                 _bits.append(f"→ {_cname} 第{max(_g_body, _g_snd)}代 ✓")
