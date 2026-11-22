@@ -222,7 +222,7 @@ def _strip_emoji(text: str) -> str:
 
 _PLUGIN_DIR = Path(__file__).resolve().parent
 _PLUGIN_NAME = "astrbot_plugin_lk_egg"
-VERSION = "2.1.73"
+VERSION = "2.1.74"
 
 
 def _cand_dirs() -> List[Path]:
@@ -454,7 +454,7 @@ def _hard_save_state(state: Dict[str, Any]) -> None:
     "astrbot_plugin_lk_egg",
     "MIKU013970 & DeepSeek",
     "洛克小肥鱼全功能 + 炫彩花种订阅",
-    "2.1.73",
+    "2.1.74",
 )
 class LkMarketNotify(Star):
     def __init__(self, context: Context, config: AstrBotConfig = None):
@@ -7439,7 +7439,20 @@ class LkMarketNotify(Star):
             }
             gi = g.generations(start, _t, partner_h_pct=_ph,
                                partner_w_pct=_pw, max_gen=20)
-            _g = gi["gen"]
+            # 代数口径：**这一胎本身就是第 1 代**。
+            # 所以「这一胎就带牌」→ 第 1 代；再配 n 次才带牌 → 第 n+1 代。
+            _pr_big = (r.get("height_at_extreme") == "max"
+                       and (r.get("child_w_pct_mean") or 0) >= 98.0)
+            _pr_small = (r.get("height_at_extreme") == "min"
+                         and (r.get("child_w_pct_mean") or 99.0) <= 2.0)
+            _this_ok = _pr_big if _t == "big" else _pr_small
+            if _this_ok:
+                _g = 1
+            elif gi["gen"]:
+                _g = gi["gen"] + 1
+            else:
+                _g = None
+            _raw_g = gi["gen"]
             _ok = f"第{_g}代 ✓" if _g else "未达"
             _g_body = gi["gen"]
 
@@ -7459,8 +7472,8 @@ class LkMarketNotify(Star):
             # 体重奖牌代数（原有逻辑，不动）
             # _g_body 为 None 有两种：① 母本 base 压根没档位数据 ② 20 代内没堆到
             _has_stage = bool((g.get(_base) or {}).get("h_stage1"))
-            if _g_body is not None:
-                _bits = [f"第{_g_body}代"]
+            if _g is not None:
+                _bits = [f"第{_g}代"]
             else:
                 _bits = ["缺档位数据" if not _has_stage else "20代内未达"]
 
@@ -7484,17 +7497,17 @@ class LkMarketNotify(Star):
             else:
                 _cname = ("大块头双牌" if _t == "big" else "小不点双牌")
             # 双牌 = 体型代数（声音这一项要么 0 代，要么永远没有）
-            if _g_body is not None and _snd_ok:
-                _bits.append(f"→ {_cname} 第{_g_body}代 ✓")
+            if _g is not None and _snd_ok:
+                _bits.append(f"→ {_cname} 第{_g}代 ✓")
             else:
                 _bits.append(f"→ {_cname} 不可达")
             # 「等效达标」提示：前面某一代已经身高到端、但体重没过线 → 不带牌
             _near = next((s for s in gi["steps"]
-                          if s["gen"] != _g and
+                          if _raw_g and s["gen"] != _raw_g and
                           ((s["at_max"] if _t == "big" else s["at_min"]))
                           and not s["ok"]), None)
             if _near is not None:
-                _bits.append(f"（第{_near['gen']}代已到端，体重"
+                _bits.append(f"（第{_near['gen'] + 1}代已到端，体重"
                              f"{_near['w_pct']:.2f}% 不够 → 无牌）")
             out.append(f"{self._gen_tname(_t)}：" + "　".join(_bits))
         return out
