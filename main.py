@@ -222,7 +222,7 @@ def _strip_emoji(text: str) -> str:
 
 _PLUGIN_DIR = Path(__file__).resolve().parent
 _PLUGIN_NAME = "astrbot_plugin_lk_egg"
-VERSION = "2.1.70"
+VERSION = "2.1.71"
 
 
 def _cand_dirs() -> List[Path]:
@@ -454,7 +454,7 @@ def _hard_save_state(state: Dict[str, Any]) -> None:
     "astrbot_plugin_lk_egg",
     "MIKU013970 & DeepSeek",
     "洛克小肥鱼全功能 + 炫彩花种订阅",
-    "2.1.70",
+    "2.1.71",
 )
 class LkMarketNotify(Star):
     def __init__(self, context: Context, config: AstrBotConfig = None):
@@ -7472,7 +7472,7 @@ class LkMarketNotify(Star):
             _v_snd = _db0
             _snd_ok = abs(_v_snd) >= 96
             if _snd_ok:
-                _bits.append(f"{_v_snd} ✓")
+                _bits.append(f"{_v_snd}dB ✓")     # 带 dB，标明这是声音不是别的数值
 
             # 组合奖牌按声音方向四选一（源 skill）：
             #   大块头+婉转声=大腕　大块头+粗嗓门=大粗
