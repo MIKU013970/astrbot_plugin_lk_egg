@@ -222,7 +222,7 @@ def _strip_emoji(text: str) -> str:
 
 _PLUGIN_DIR = Path(__file__).resolve().parent
 _PLUGIN_NAME = "astrbot_plugin_lk_egg"
-VERSION = "2.1.72"
+VERSION = "2.1.73"
 
 
 def _cand_dirs() -> List[Path]:
@@ -454,7 +454,7 @@ def _hard_save_state(state: Dict[str, Any]) -> None:
     "astrbot_plugin_lk_egg",
     "MIKU013970 & DeepSeek",
     "洛克小肥鱼全功能 + 炫彩花种订阅",
-    "2.1.72",
+    "2.1.73",
 )
 class LkMarketNotify(Star):
     def __init__(self, context: Context, config: AstrBotConfig = None):
@@ -7488,6 +7488,14 @@ class LkMarketNotify(Star):
                 _bits.append(f"→ {_cname} 第{_g_body}代 ✓")
             else:
                 _bits.append(f"→ {_cname} 不可达")
+            # 「等效达标」提示：前面某一代已经身高到端、但体重没过线 → 不带牌
+            _near = next((s for s in gi["steps"]
+                          if s["gen"] != _g and
+                          ((s["at_max"] if _t == "big" else s["at_min"]))
+                          and not s["ok"]), None)
+            if _near is not None:
+                _bits.append(f"（第{_near['gen']}代已到端，体重"
+                             f"{_near['w_pct']:.2f}% 不够 → 无牌）")
             out.append(f"{self._gen_tname(_t)}：" + "　".join(_bits))
         return out
 
