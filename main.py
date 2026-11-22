@@ -222,7 +222,7 @@ def _strip_emoji(text: str) -> str:
 
 _PLUGIN_DIR = Path(__file__).resolve().parent
 _PLUGIN_NAME = "astrbot_plugin_lk_egg"
-VERSION = "2.1.81"
+VERSION = "2.1.82"
 
 
 def _cand_dirs() -> List[Path]:
@@ -454,7 +454,7 @@ def _hard_save_state(state: Dict[str, Any]) -> None:
     "astrbot_plugin_lk_egg",
     "MIKU013970 & DeepSeek",
     "洛克小肥鱼全功能 + 炫彩花种订阅",
-    "2.1.81",
+    "2.1.82",
 )
 class LkMarketNotify(Star):
     def __init__(self, context: Context, config: AstrBotConfig = None):
@@ -7406,7 +7406,7 @@ class LkMarketNotify(Star):
         _m["db"] = mo.get("db")
         # 包络走配置（genetics_weight_noise，默认 3.0）
         try:
-            _nz = max(0.0, float(self._cfg("genetics_weight_noise", 3.0)))
+            _nz = max(0.0, float(self._cfg("genetics_weight_noise", 1.9)))
         except (TypeError, ValueError):
             _nz = 3.0
         return g.pair(_f, _m, noise=_nz)

@@ -35,6 +35,11 @@ from typing import Any, Dict, List, Optional, Tuple
 SMALL_MAX = 2.0        # 小不点：体重% ≤ 2.0
 BIG_MIN = 98.0         # 大块头：体重% ≥ 98.0
 VOICE_ABS = 96         # |分贝| ≥ 96
+#: 规则2（双亲身高同为极值）时的包络。
+#: 源 skill 实测 334 颗双亲身高都满的蛋：子代体重全部 ≥98（最低 98.0、中位 99.2）。
+#: 锁 99.17 要覆盖到 98.0 下限 → 1.17pp。
+RULE2_NOISE = 1.17
+
 #: 子代体重% 相对双亲平均的随机包络（±pp）。
 #:
 #: 依据源 skill（medal-inherit/SKILL.md 第 251 行）的实测：
@@ -42,7 +47,7 @@ VOICE_ABS = 96         # |分贝| ≥ 96
 #: 也就是说子代体重不是定值，而是在「父母平均 ±1.9pp」这个区间里随机取。
 #: 源工具默认用 1.0pp 是**保守包络**（medal.py NOISE=1.0），这里改按实测上限 1.9。
 #: 想回到保守口径把下面改成 1.0 即可。
-NOISE = 3.0
+NOISE = 1.9              # 规则1：436 颗蛋实测最大偏移 1.92pp
 RULE2_TOP = 0.9917     # 规则2 满端平台（368 颗蛋实测 99.17±0.56）
 RULE2_BOTTOM = 0.0083  # 规则2 低端锁定（新 skill RULE2_BOT=0.83%，按高端 99.17 对称推定）
 
@@ -228,8 +233,9 @@ class Genetics:
             h_at_max = hh["hatch_slot"] == hh["hatch_slots"] - 1
             h_at_min = hh["hatch_slot"] == 0
 
-        p_small = _prob_le(w_c * 100, SMALL_MAX, noise) if h_at_min else 0.0
-        p_big = _prob_ge(w_c * 100, BIG_MIN, noise) if h_at_max else 0.0
+        _nz = RULE2_NOISE if rule2 else noise      # 规则2 用更窄的实测包络
+        p_small = _prob_le(w_c * 100, SMALL_MAX, _nz) if h_at_min else 0.0
+        p_big = _prob_ge(w_c * 100, BIG_MIN, _nz) if h_at_max else 0.0
 
         out: Dict[str, Any] = {
             "mother": mo["name"], "father": fa["name"],
@@ -245,8 +251,8 @@ class Genetics:
                      else ("规则1(平均) · 身高未知，未判极值" if not h_known
                            else "规则1(平均)")),
             "child_w_pct_mean": round(w_c * 100, 2),
-            "child_w_pct_lo": round(max(0.0, w_c * 100 - noise), 2),
-            "child_w_pct_hi": round(w_c * 100 + noise, 2),
+            "child_w_pct_lo": round(max(0.0, w_c * 100 - (RULE2_NOISE if rule2 else noise)), 2),
+            "child_w_pct_hi": round(w_c * 100 + (RULE2_NOISE if rule2 else noise), 2),
             "p_small": round(p_small, 4),
             "p_big": round(p_big, 4),
             "height_at_extreme": ("max" if h_at_max else "min" if h_at_min else "none"),
