@@ -222,7 +222,7 @@ def _strip_emoji(text: str) -> str:
 
 _PLUGIN_DIR = Path(__file__).resolve().parent
 _PLUGIN_NAME = "astrbot_plugin_lk_egg"
-VERSION = "2.1.53"
+VERSION = "2.1.54"
 
 
 def _cand_dirs() -> List[Path]:
@@ -454,7 +454,7 @@ def _hard_save_state(state: Dict[str, Any]) -> None:
     "astrbot_plugin_lk_egg",
     "MIKU013970 & DeepSeek",
     "洛克小肥鱼全功能 + 炫彩花种订阅",
-    "2.1.53",
+    "2.1.54",
 )
 class LkMarketNotify(Star):
     def __init__(self, context: Context, config: AstrBotConfig = None):
@@ -7283,7 +7283,7 @@ class LkMarketNotify(Star):
 
     def _genetics_pair_text(self, g: Any, a: Dict[str, Any],
                             b: Dict[str, Any]) -> str:
-        """两只精灵 → 子代结果 + 多代推演。"""
+        """两只精灵 → 子代结果 + 两种父母顺序的推演。"""
         lines: List[str] = []
         _fmt = lambda x: (f"身高 {x['h']:g}%{'（默认）' if x['h_default'] else ''}"
                           f"　体重 {x['w']:g}%{'（默认）' if x['w_default'] else ''}"
@@ -7294,11 +7294,9 @@ class LkMarketNotify(Star):
         for x in (a, b):
             for n in (x.get("notes") or []):
                 lines.append(f"　　· {x['name']}：{n}")
-        # 能不能生蛋（去重，迪莫这种会两边都命中）
         _nb = [x["name"] for x in (a, b) if not g.breedable(x["name"])]
         if _nb:
-            lines.append(f"⚠ {'、'.join(dict.fromkeys(_nb))} 源数据标了不可繁殖"
-                         f"（仍按公式计算，仅供参考）")
+            lines.append(f"⚠ {'、'.join(dict.fromkeys(_nb))} 源数据标了不可繁殖")
         _ea = set(g.get(a["name"]).get("egg") or []) if g.get(a["name"]) else set()
         _eb = set(g.get(b["name"]).get("egg") or []) if g.get(b["name"]) else set()
         if _ea and _eb:
@@ -7308,12 +7306,7 @@ class LkMarketNotify(Star):
             else:
                 lines.append(f"蛋组交集　{'/'.join(sorted(_ea & _eb))}")
 
-        # 组成 pair() 需要的结构（输入是百分比，转 0~1）
-        fa = g.resolve(a["name"])
-        mo = g.resolve(b["name"])
-        fa["p_h"], fa["p_w"] = a["h"] / 100.0, a["w"] / 100.0
-        mo["p_h"], mo["p_w"] = b["h"] / 100.0, b["w"] / 100.0
-        r = g.pair(fa, mo)
+        r = self._gen_pair(g, a, b)
 
         lines.append("")
         lines.append("━━━ 子代 ━━━")
@@ -7321,12 +7314,9 @@ class LkMarketNotify(Star):
             lines.append(f"身高　{r['child_h_pct_mean']:.2f}% → 孵出 {r['hatch_h']} m"
                          f"（档位 {r.get('hatch_pct', 0):.0f}%）")
         else:
-            lines.append(f"身高　{r['child_h_pct_mean']:.2f}%（该物种缺身高档位数据）")
+            lines.append(f"身高　{r['child_h_pct_mean']:.2f}%")
         lines.append(f"体重　{r['child_w_pct_mean']:.2f}%"
-                     f"（{r['child_w_pct_lo']:.1f}~{r['child_w_pct_hi']:.1f}）"
-                     f"　{r['rule']}")
-        lines.append("　　（体重不是定值：在「父母平均 ±1.9pp」里随机取，"
-                     "436 颗蛋实测）")
+                     f"（{r['child_w_pct_lo']:.1f}~{r['child_w_pct_hi']:.1f}）")
         if r.get("child_egg_w_kg") is not None:
             lines.append(f"蛋重　{r['child_egg_w_kg']} kg")
         v = g.voice(a["db"], b["db"])
@@ -7337,49 +7327,84 @@ class LkMarketNotify(Star):
             if v["p_rough"]:
                 _extra.append("粗嗓门")
             lines.append(f"声音　⌊({a['db']}+{b['db']})/2⌋ = {v['child_db']}"
-                         + (f"　→ {'/'.join(_extra)}" if _extra else ""))
-        lines.append(f"奖牌　小不点 {r['p_small'] * 100:.1f}%"
-                     f"　大块头 {r['p_big'] * 100:.1f}%"
-                     f"　（身高{'到顶' if r['height_at_extreme'] == 'max' else '到底' if r['height_at_extreme'] == 'min' else '未到端'}）")
+                         + (f" {'/'.join(_extra)}" if _extra else ""))
+        _medals = []
+        if r["p_small"] > 0:
+            _medals.append(f"小不点 {r['p_small'] * 100:.1f}%")
+        if r["p_big"] > 0:
+            _medals.append(f"大块头 {r['p_big'] * 100:.1f}%")
+        lines.append("奖牌　" + ("　".join(_medals) if _medals else "不符合"))
 
-        # ---- 多代推演：从**这一胎的孩子**起步，每代再配一个同方向的极值配偶 ----
-        _target = "small" if (r["child_w_pct_mean"] < 50) else "big"
-        _ph, _pw = (0.0, 0.0) if _target == "small" else (100.0, 100.0)
-        _tname = "小不点" if _target == "small" else "大块头"
+        # ---- 推演：目标按【这一胎的身高%】分，<50 冲小不点，≥50 冲大块头 ----
+        t1 = self._gen_target(r)
         lines.append("")
-        lines.append(f"━━━ 多代推演 · 目标 {_tname} ━━━")
-        lines.append(f"起点：这一胎（身高 {r['child_h_pct_mean']:.2f}% / "
-                     f"体重 {r['child_w_pct_mean']:.2f}%）")
-        lines.append(f"前提：每代留最优子代，再配「身高{_ph:g}% + 体重{_pw:g}%」的配偶")
-        # 起点必须是子代，不是母本 —— 否则第 1 代就成了「母本再配一次」，白跳一辈
-        _base_rec = g.get(b["name"]) or {}
-        _child_name = _base_rec.get("base") or b["name"]
+        lines.append(f"━━━ 推演 · 目标 {self._gen_tname(t1)} ━━━")
+        _c1 = (g.get(b["name"]) or {}).get("base") or b["name"]
+        lines.append(f"① 父={a['name']}　母={b['name']}　→ 子代 {_c1}")
+        lines.extend(self._gen_steps(g, a, b, r, t1))
+
+        # 第二种顺序：父母对调（子代物种会跟着母本变，结果可能不同）
+        if a["name"] != b["name"]:
+            r2 = self._gen_pair(g, b, a)
+            t2 = self._gen_target(r2)
+            lines.append("")
+            _t2note = "" if t2 == t1 else f"（目标 {self._gen_tname(t2)}）"
+            _c2 = (g.get(a["name"]) or {}).get("base") or a["name"]
+            lines.append(f"② 父={b['name']}　母={a['name']}　→ 子代 {_c2}{_t2note}")
+            lines.extend(self._gen_steps(g, b, a, r2, t2))
+
+        lines.append("")
+        lines.append("⚠ 推演是 p=(父+母)/2 反复迭代推的，源 skill 只实测过单代。")
+        lines.append("　每代体重还会 ±1.9pp 随机，越接近 98 越看运气。")
+        return "\n".join(lines)
+
+    @staticmethod
+    def _gen_pair(g: Any, fa: Dict[str, Any], mo: Dict[str, Any]) -> Dict[str, Any]:
+        """按「第一只=父、第二只=母」算一次。"""
+        _f = g.resolve(fa["name"])
+        _f["p_h"], _f["p_w"] = fa["h"] / 100.0, fa["w"] / 100.0
+        _m = g.resolve(mo["name"])
+        _m["p_h"], _m["p_w"] = mo["h"] / 100.0, mo["w"] / 100.0
+        return g.pair(_f, _m)
+
+    @staticmethod
+    def _gen_target(r: Dict[str, Any]) -> str:
+        """目标按身高 50% 分：<50 小不点，≥50 大块头。"""
+        return "small" if r["child_h_pct_mean"] < 50 else "big"
+
+    @staticmethod
+    def _gen_tname(t: str) -> str:
+        return "小不点" if t == "small" else "大块头"
+
+    def _gen_steps(self, g: Any, fa: Dict[str, Any], mo: Dict[str, Any],
+                   r: Dict[str, Any], target: str) -> List[str]:
+        """从「这一胎」起步，每代配一个同方向的极值配偶，推到达标。"""
+        out: List[str] = []
+        _ph, _pw = (0.0, 0.0) if target == "small" else (100.0, 100.0)
+        _tname = self._gen_tname(target)
+        _base = (g.get(mo["name"]) or {}).get("base") or mo["name"]
+        out.append(f"起点：这一胎（身高 {r['child_h_pct_mean']:.2f}% / "
+                   f"体重 {r['child_w_pct_mean']:.2f}%）")
         start = {
-            "name": _child_name,
-            "rec": g.get(_child_name) or {},
+            "name": _base,
+            "rec": g.get(_base) or {},
             "p_h": r["child_h_pct_mean"] / 100.0,
             "p_w": r["child_w_pct_mean"] / 100.0,
-            "egg": list((g.get(_child_name) or {}).get("egg") or []),
+            "egg": list((g.get(_base) or {}).get("egg") or []),
         }
-        gi = g.generations(start, _target, partner_h_pct=_ph,
+        gi = g.generations(start, target, partner_h_pct=_ph,
                            partner_w_pct=_pw, max_gen=20)
-        lines.append("代　身高%　身高　到端　体重%　规则2　达标")
+        out.append("代　身高%　身高　　体重%　　达标")
         for s in gi["steps"]:
-            _edge = s["at_max"] if _target == "big" else s["at_min"]
-            lines.append(f"{s['gen']}　{s['h_pct']:.0f}%　"
-                         f"{s['hatch_h'] if s['hatch_h'] is not None else '—'}m　"
-                         f"{'是' if _edge else '否'}　{s['w_pct']:.1f}%　"
-                         f"{'是' if s['rule2'] else '否'}　{'✓' if s['ok'] else ''}")
+            _h = s["hatch_h"] if s["hatch_h"] is not None else "—"
+            out.append(f"{s['gen']}　{s['h_pct']:.0f}%　{_h}m　　"
+                       f"{s['w_pct']:.1f}%　"
+                       f"{'是　✓' if s['ok'] else '否'}")
         if gi["gen"]:
-            _s = gi["steps"][-1]
-            _why = ("规则2：双亲身高都到端 → 体重锁 99.17%"
-                    if _s.get("rule2") else "体重逐代累积到位")
-            lines.append(f"→ 第 {gi['gen']} 代出{_tname}（{_why}）")
+            out.append(f"→ 第 {gi['gen']} 代出{_tname}")
         else:
-            lines.append(f"→ {len(gi['steps'])} 代内没堆到线")
-        lines.append("⚠ 多代是 p=(父+母)/2 反复迭代推的，源 skill 只实测过单代。")
-        lines.append("　体重列是中心值，每一代实际还会 ±1.9pp 随机（越接近 98 越看运气）。")
-        return "\n".join(lines)
+            out.append(f"→ {len(gi['steps'])} 代内没堆到线")
+        return out
 
     @filter.command("洛克")
     async def cmd_roco(self, event: AstrMessageEvent, arg: str = ""):
