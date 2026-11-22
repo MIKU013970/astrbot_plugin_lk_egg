@@ -246,6 +246,14 @@ class Genetics:
                            if (fa["egg"] and mo["egg"]) else None),
         }
         out.update(hh)
+        # 补一份和源 medal.py 同名的字段，方便对照/引用
+        if hh.get("egg_h") is not None:
+            out["child_egg_h"] = hh["egg_h"]
+            out["child_egg_pct"] = hh.get("egg_pct")
+            out["slots"] = hh.get("egg_slots")
+        if hh.get("hatch_h") is not None:
+            out["child_hatch_h"] = hh["hatch_h"]
+            out["child_h_pct_slot"] = hh.get("hatch_pct")
         # 蛋重：用基础形态的蛋尺子
         if brec.get("w_egg"):
             wl, wh = brec["w_egg"]
