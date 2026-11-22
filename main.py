@@ -222,7 +222,7 @@ def _strip_emoji(text: str) -> str:
 
 _PLUGIN_DIR = Path(__file__).resolve().parent
 _PLUGIN_NAME = "astrbot_plugin_lk_egg"
-VERSION = "2.1.69"
+VERSION = "2.1.70"
 
 
 def _cand_dirs() -> List[Path]:
@@ -454,7 +454,7 @@ def _hard_save_state(state: Dict[str, Any]) -> None:
     "astrbot_plugin_lk_egg",
     "MIKU013970 & DeepSeek",
     "洛克小肥鱼全功能 + 炫彩花种订阅",
-    "2.1.69",
+    "2.1.70",
 )
 class LkMarketNotify(Star):
     def __init__(self, context: Context, config: AstrBotConfig = None):
@@ -7457,7 +7457,12 @@ class LkMarketNotify(Star):
                    else None)
 
             # 体重奖牌代数（原有逻辑，不动）
-            _bits = [f"第{_g_body}代"]
+            # _g_body 为 None 有两种：① 母本 base 压根没档位数据 ② 20 代内没堆到
+            _has_stage = bool((g.get(_base) or {}).get("h_stage1"))
+            if _g_body is not None:
+                _bits = [f"第{_g_body}代"]
+            else:
+                _bits = ["缺档位数据" if not _has_stage else "20代内未达"]
 
             # 声音在推演里**恒定不变**。
             # 推演 = 同一支谱系反复生，配偶声音和这一支一样，
