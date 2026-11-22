@@ -222,7 +222,7 @@ def _strip_emoji(text: str) -> str:
 
 _PLUGIN_DIR = Path(__file__).resolve().parent
 _PLUGIN_NAME = "astrbot_plugin_lk_egg"
-VERSION = "2.1.63"
+VERSION = "2.1.64"
 
 
 def _cand_dirs() -> List[Path]:
@@ -454,7 +454,7 @@ def _hard_save_state(state: Dict[str, Any]) -> None:
     "astrbot_plugin_lk_egg",
     "MIKU013970 & DeepSeek",
     "洛克小肥鱼全功能 + 炫彩花种订阅",
-    "2.1.63",
+    "2.1.64",
 )
 class LkMarketNotify(Star):
     def __init__(self, context: Context, config: AstrBotConfig = None):
@@ -7441,46 +7441,15 @@ class LkMarketNotify(Star):
                                partner_w_pct=_pw, max_gen=20)
             _g = gi["gen"]
             _ok = f"第{_g}代 ✓" if _g else "未达"
-            # 配偶固定「同种满阶」：身高 100% / 体重 100% / **声音 100**。
-            # 声音每代 = ⌊(x + 100)/2⌋，只会往 100 收敛，永远不会变负 ——
-            # 所以「父母 100」这一支不可能推出 −100（这点之前算错了，多算了个 −100 配偶）。
-            # 体型方向（大块头/小不点）只换身高体重的配偶值，声音配偶始终是 100。
-            _VA = 96                                     # 声音奖牌线
-            _g_body = gi["gen"]
-            _g_voice = g.voice_need_gen(_db0, 100)      # 往婉转声收敛
-            _voice_hit = _db0 >= _VA              # 子代本身已经是婉转声
-            if _g_voice is None:
-                _vtxt = "婉转声 未达"
-            elif _voice_hit:
-                _vtxt = "婉转声 已达标"
-            else:
-                _vtxt = f"婉转声 第{_g_voice}代"
-
-            # 粗嗓门：只有子代本身已经 ≤−96 才成立；否则配偶声音是 +100，永远拉不下来
-            if _db0 <= -_VA:
-                _rtxt = "粗嗓门 已达标"
-            else:
-                _rtxt = "粗嗓门 不可达"
-
-            # 组合奖牌（大腕/小粗）要同一只同时满足体型 + 声音
-            _cn_big = "大腕"
-            _cn_sml = "小粗"
-            def _combo(body_gen: Any, need_voice: bool, voice_gen: Any) -> str:
-                if body_gen is None:
-                    return "未达"
-                if not need_voice:
-                    return f"第{body_gen}代 ✗（声音不满足）"
-                return f"第{max(body_gen, voice_gen or 0)}代 ✓"
-
-            _cname = _cn_big if _t == "big" else _cn_sml
-            _need_v = _voice_hit or (_g_voice is not None)
-            _cgtxt = _combo(_g_body, _need_v, _g_voice)
-            if _t == "small":
-                # 小粗 = 小不点 + 粗嗓门，配偶声音 +100 时只有子代本身粗糙才行
-                _cgtxt = (f"第{max(_g_body or 0, 0)}代 ✓" if (_db0 <= -_VA and _g_body)
-                          else "不可达（配偶声音+100，压不出粗嗓门）")
-            out.append(f"{self._gen_tname(_t)}：{_ok}　{_vtxt}　{_rtxt}"
-                       f"　{_cname}：{_cgtxt}")
+            # 声音**不参与多代推演** —— 每代的配偶声音无法预知，硬假设（+100 或 −100）
+            # 都会推出自相矛盾的结果（父母 100 却能出 −100，或父母 −100 却能出婉转声）。
+            # 所以这里只给「这一胎」的声音奖牌判定：
+            #   子代分贝 = ⌊(父 + 母)/2⌋，≥96 婉转声，≤−96 粗嗓门。
+            _v_ok = _db0 >= 96
+            _r_ok = _db0 <= -96
+            out.append(f"{self._gen_tname(_t)}：{_ok}　"
+                       f"100:{'✓' if _v_ok else '✗'}　"
+                       f"-100:{'✓' if _r_ok else '✗'}")
         return out
 
     def _gen_block(self, g: Any, tag: str, fa: Dict[str, Any],
