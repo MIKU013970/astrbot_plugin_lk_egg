@@ -426,6 +426,21 @@ class Genetics:
             return False
         return cls.VOICE_MIN <= fv <= cls.VOICE_MAX
 
+    def value_to_pct(self, name: str, v: float, kind: str) -> Tuple[float, bool]:
+        """把输入数值统一成百分比。
+
+        规则：带 % 的调用方已处理；这里处理不带 % 的 ——
+        若落在该精灵的真实区间（米 / kg）内，就换算成百分比；
+        否则原样当百分比（并返回 False 表示「没换算」）。
+        返回 (百分比 0~100, 是否发生了换算)。
+        """
+        hs, ws = self._stage_ranges(name)
+        ranges = hs if kind == "h" else ws
+        for lo, hi in ranges:
+            if hi > lo and lo - 1e-9 <= v <= hi + 1e-9:
+                return max(0.0, min(100.0, (v - lo) / (hi - lo) * 100.0)), True
+        return float(v), False
+
     def _one(self, name: str, toks: List[str]) -> Dict[str, Any]:
         """解析「名字后面那串 token」→ {h, w, db, notes}。
 
@@ -445,20 +460,41 @@ class Genetics:
         notes: List[str] = []
 
         if len(items) == 3:
-            # 三个数：按顺序 身高 / 体重 / 声音，逐个校验
-            h, w, db = items[0][0], items[1][0], items[2][0]
+            # 三个数：按顺序 身高 / 体重 / 声音
+            h_v, h_pct = items[0]
+            w_v, w_pct = items[1]
+            db = items[2][0]
+            if not h_pct:
+                h_v, _conv = self.value_to_pct(name, h_v, "h")
+                if _conv:
+                    notes.append(f"身高 {items[0][0]:g} 米 → {h_v:.2f}%")
+            if not w_pct:
+                w_v, _conv = self.value_to_pct(name, w_v, "w")
+                if _conv:
+                    notes.append(f"体重 {items[1][0]:g} kg → {w_v:.2f}%")
+            if not (0 <= h_v <= 100):
+                return {"error": f"身高 {h_v:g} 超出 0~100%"}
+            if not (0 <= w_v <= 100):
+                return {"error": f"体重 {w_v:g} 超出 0~100%"}
+            h, w = h_v, w_v
             if items[2][1] and not (0 <= db <= 100):
                 return {"error": f"声音 {db:g}% 超出 0~100"}
             if not self.is_voice(db):
                 return {"error": f"声音 {db:g} 超出 −100~100（且必须是整数）"}
         elif len(items) == 2:
             h = items[0][0]
+            if not items[0][1]:
+                h, _conv = self.value_to_pct(name, h, "h")
+                if _conv:
+                    notes.append(f"身高 {items[0][0]:g} 米 → {h:.2f}%")
             v, vpct = items[1]
             if vpct:
                 w = v                      # 带 % → 直接当体重%
                 notes.append("第2个带 % 按体重%处理")
             elif self.fits_weight(name, v):
-                w = v
+                w, _conv = self.value_to_pct(name, v, "w")
+                if _conv:
+                    notes.append(f"体重 {v:g} kg → {w:.2f}%")
             elif self.is_voice(v):
                 db = v
                 notes.append("第2个按声音处理")
@@ -470,10 +506,12 @@ class Genetics:
                 h = v                      # 带 % → 直接当身高%
                 notes.append("带 % 按身高%处理")
             elif self.fits_height(name, v):
-                h = v
+                h, _conv = self.value_to_pct(name, v, "h")
+                if _conv:
+                    notes.append(f"按身高处理（{v:g} 米 → {h:.2f}%）")
             elif self.fits_weight(name, v):
-                w = v
-                notes.append("按体重处理")
+                w, _conv = self.value_to_pct(name, v, "w")
+                notes.append(f"按体重处理" + (f"（{v:g} kg → {w:.2f}%）" if _conv else ""))
             elif self.is_voice(v):
                 db = v
                 notes.append("按声音处理")
