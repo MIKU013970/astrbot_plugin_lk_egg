@@ -43,7 +43,7 @@ VOICE_ABS = 96         # |分贝| ≥ 96
 #: 想回到保守口径把下面改成 1.0 即可。
 NOISE = 1.9
 RULE2_TOP = 0.9917     # 规则2 满端平台（368 颗蛋实测 99.17±0.56）
-RULE2_BOTTOM = 0.02    # 规则2 低端上限（≤2%）
+RULE2_BOTTOM = 0.0083  # 规则2 低端锁定（新 skill RULE2_BOT=0.83%，按高端 99.17 对称推定）
 
 
 def _pct(v: Optional[float], lo: Optional[float],
@@ -199,8 +199,8 @@ class Genetics:
         p_fw = fa["p_w"] if fa["p_w"] is not None else 0.0
         p_mw = mo["p_w"] if mo["p_w"] is not None else 0.0
 
-        both_max = h_known and p_fh >= 0.985 and p_mh >= 0.985
-        both_min = h_known and p_fh <= 0.015 and p_mh <= 0.015
+        both_max = h_known and p_fh >= 0.999 and p_mh >= 0.999
+        both_min = h_known and p_fh <= 0.001 and p_mh <= 0.001
         rule2 = both_max or both_min
         p_c = (p_fh + p_mh) / 2.0
 
@@ -214,7 +214,7 @@ class Genetics:
             if both_max:
                 w_c = RULE2_TOP
             elif both_min:
-                w_c = min(RULE2_BOTTOM, (p_fw + p_mw) / 2.0)
+                w_c = RULE2_BOTTOM          # 新 skill：直接锁 0.83%
             else:
                 w_c = (p_fw + p_mw) / 2.0
 
@@ -315,10 +315,13 @@ class Genetics:
             hh = hatch_height(p_child_h, h_egg, h_stage1)
             p_h = hh.get("hatch_pct", 0.0) / 100.0 if hh.get("hatch_slot") is not None else p_child_h
 
-            # 规则2：**双亲**身高都满（亲本 100% + 配偶 100%）→ 子代体重锁满端平台
-            both_max = parent_h >= 0.985 and ph_partner >= 0.985
+            # 规则2：**双亲**身高都在极值（都满 / 都空）→ 子代体重锁到那一端
+            both_max = parent_h >= 0.999 and ph_partner >= 0.999
+            both_min = parent_h <= 0.001 and ph_partner <= 0.001
             if both_max:
                 p_w = RULE2_TOP
+            elif both_min:
+                p_w = RULE2_BOTTOM          # 新 skill：低端直接锁 0.83%
             else:
                 p_w = (p_w + pw_partner) / 2.0
 
@@ -332,7 +335,7 @@ class Genetics:
                 "hatch_h": hh.get("hatch_h"),
                 "at_max": at_max, "at_min": at_min,
                 "w_pct": round(w_pct, 2),
-                "rule2": both_max,
+                "rule2": both_max or both_min,
                 "ok": (at_max and w_pct >= BIG_MIN) if target == "big"
                       else (at_min and w_pct <= SMALL_MAX),
                 # ±1pp 包络下「有概率拿到」的判定
