@@ -322,6 +322,41 @@ class Genetics:
             "note": "由单代公式 p=(父+母)/2 迭代推导；源 skill 只实测过单代",
         }
 
+    # ---------------------------------------------------------------- 声音奖牌
+    @staticmethod
+    def voice(fa_db: Optional[int], mo_db: Optional[int]) -> Dict[str, Any]:
+        """子代分贝 = ⌊(父 + 母) / 2⌋（奇数和向下取整）。
+
+        ≥ +96 → 婉转声；≤ −96 → 粗嗓门（源 skill：478 颗蛋 474 颗吻合）。
+        两个分贝都要有才给结果，缺一个就返回空 dict（不猜）。
+        """
+        if fa_db is None or mo_db is None:
+            return {}
+        child = int(math.floor((int(fa_db) + int(mo_db)) / 2.0))
+        return {
+            "father_db": int(fa_db), "mother_db": int(mo_db),
+            "child_db": child,
+            "p_voice": 1.0 if child >= VOICE_ABS else 0.0,
+            "p_rough": 1.0 if child <= -VOICE_ABS else 0.0,
+        }
+
+    @staticmethod
+    def voice_need(fa_db: int, target: str = "voice") -> Dict[str, Any]:
+        """反解：给定父本分贝，母本分贝要到多少才出声音奖牌。
+
+        婉转声：⌊(父+母)/2⌋ ≥ 96  ⇔  父+母 ≥ 192  ⇔  母 ≥ 192 − 父
+        粗嗓门：⌊(父+母)/2⌋ ≤ −96 ⇔  (父+母)/2 < −95 ⇔ 父+母 ≤ −191 ⇔ 母 ≤ −191 − 父
+        （向下取整的边界差 1，这里按严格推导写）
+        """
+        f = int(fa_db)
+        if target == "rough":
+            need = -191 - f
+            return {"target": "rough", "father_db": f, "need_max": need,
+                    "thr": -VOICE_ABS}
+        need = 192 - f
+        return {"target": "voice", "father_db": f, "need_min": need,
+                "thr": VOICE_ABS}
+
     def partners(self, me: Dict[str, Any], gender: str = "公",
                  limit: int = 12) -> List[Dict[str, Any]]:
         """给一只精灵，列出能配的异性（蛋组有交集 + 能生蛋 + 只取基础形态）。"""

@@ -222,7 +222,7 @@ def _strip_emoji(text: str) -> str:
 
 _PLUGIN_DIR = Path(__file__).resolve().parent
 _PLUGIN_NAME = "astrbot_plugin_lk_egg"
-VERSION = "2.1.44"
+VERSION = "2.1.45"
 
 
 def _cand_dirs() -> List[Path]:
@@ -454,7 +454,7 @@ def _hard_save_state(state: Dict[str, Any]) -> None:
     "astrbot_plugin_lk_egg",
     "MIKU013970 & DeepSeek",
     "洛克小肥鱼全功能 + 炫彩花种订阅",
-    "2.1.44",
+    "2.1.45",
 )
 class LkMarketNotify(Star):
     def __init__(self, context: Context, config: AstrBotConfig = None):
@@ -7274,16 +7274,36 @@ class LkMarketNotify(Star):
         name = args[0]
         gender = ""
         weight: Optional[float] = None
+        height: Optional[float] = None
+        db_f: Optional[int] = None
+        db_m: Optional[int] = None
+        _nums: List[float] = []
         for a in args[1:]:
             if a in ("公", "雄", "male", "M", "m"):
                 gender = "公"
             elif a in ("母", "雌", "female", "F", "f"):
                 gender = "母"
             else:
+                # 分贝可以写成 db=120 / 120db
+                _s = str(a)
+                if _s.lower().startswith("db="):
+                    try:
+                        db_f = int(float(_s.split("=", 1)[1]))
+                    except (TypeError, ValueError):
+                        pass
+                    continue
                 try:
-                    weight = float(a)
+                    _nums.append(float(_s))
                 except (TypeError, ValueError):
                     pass
+        # 约定：第1个数=体重，第2个(<5)=身高，第3个(或 |x|≥10 的)=分贝
+        if _nums:
+            weight = _nums[0]
+        for v in _nums[1:]:
+            if abs(v) >= 10 and db_f is None:
+                db_f = int(v)
+            elif abs(v) < 5 and height is None:
+                height = v
         if not gender:
             gender = "公"          # 没写就按公本算（列母本是主用法）
         try:
@@ -7297,7 +7317,7 @@ class LkMarketNotify(Star):
                         f"可能是新精灵、或名字写法不同（源数据里有「（xx的样子）」这类形态名）。")
             if not g.breedable(name):
                 return f"「{name}」不能生蛋（源数据标了不可繁殖），算不了子代。"
-            me = g.resolve(name, w=weight)
+            me = g.resolve(name, h=height, w=weight)
             rn = me["name"]
             w_rng = me["w_range"]
             lines: List[str] = []
@@ -7408,6 +7428,28 @@ class LkMarketNotify(Star):
                                  f"配 0% 的母本就有一半以上机会（±1pp 包络）")
                 lines.append("💡 想出大块头：双亲身高达标（≥98.5%）时体重会被锁到 99.2 平台"
                              "（规则2），否则要双亲体重% 都 ≥98")
+
+            # ---- 声音奖牌（子代分贝 = ⌊(父+母)/2⌋）----
+            lines.append("")
+            lines.append("━━━ 声音奖牌 ━━━")
+            lines.append("子代分贝 = ⌊(父 + 母) / 2⌋（奇数和向下取整）"
+                         "　≥96 婉转声　≤−96 粗嗓门")
+            if db_f is None:
+                lines.append("给个分贝我就能反解：洛克 遗传 "
+                             f"{rn} {gender} {weight:g} 120")
+            else:
+                _v1 = g.voice_need(db_f, "voice")
+                _v2 = g.voice_need(db_f, "rough")
+                lines.append(f"父本分贝 {db_f} → 母本要 ≥{_v1['need_min']}"
+                             f" 才出婉转声（子代 ≥{_v1['thr']}）")
+                lines.append(f"　　　　　　　{db_f} → 母本要 ≤{_v2['need_max']}"
+                             f" 才出粗嗓门（子代 ≤{_v2['thr']}）")
+                if db_m is not None:
+                    _v = g.voice(db_f, db_m)
+                    if _v:
+                        lines.append(f"父 {db_f} + 母 {db_m} → 子代 {_v['child_db']}"
+                                     f"（婉转声 {_v['p_voice'] * 100:.0f}% / "
+                                     f"粗嗓门 {_v['p_rough'] * 100:.0f}%）")
             return "\n".join(lines)
         except Exception as e:                               # noqa: BLE001
             logger.warning(f"[遗传] 计算异常: {type(e).__name__}: {e}")
