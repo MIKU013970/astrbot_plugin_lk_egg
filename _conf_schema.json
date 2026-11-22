@@ -373,6 +373,12 @@
     "default": true,
     "hint": "关掉后只显示这一胎的结果（身高/体重/蛋重/声音/奖牌），不再推演几代能出双牌"
   },
+  "genetics_enabled": {
+    "description": "启用遗传计算",
+    "type": "bool",
+    "default": true,
+    "hint": "关掉后「直接发两只精灵」的遗传计算完全不响应，这类消息按普通聊天处理"
+  },
   "genetics_weight_noise": {
     "description": "子代体重随机包络（±pp）",
     "type": "float",

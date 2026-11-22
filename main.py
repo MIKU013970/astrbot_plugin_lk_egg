@@ -222,7 +222,7 @@ def _strip_emoji(text: str) -> str:
 
 _PLUGIN_DIR = Path(__file__).resolve().parent
 _PLUGIN_NAME = "astrbot_plugin_lk_egg"
-VERSION = "2.1.80"
+VERSION = "2.1.81"
 
 
 def _cand_dirs() -> List[Path]:
@@ -454,7 +454,7 @@ def _hard_save_state(state: Dict[str, Any]) -> None:
     "astrbot_plugin_lk_egg",
     "MIKU013970 & DeepSeek",
     "洛克小肥鱼全功能 + 炫彩花种订阅",
-    "2.1.80",
+    "2.1.81",
 )
 class LkMarketNotify(Star):
     def __init__(self, context: Context, config: AstrBotConfig = None):
@@ -7274,6 +7274,12 @@ class LkMarketNotify(Star):
 
         解析不出来就**静默**（不干扰聊天）；只有明显是遗传输入但数据有错时才提示一次。
         """
+        # 遗传总开关：关掉后整段遗传计算都不响应
+        if not bool(self._cfg("genetics_enabled", True)):
+            return
+        # 遗传总开关：关掉后整段遗传计算都不响应
+        if not bool(self._cfg("genetics_enabled", True)):
+            return
         if not bool(self._cfg("genetics_auto", True)):
             return
         raw = (getattr(event, "message_str", "") or "").strip()
