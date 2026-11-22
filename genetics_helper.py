@@ -253,6 +253,17 @@ class Genetics:
                            if (fa["egg"] and mo["egg"]) else None),
         }
         out.update(hh)
+        # 声音奖牌：子代分贝 = ⌊(父 + 母)/2⌋（向下取整）。
+        # 注意这个迭代的正负不对称：⌊(x+100)/2⌋ 在 x<100 时永远 <100 → 正向最终卡 99；
+        # 负向因为向下取整能到 −100。奖牌线是 ±96，所以判定只看 |dB| ≥ 96。
+        if fa.get("db") is not None and mo.get("db") is not None:
+            _d = int(math.floor((float(fa["db"]) + float(mo["db"])) / 2.0))
+            out.update({
+                "father_db": int(fa["db"]), "mother_db": int(mo["db"]),
+                "child_db": _d,
+                "p_voice": 1.0 if _d >= VOICE_ABS else 0.0,
+                "p_rough": 1.0 if _d <= -VOICE_ABS else 0.0,
+            })
         # 补一份和源 medal.py 同名的字段，方便对照/引用
         if hh.get("egg_h") is not None:
             out["child_egg_h"] = hh["egg_h"]
@@ -585,11 +596,14 @@ class Genetics:
         返回代数；max_gen 内没到就返回 None。
         """
         v = int(start_db)
-        if abs(v) >= VOICE_ABS:
+        _up = int(target_db) > 0        # 冲婉转声还是粗嗓门，判定方向不同
+        def _hit(x: int) -> bool:
+            return x >= VOICE_ABS if _up else x <= -VOICE_ABS
+        if _hit(v):
             return 0
         for g in range(1, max_gen + 1):
             v = int(math.floor((v + int(target_db)) / 2.0))
-            if abs(v) >= VOICE_ABS:
+            if _hit(v):
                 return g
         return None
 

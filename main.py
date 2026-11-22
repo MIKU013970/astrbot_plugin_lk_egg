@@ -222,7 +222,7 @@ def _strip_emoji(text: str) -> str:
 
 _PLUGIN_DIR = Path(__file__).resolve().parent
 _PLUGIN_NAME = "astrbot_plugin_lk_egg"
-VERSION = "2.1.59"
+VERSION = "2.1.60"
 
 
 def _cand_dirs() -> List[Path]:
@@ -454,7 +454,7 @@ def _hard_save_state(state: Dict[str, Any]) -> None:
     "astrbot_plugin_lk_egg",
     "MIKU013970 & DeepSeek",
     "洛克小肥鱼全功能 + 炫彩花种订阅",
-    "2.1.59",
+    "2.1.60",
 )
 class LkMarketNotify(Star):
     def __init__(self, context: Context, config: AstrBotConfig = None):
@@ -7381,8 +7381,10 @@ class LkMarketNotify(Star):
         """按「第一只=父、第二只=母」算一次。"""
         _f = g.resolve(fa["name"])
         _f["p_h"], _f["p_w"] = fa["h"] / 100.0, fa["w"] / 100.0
+        _f["db"] = fa.get("db")          # 不塞进去 pair() 就算不出子代分贝
         _m = g.resolve(mo["name"])
         _m["p_h"], _m["p_w"] = mo["h"] / 100.0, mo["w"] / 100.0
+        _m["db"] = mo.get("db")
         return g.pair(_f, _m)
 
     @staticmethod
@@ -7422,11 +7424,14 @@ class LkMarketNotify(Star):
                                partner_w_pct=_pw, max_gen=20)
             _g = gi["gen"]
             _ok = f"第{_g}代 ✓" if _g else "未达"
+            # 配偶配满端（±100），但**判定线是 ±96**：
+            # 迭代式 ⌊(x+100)/2⌋ 在 x<100 时永远 <100，最终卡在 99，
+            # 所以显示 100 会误导 —— 奖牌本来就只看 |dB| ≥ 96。
             _v1 = g.voice_need_gen(_db0, 100)
             _v2 = g.voice_need_gen(_db0, -100)
-            _s1 = f"第{_v1}代" if _v1 else "未达"
-            _s2 = f"第{_v2}代" if _v2 else "未达"
-            out.append(f"{self._gen_tname(_t)}：{_ok}　100:{_s1}　-100:{_s2}")
+            _s1 = ("已达标" if _v1 == 0 else f"第{_v1}代") if _v1 is not None else "未达"
+            _s2 = ("已达标" if _v2 == 0 else f"第{_v2}代") if _v2 is not None else "未达"
+            out.append(f"{self._gen_tname(_t)}：{_ok}　96:{_s1}　-96:{_s2}")
         return out
 
     def _gen_block(self, g: Any, tag: str, fa: Dict[str, Any],
