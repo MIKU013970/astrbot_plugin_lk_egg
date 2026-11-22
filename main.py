@@ -222,7 +222,7 @@ def _strip_emoji(text: str) -> str:
 
 _PLUGIN_DIR = Path(__file__).resolve().parent
 _PLUGIN_NAME = "astrbot_plugin_lk_egg"
-VERSION = "2.1.64"
+VERSION = "2.1.65"
 
 
 def _cand_dirs() -> List[Path]:
@@ -454,7 +454,7 @@ def _hard_save_state(state: Dict[str, Any]) -> None:
     "astrbot_plugin_lk_egg",
     "MIKU013970 & DeepSeek",
     "洛克小肥鱼全功能 + 炫彩花种订阅",
-    "2.1.64",
+    "2.1.65",
 )
 class LkMarketNotify(Star):
     def __init__(self, context: Context, config: AstrBotConfig = None):
@@ -7441,15 +7441,31 @@ class LkMarketNotify(Star):
                                partner_w_pct=_pw, max_gen=20)
             _g = gi["gen"]
             _ok = f"第{_g}代 ✓" if _g else "未达"
-            # 声音**不参与多代推演** —— 每代的配偶声音无法预知，硬假设（+100 或 −100）
-            # 都会推出自相矛盾的结果（父母 100 却能出 −100，或父母 −100 却能出婉转声）。
-            # 所以这里只给「这一胎」的声音奖牌判定：
-            #   子代分贝 = ⌊(父 + 母)/2⌋，≥96 婉转声，≤−96 粗嗓门。
-            _v_ok = _db0 >= 96
-            _r_ok = _db0 <= -96
-            out.append(f"{self._gen_tname(_t)}：{_ok}　"
-                       f"100:{'✓' if _v_ok else '✗'}　"
-                       f"-100:{'✓' if _r_ok else '✗'}")
+            _g_body = gi["gen"]
+
+            # 声音单独推演（配偶固定「同种满阶」= 100 dB）：
+            #   ⌊(x + 100)/2⌋ 只会往 100 收敛，几代到 96 就是声音奖牌的代数。
+            #   粗嗓门：配偶是 +100，压不下来 —— 只有子代本身 ≤−96 才算（0 代）。
+            _gv = 0 if _db0 >= 96 else g.voice_need_gen(_db0, 100)
+            _gr = 0 if _db0 <= -96 else None
+
+            # 组合奖牌要【同一只】同时满足体型 + 声音，所以取两者的 max；
+            # 任何一项不达标就整块拿不到。
+            _cb = (max(_g_body, _gv) if (_g_body is not None and _gv is not None)
+                   else None)
+            _cs = (max(_g_body, _gr) if (_g_body is not None and _gr is not None)
+                   else None)
+
+            _vtxt = ("已达标" if _gv == 0 else
+                     (f"第{_gv}代" if _gv is not None else "未达"))
+            _rtxt = ("已达标" if _gr == 0 else "不可达") if _gr is not None else "不可达"
+            _cname = "大腕" if _t == "big" else "小粗"
+            _cgt = (f"第{max(_g_body, _gv)}代 ✓" if _t == "big" and _cb is not None else
+                    f"第{max(_g_body, _gr)}代 ✓" if _t == "small" and _cs is not None else
+                    "不可达（声音不达标）")
+            out.append(f"{self._gen_tname(_t)}：第{_g_body}代　"
+                       f"婉转声 {_vtxt}　粗嗓门 {_rtxt}　"
+                       f"→ {_cname}：{_cgt}")
         return out
 
     def _gen_block(self, g: Any, tag: str, fa: Dict[str, Any],
