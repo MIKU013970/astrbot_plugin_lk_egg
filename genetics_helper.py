@@ -588,17 +588,20 @@ class Genetics:
         return {"ok": True, "a": a, "b": b}
 
     @staticmethod
-    def voice_need_gen(start_db: int, target_db: int,
+    def voice_need_gen(start_db: int, target_db: int, thr: Optional[int] = None,
                        max_gen: int = 20) -> Optional[int]:
-        """从 start_db 起，每代配一个 target_db 的配偶，几代能让 |分贝| ≥96。
+        """从 start_db 起，每代配一个 target_db 的配偶，几代能冲到目标分贝。
 
+        thr 默认取奖牌线（±96）；传 ±100 表示「要求真正顶到极值」。
         子代分贝 = ⌊(父 + 母)/2⌋（向下取整），逐代迭代。
-        返回代数；max_gen 内没到就返回 None。
+        注意正负不对称：正向 ⌊(x+100)/2⌋ 在 x<100 时永远 <100，最终卡 99；
+        负向因向下取整能到 −100。
         """
         v = int(start_db)
         _up = int(target_db) > 0        # 冲婉转声还是粗嗓门，判定方向不同
+        _t = int(thr) if thr is not None else (VOICE_ABS if _up else -VOICE_ABS)
         def _hit(x: int) -> bool:
-            return x >= VOICE_ABS if _up else x <= -VOICE_ABS
+            return x >= _t if _up else x <= _t
         if _hit(v):
             return 0
         for g in range(1, max_gen + 1):

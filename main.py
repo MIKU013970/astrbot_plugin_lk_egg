@@ -222,7 +222,7 @@ def _strip_emoji(text: str) -> str:
 
 _PLUGIN_DIR = Path(__file__).resolve().parent
 _PLUGIN_NAME = "astrbot_plugin_lk_egg"
-VERSION = "2.1.60"
+VERSION = "2.1.61"
 
 
 def _cand_dirs() -> List[Path]:
@@ -454,7 +454,7 @@ def _hard_save_state(state: Dict[str, Any]) -> None:
     "astrbot_plugin_lk_egg",
     "MIKU013970 & DeepSeek",
     "洛克小肥鱼全功能 + 炫彩花种订阅",
-    "2.1.60",
+    "2.1.61",
 )
 class LkMarketNotify(Star):
     def __init__(self, context: Context, config: AstrBotConfig = None):
@@ -5707,18 +5707,35 @@ class LkMarketNotify(Star):
                 return n
         return self._parse_hatch_seconds(rec.get("孵蛋时间"))
 
+    @property
+    def hatch_weekend_mult(self) -> float:
+        """周末（孵蛋加速日）的加速倍率。
+
+        wiki 上的活动名是「500% 孵蛋加速日」，这里有两种读法：
+          · 加速 **+500%** → 总速度 600% = **6 倍**（现在的默认）
+          · 速度 **变为 500%** → **5 倍**
+        你服实测是几倍就在配置里填几，默认按 6 倍。
+        """
+        try:
+            return max(1.0, float(self._cfg("hatch_weekend_mult", 6)))
+        except (TypeError, ValueError):
+            return 6.0
+
     def _hatch_rows(self, rec: Dict[str, Any]) -> List[tuple]:
-        """孵化时间：普通 / 挂风场 / 周末 5 倍 / 风场 + 5 倍（压成两行，卡片不臃肿）。"""
+        """孵化时间：普通 / 挂风场 / 周末加速 / 风场 + 加速（压成两行，卡片不臃肿）。"""
         base = self._hatch_base_seconds(rec)
         if not base:
             return []
+        wind = self.hatch_wind_mult
+        wk = self.hatch_weekend_mult
         wind = self.hatch_wind_mult
         return [
             ("", "—— 孵化 ——"),
             ("", f"普通 {self._fmt_duration(base)}"
                  f"　·　挂风场（×{wind:g}） {self._fmt_duration(base / wind)}"),
-            ("", f"周末 5 倍速 {self._fmt_duration(base / 5)}"
-                 f"　·　风场 + 5 倍速（×{wind * 5:g}） {self._fmt_duration(base / (wind * 5))}"),
+            ("", f"周末 {wk:g} 倍速 {self._fmt_duration(base / wk)}"
+                 f"　·　风场 + {wk:g} 倍速（×{wind * wk:g}） "
+                 f"{self._fmt_duration(base / (wind * wk))}"),
         ]
 
     def _shiny_grid_cards(self, rows: List[Dict[str, Any]]) -> List[Dict[str, Any]]:
@@ -7424,14 +7441,21 @@ class LkMarketNotify(Star):
                                partner_w_pct=_pw, max_gen=20)
             _g = gi["gen"]
             _ok = f"第{_g}代 ✓" if _g else "未达"
-            # 配偶配满端（±100），但**判定线是 ±96**：
-            # 迭代式 ⌊(x+100)/2⌋ 在 x<100 时永远 <100，最终卡在 99，
-            # 所以显示 100 会误导 —— 奖牌本来就只看 |dB| ≥ 96。
-            _v1 = g.voice_need_gen(_db0, 100)
-            _v2 = g.voice_need_gen(_db0, -100)
-            _s1 = ("已达标" if _v1 == 0 else f"第{_v1}代") if _v1 is not None else "未达"
-            _s2 = ("已达标" if _v2 == 0 else f"第{_v2}代") if _v2 is not None else "未达"
-            out.append(f"{self._gen_tname(_t)}：{_ok}　96:{_s1}　-96:{_s2}")
+            # 优先看能不能真正顶到极值（±100）；到不了再退回奖牌线（±96）。
+            # 正向 ⌊(x+100)/2⌋ 在 x<100 时永远到不了 100（卡 99），所以多数情况会显示 96。
+            def _lbl(db0: int, side: int) -> str:
+                _full = g.voice_need_gen(db0, side, thr=side)
+                if _full is not None:
+                    _tag, _gk = ("100" if side > 0 else "-100"), _full
+                else:
+                    _gk = g.voice_need_gen(db0, side)
+                    if _gk is None:
+                        return ("100" if side > 0 else "-100") + ":未达"
+                    _tag = ("96" if side > 0 else "-96")
+                _s = "已达标" if _gk == 0 else f"第{_gk}代"
+                return f"{_tag}:{_s}"
+            out.append(f"{self._gen_tname(_t)}：{_ok}　"
+                       f"{_lbl(_db0, 100)}　{_lbl(_db0, -100)}")
         return out
 
     def _gen_block(self, g: Any, tag: str, fa: Dict[str, Any],

@@ -128,6 +128,12 @@
     "default": 2,
     "hint": "挂风场能把孵化时间缩到几分之一。默认按 2 倍算；你服实测是几倍就填几"
   },
+  "hatch_weekend_mult": {
+    "description": "周末（孵蛋加速日）加速倍率",
+    "type": "float",
+    "default": 6.0,
+    "hint": "wiki 活动名是「500% 孵蛋加速日」：按 +500% 算是 6 倍（默认），按「变为500%」算是 5 倍；你服实测几倍就填几"
+  },
   "market_quote_enabled": {
     "description": "查蛋时附带实时行情",
     "type": "bool",
