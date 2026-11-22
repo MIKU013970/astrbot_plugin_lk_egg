@@ -222,7 +222,7 @@ def _strip_emoji(text: str) -> str:
 
 _PLUGIN_DIR = Path(__file__).resolve().parent
 _PLUGIN_NAME = "astrbot_plugin_lk_egg"
-VERSION = "2.1.74"
+VERSION = "2.1.75"
 
 
 def _cand_dirs() -> List[Path]:
@@ -454,7 +454,7 @@ def _hard_save_state(state: Dict[str, Any]) -> None:
     "astrbot_plugin_lk_egg",
     "MIKU013970 & DeepSeek",
     "洛克小肥鱼全功能 + 炫彩花种订阅",
-    "2.1.74",
+    "2.1.75",
 )
 class LkMarketNotify(Star):
     def __init__(self, context: Context, config: AstrBotConfig = None):
@@ -7477,28 +7477,34 @@ class LkMarketNotify(Star):
             else:
                 _bits = ["缺档位数据" if not _has_stage else "20代内未达"]
 
-            # 声音在推演里**恒定不变**。
-            # 推演 = 同一支谱系反复生，配偶声音和这一支一样，
-            # 子代分贝 = ⌊(父 + 母)/2⌋ 每代都还是同一个数。
-            # 父母 −100 → 子代 −100 → 孙代 −100 … 一万代也不会变正。
-            # 所以「声音第几代达标」这件事不存在：要么这一胎就已经达标，要么永远不达标。
-            _v_snd = _db0
-            _snd_ok = abs(_v_snd) >= 96
+            # 声音**跟着迭代**：每代和「离 0 更远」的那个亲本生（搭档固定）。
+            #   91 + 100 → 子代 95（第1代，不够 96）
+            #   → 再和 100 生 97（第2代，达标）
+            #   双方 −100 → 搭档也是 −100，子代恒定 −100，不会变正。
+            _fa_db = int(r.get("father_db") or 0)
+            _mo_db = int(r.get("mother_db") or 0)
+            _pdb = _fa_db if abs(_fa_db) >= abs(_mo_db) else _mo_db
+            _v_snd, _sg = g.voice_iter(_db0, _pdb)
+            _snd_ok = _v_snd is not None
             if _snd_ok:
-                _bits.append(f"{_v_snd}dB ✓")     # 带 dB，标明这是声音不是别的数值
+                # 声音第几代够 → 标出来（第1代就直接够就不标）
+                _sg_real = (_sg or 0) + 1
+                _bits.append(f"{_v_snd}dB ✓"
+                             + ("" if _sg_real <= 1 else f"（第{_sg_real}代够）"))
 
             # 组合奖牌按声音方向四选一（源 skill）：
             #   大块头+婉转声=大腕　大块头+粗嗓门=大粗
             #   小不点+婉转声=小腕　小不点+粗嗓门=小粗
-            if _v_snd >= 96:
+            if _snd_ok and _v_snd >= 96:
                 _cname = "大腕" if _t == "big" else "小腕"
-            elif _v_snd <= -96:
+            elif _snd_ok and _v_snd <= -96:
                 _cname = "大粗" if _t == "big" else "小粗"
             else:
                 _cname = ("大块头双牌" if _t == "big" else "小不点双牌")
             # 双牌 = 体型代数（声音这一项要么 0 代，要么永远没有）
             if _g is not None and _snd_ok:
-                _bits.append(f"→ {_cname} 第{_g}代 ✓")
+                _cg = max(_g, (_sg or 0) + 1)
+                _bits.append(f"→ {_cname} 第{_cg}代 ✓")
             else:
                 _bits.append(f"→ {_cname} 不可达")
             # 「等效达标」提示：前面某一代已经身高到端、但体重没过线 → 不带牌

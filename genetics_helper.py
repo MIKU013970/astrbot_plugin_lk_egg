@@ -27,6 +27,7 @@ from __future__ import annotations
 
 import json
 import math
+import re
 from pathlib import Path
 from typing import Any, Dict, List, Optional, Tuple
 
@@ -463,11 +464,12 @@ class Genetics:
         items: List[Tuple[float, bool]] = []
         for t in toks:
             s = str(t).strip()
-            is_pct = s.endswith("%")
-            try:
-                items.append((float(s.rstrip("%")), is_pct))
-            except ValueError:
+            # 支持连写：0%1.37%  →  0% + 1.37%
+            _parts = re.findall(r"-?\d+(?:\.\d+)?%?", s)
+            if not _parts or "".join(_parts) != s:
                 return {"error": f"「{t}」不是数字"}
+            for _p in _parts:
+                items.append((float(_p.rstrip("%")), _p.endswith("%")))
         if len(items) > 3:
             return {"error": "一只精灵最多跟 3 个数字（身高 体重 声音）"}
         h = w = db = None
@@ -635,6 +637,27 @@ class Genetics:
             if _hit(v):
                 return g
         return None
+
+    @staticmethod
+    def voice_iter(start_db: int, partner_db: int,
+                   max_gen: int = 20) -> Tuple[Optional[int], Optional[int]]:
+        """声音迭代：从 start_db 起，每代和「搭档」生一胎。
+
+        搭档取父母中**离 0 更远**的那个（|dB| 更大），也就是说每代都用更极端的那只
+        去拉子代 —— 91 + 100 生出 95，再和 100 生 → 97，再 → 98 … 收敛到 100。
+        父母都是 −100 时搭档也是 −100，恒定不变。
+
+        返回 (第一次达标时的分贝, 代数)；到不了返回 (None, None)。
+        """
+        v = int(start_db)
+        pv = int(partner_db)
+        if abs(v) >= VOICE_ABS:
+            return v, 0
+        for g in range(1, max_gen + 1):
+            v = int(math.floor((v + pv) / 2.0))
+            if abs(v) >= VOICE_ABS:
+                return v, g
+        return None, None
 
     def partners(self, me: Dict[str, Any], gender: str = "公",
                  limit: int = 12) -> List[Dict[str, Any]]:
