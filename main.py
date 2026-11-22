@@ -222,7 +222,7 @@ def _strip_emoji(text: str) -> str:
 
 _PLUGIN_DIR = Path(__file__).resolve().parent
 _PLUGIN_NAME = "astrbot_plugin_lk_egg"
-VERSION = "2.1.77"
+VERSION = "2.1.78"
 
 
 def _cand_dirs() -> List[Path]:
@@ -454,7 +454,7 @@ def _hard_save_state(state: Dict[str, Any]) -> None:
     "astrbot_plugin_lk_egg",
     "MIKU013970 & DeepSeek",
     "洛克小肥鱼全功能 + 炫彩花种订阅",
-    "2.1.77",
+    "2.1.78",
 )
 class LkMarketNotify(Star):
     def __init__(self, context: Context, config: AstrBotConfig = None):
@@ -7375,6 +7375,8 @@ class LkMarketNotify(Star):
 
         # ---- 多代推演（一行式，含声音奖牌代数）----
         r2 = self._gen_pair(g, b, a) if a["name"] != b["name"] else None
+        if not bool(self._cfg("genetics_predict_enabled", True)):
+            return "\n".join(lines)          # 关掉子代预测：只给这一胎的结果
         lines.append("")
         lines.append("━━━ 多代推演 ━━━")
         lines.append(f" 父={a['name']}　母={b['name']} ")
