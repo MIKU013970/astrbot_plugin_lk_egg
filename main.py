@@ -222,7 +222,7 @@ def _strip_emoji(text: str) -> str:
 
 _PLUGIN_DIR = Path(__file__).resolve().parent
 _PLUGIN_NAME = "astrbot_plugin_lk_egg"
-VERSION = "2.1.79"
+VERSION = "2.1.80"
 
 
 def _cand_dirs() -> List[Path]:
@@ -454,7 +454,7 @@ def _hard_save_state(state: Dict[str, Any]) -> None:
     "astrbot_plugin_lk_egg",
     "MIKU013970 & DeepSeek",
     "洛克小肥鱼全功能 + 炫彩花种订阅",
-    "2.1.79",
+    "2.1.80",
 )
 class LkMarketNotify(Star):
     def __init__(self, context: Context, config: AstrBotConfig = None):
@@ -7389,8 +7389,8 @@ class LkMarketNotify(Star):
         lines.append("")
         return "\n".join(lines)
 
-    @staticmethod
-    def _gen_pair(g: Any, fa: Dict[str, Any], mo: Dict[str, Any]) -> Dict[str, Any]:
+    def _gen_pair(self, g: Any, fa: Dict[str, Any],
+                  mo: Dict[str, Any]) -> Dict[str, Any]:
         """按「第一只=父、第二只=母」算一次。"""
         _f = g.resolve(fa["name"])
         _f["p_h"], _f["p_w"] = fa["h"] / 100.0, fa["w"] / 100.0
@@ -7398,7 +7398,12 @@ class LkMarketNotify(Star):
         _m = g.resolve(mo["name"])
         _m["p_h"], _m["p_w"] = mo["h"] / 100.0, mo["w"] / 100.0
         _m["db"] = mo.get("db")
-        return g.pair(_f, _m)
+        # 包络走配置（genetics_weight_noise，默认 3.0）
+        try:
+            _nz = max(0.0, float(self._cfg("genetics_weight_noise", 3.0)))
+        except (TypeError, ValueError):
+            _nz = 3.0
+        return g.pair(_f, _m, noise=_nz)
 
     @staticmethod
     def _gen_targets(fa: Dict[str, Any], mo: Dict[str, Any],
