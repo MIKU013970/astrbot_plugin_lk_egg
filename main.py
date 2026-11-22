@@ -222,7 +222,7 @@ def _strip_emoji(text: str) -> str:
 
 _PLUGIN_DIR = Path(__file__).resolve().parent
 _PLUGIN_NAME = "astrbot_plugin_lk_egg"
-VERSION = "2.1.56"
+VERSION = "2.1.57"
 
 
 def _cand_dirs() -> List[Path]:
@@ -454,7 +454,7 @@ def _hard_save_state(state: Dict[str, Any]) -> None:
     "astrbot_plugin_lk_egg",
     "MIKU013970 & DeepSeek",
     "洛克小肥鱼全功能 + 炫彩花种订阅",
-    "2.1.56",
+    "2.1.57",
 )
 class LkMarketNotify(Star):
     def __init__(self, context: Context, config: AstrBotConfig = None):
@@ -7294,6 +7294,17 @@ class LkMarketNotify(Star):
         for x in (a, b):
             for n in (x.get("notes") or []):
                 lines.append(f"　　· {x['name']}：{n}")
+        # 身高% 与体重% 是同一个「体型百分位」的两种显示（源 skill 实测 corr=0.997，
+        # 90.8% 的个体两者差在 ±5pp 内）。差太多说明这组输入现实中不存在，提示一下。
+        for _x in (a, b):
+            try:
+                _d = abs(float(_x["h"]) - float(_x["w"]))
+            except (TypeError, ValueError):
+                continue
+            if _d > 15:
+                lines.append(f"⚠ {_x['name']}：身高 {_x['h']:g}% 与体重 {_x['w']:g}% "
+                             f"相差 {_d:.0f}pp —— 身高和体重是同一个体型，"
+                             f"现实里不会有这种组合")
         _nb = [x["name"] for x in (a, b) if not g.breedable(x["name"])]
         if _nb:
             lines.append(f"⚠ {'、'.join(dict.fromkeys(_nb))} 源数据标了不可繁殖")
