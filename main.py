@@ -222,7 +222,7 @@ def _strip_emoji(text: str) -> str:
 
 _PLUGIN_DIR = Path(__file__).resolve().parent
 _PLUGIN_NAME = "astrbot_plugin_lk_egg"
-VERSION = "2.1.65"
+VERSION = "2.1.66"
 
 
 def _cand_dirs() -> List[Path]:
@@ -454,7 +454,7 @@ def _hard_save_state(state: Dict[str, Any]) -> None:
     "astrbot_plugin_lk_egg",
     "MIKU013970 & DeepSeek",
     "洛克小肥鱼全功能 + 炫彩花种订阅",
-    "2.1.65",
+    "2.1.66",
 )
 class LkMarketNotify(Star):
     def __init__(self, context: Context, config: AstrBotConfig = None):
@@ -7456,16 +7456,19 @@ class LkMarketNotify(Star):
             _cs = (max(_g_body, _gr) if (_g_body is not None and _gr is not None)
                    else None)
 
-            _vtxt = ("已达标" if _gv == 0 else
-                     (f"第{_gv}代" if _gv is not None else "未达"))
-            _rtxt = ("已达标" if _gr == 0 else "不可达") if _gr is not None else "不可达"
+            # 达不到的项**直接不显示**（不再写「不可达」占位）
+            _bits = [f"第{_g_body}代"]
+            if _gv is not None:
+                _bits.append("婉转声 已达标" if _gv == 0 else f"婉转声 第{_gv}代")
+            if _gr is not None:
+                _bits.append("粗嗓门 已达标" if _gr == 0 else f"粗嗓门 第{_gr}代")
             _cname = "大腕" if _t == "big" else "小粗"
-            _cgt = (f"第{max(_g_body, _gv)}代 ✓" if _t == "big" and _cb is not None else
-                    f"第{max(_g_body, _gr)}代 ✓" if _t == "small" and _cs is not None else
-                    "不可达（声音不达标）")
-            out.append(f"{self._gen_tname(_t)}：第{_g_body}代　"
-                       f"婉转声 {_vtxt}　粗嗓门 {_rtxt}　"
-                       f"→ {_cname}：{_cgt}")
+            _combo = _cb if _t == "big" else _cs
+            if _combo is not None:
+                _bits.append(f"→ {_cname} 第{_combo}代 ✓")
+            elif (_gv is not None) or (_gr is not None):
+                _bits.append(f"→ {_cname} 拿不到（声音那一项不够）")
+            out.append(f"{self._gen_tname(_t)}：" + "　".join(_bits))
         return out
 
     def _gen_block(self, g: Any, tag: str, fa: Dict[str, Any],
