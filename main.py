@@ -44,6 +44,9 @@ from astrbot.api.star import Context, Star, register
 # ---------------------------------------------------------------- 出图模块
 _CARD_MOD = None
 _CARD_TRIED = False
+_GEN_MOD = None
+_GEN_TRIED = False
+_GEN_INST = None
 
 #: 文字卡缓存：内容 + 配置一致就直接复用，省掉重复渲染
 #: （帮助菜单、各种格式提示这些天天发同样的内容，画一次就够了）
@@ -54,6 +57,50 @@ _SPECIES_CACHE_MAX = 128
 #: 查ID 的商家数据短缓存：key → (时间戳, data)
 _MERCHANT_CACHE: Dict[str, tuple] = {}
 _CARD_CACHE_MAX = 64
+
+
+def _genetics():
+    """按文件路径加载同目录的 genetics_helper.py（遗传计算内核）。
+
+    和 _card() 一个套路：AstrBot 各版本加载方式不同，按 __file__ 找最稳。
+    加载失败不影响别的功能，只是「洛克 遗传」会提示不可用。
+    """
+    global _GEN_MOD, _GEN_TRIED
+    if _GEN_TRIED:
+        return _GEN_MOD
+    _GEN_TRIED = True
+    import importlib.util
+    fp = Path(__file__).with_name("genetics_helper.py")
+    if not fp.is_file():
+        return None
+    try:
+        spec = importlib.util.spec_from_file_location("lk_egg_genetics", str(fp))
+        m = importlib.util.module_from_spec(spec)
+        spec.loader.exec_module(m)
+        _GEN_MOD = m
+    except Exception as e:
+        logger.warning(f"[遗传] genetics_helper.py 加载失败: {type(e).__name__}: {e}")
+    return _GEN_MOD
+
+
+def _genetics_instance():
+    """遗传计算器实例（懒加载 + 缓存）。数据文件缺失就返回 None。"""
+    global _GEN_INST
+    if _GEN_INST is not None:
+        return _GEN_INST
+    m = _genetics()
+    if m is None:
+        return None
+    try:
+        inst = m.Genetics(Path(__file__).with_name("genetics_species.json"))
+        if not inst.ready:
+            logger.warning("[遗传] genetics_species.json 为空或读取失败")
+            return None
+        _GEN_INST = inst
+    except Exception as e:
+        logger.warning(f"[遗传] 计算器初始化失败: {type(e).__name__}: {e}")
+        return None
+    return _GEN_INST
 
 
 def _card():
@@ -175,7 +222,7 @@ def _strip_emoji(text: str) -> str:
 
 _PLUGIN_DIR = Path(__file__).resolve().parent
 _PLUGIN_NAME = "astrbot_plugin_lk_egg"
-VERSION = "2.1.42"
+VERSION = "2.1.43"
 
 
 def _cand_dirs() -> List[Path]:
@@ -407,7 +454,7 @@ def _hard_save_state(state: Dict[str, Any]) -> None:
     "astrbot_plugin_lk_egg",
     "MIKU013970 & DeepSeek",
     "洛克小肥鱼全功能 + 炫彩花种订阅",
-    "2.1.42",
+    "2.1.43",
 )
 class LkMarketNotify(Star):
     def __init__(self, context: Context, config: AstrBotConfig = None):
@@ -7190,6 +7237,129 @@ class LkMarketNotify(Star):
     async def cmd_menu(self, event: AstrMessageEvent):
         """和 /帮助 同一张卡片（以前只注册了「帮助」，「菜单」发出去一点反应都没有）。"""
         yield await self._say(event, await self._menu_for(event))
+
+    # ---------------------------------------------------------------- 洛克 遗传
+    GENETICS_HELP = (
+        "🧬 遗传计算（子代奖牌）\n"
+        "用法：洛克 遗传 <精灵> <公|母> <体重kg>\n"
+        "例：  洛克 遗传 呆呆铃 公 2.08\n"
+        "　　  洛克 遗传 小夜 母 4.9\n\n"
+        "说明：奖牌是子代出生时按【身高档 + 体重%】判的，一次配对就能定，\n"
+        "　　　这份规则里没有「繁育几代」的模型，所以算的是「这一对能不能出奖牌」。")
+
+    @filter.command("洛克")
+    async def cmd_roco(self, event: AstrMessageEvent, arg: str = ""):
+        """洛克 遗传 <精灵> <公|母> <体重>
+
+        用「主命令 + 手动分派」而不是 command_group：
+        各版本 AstrBot 的 command_group 触发行为不完全一致，手动分派不会重复触发，
+        效果一样（「洛克 遗传 …」照样能用，空格照常解析）。
+        """
+        raw = str(arg or "").strip()
+        parts = [x for x in re.split(r"[\s　]+", raw) if x]
+        if parts and parts[0] in ("洛克",):
+            parts = parts[1:]
+        if not parts or parts[0] not in ("遗传", "genetics", "Genetics"):
+            yield await self._say(event, self.GENETICS_HELP)
+            return
+        yield await self._say(event, self._genetics_reply(parts[1:]))
+
+    def _genetics_reply(self, args: List[str]) -> str:
+        """遗传计算的文字出口。任何异常都转成提示，不往上抛。"""
+        if not args:
+            return self.GENETICS_HELP
+        name = args[0]
+        gender = ""
+        weight: Optional[float] = None
+        for a in args[1:]:
+            if a in ("公", "雄", "male", "M", "m"):
+                gender = "公"
+            elif a in ("母", "雌", "female", "F", "f"):
+                gender = "母"
+            else:
+                try:
+                    weight = float(a)
+                except (TypeError, ValueError):
+                    pass
+        if not gender:
+            gender = "公"          # 没写就按公本算（列母本是主用法）
+        try:
+            g = _genetics_instance()
+            if g is None or not g.ready:
+                return ("遗传数据没加载起来（genetics_species.json 缺失或坏了）。\n"
+                        "把压缩包里的 data/species.json 放到插件目录、改名 "
+                        "genetics_species.json 就能用。")
+            if not g.get(name):
+                return (f"「{name}」不在这份遗传数据里（711 种）。\n"
+                        f"可能是新精灵、或名字写法不同（源数据里有「（xx的样子）」这类形态名）。")
+            if not g.breedable(name):
+                return f"「{name}」不能生蛋（源数据标了不可繁殖），算不了子代。"
+            me = g.resolve(name, w=weight)
+            rn = me["name"]
+            w_rng = me["w_range"]
+            lines: List[str] = []
+            if weight is None:
+                if not w_rng:
+                    return f"「{rn}」缺体重区间，也还没给体重，算不出来。\n用法：洛克 遗传 {rn} {gender} <体重kg>"
+                lines.append(f"🧬 遗传 · {rn}（{gender}）")
+                lines.append(f"没给体重 —— 用法：洛克 遗传 {rn} {gender} <体重kg>")
+                lines.append(f"该物种体重区间：{w_rng[0]}~{w_rng[1]} kg")
+                return "\n".join(lines)
+            lines.append(f"🧬 遗传 · {rn}（{gender}）")
+            if me["p_w"] is None:
+                lines.append(f"体重 {weight:g} kg —— 但这份数据没有「{rn}」的体重区间，算不出体重%。")
+                lines.append("（源数据里 676/711 种有体重区间；新精灵常缺，需要手工补 --f-range）")
+                return "\n".join(lines)
+            lines.append(f"体重 {weight:g} kg → {me['p_w'] * 100:.2f}%"
+                         f"（区间 {w_rng[0]}~{w_rng[1]} kg）")
+            if me.get("h_range"):
+                lines.append(f"一阶段身高区间 {me['h_range'][0]}~{me['h_range'][1]} m")
+            lines.append(f"蛋组 {' / '.join(me['egg']) if me['egg'] else '未知'}")
+            lines.append("")
+            lines.append("⚠ 规则里没有「几代」：奖牌按子代出生时的【身高档 + 体重%】判定，")
+            lines.append("　一次配对就定生死。下面是可配对象的子代结果。")
+
+            rows = g.partners(me, gender, limit=8)
+            if not rows:
+                lines.append("")
+                lines.append("和谁都不在同一蛋组，配不了。")
+                return "\n".join(lines)
+            lines.append("")
+            lines.append(f"可配{'母' if gender == '公' else '公'}本（{len(rows)} 个，按奖牌概率排）：")
+            for i, r in enumerate(rows, 1):
+                _egg = r.get("child_egg_w_kg")
+                _h = r.get("hatch_h")
+                bits = [f"子代体重 {r['child_w_pct_mean']:.2f}%"
+                        f"（{r['child_w_pct_lo']:.1f}~{r['child_w_pct_hi']:.1f}）"]
+                if _h is not None:
+                    bits.append(f"身高 {_h} m（{r.get('hatch_pct', 0):.0f}%）")
+                if _egg is not None:
+                    bits.append(f"蛋重 {_egg} kg")
+                lines.append(f"{i}. {r['mother'] if gender == '公' else r['father']}"
+                             f" {r.get('dex') or ''}".rstrip())
+                lines.append("   " + "｜".join(bits))
+                lines.append(f"   小不点 {r['p_small'] * 100:.1f}%｜"
+                             f"大块头 {r['p_big'] * 100:.1f}%｜{r['rule']}")
+
+            # 反解：想出小不点，公本体重% 最多多少（母本按 0% 算）
+            if gender == "公" and w_rng:
+                p_need = 4.0     # 子代均值 ≤2 → (父% + 0)/2 ≤ 2 → 父% ≤ 4
+                kg_need = w_rng[0] + (p_need / 100.0) * (w_rng[1] - w_rng[0])
+                cur = weight
+                lines.append("")
+                if cur > kg_need:
+                    lines.append(f"💡 想出小不点：公本体重% 要 ≤{p_need:g}%"
+                                 f"（≈{kg_need:.2f} kg），现在 {cur:g} kg，"
+                                 f"还差 {cur - kg_need:.2f} kg（母本按 0% 算）")
+                else:
+                    lines.append(f"💡 想出小不点：公本已经 ≤{p_need:g}%（≈{kg_need:.2f} kg 以内），"
+                                 f"配 0% 的母本就有一半以上机会（±1pp 包络）")
+                lines.append("💡 想出大块头：双亲身高达标（≥98.5%）时体重会被锁到 99.2 平台"
+                             "（规则2），否则要双亲体重% 都 ≥98")
+            return "\n".join(lines)
+        except Exception as e:                               # noqa: BLE001
+            logger.warning(f"[遗传] 计算异常: {type(e).__name__}: {e}")
+            return f"遗传计算出错了：{type(e).__name__}。换个写法试试，或看 /帮助。"
 
     @filter.regex(r"^\s*[\u4e00-\u9fa5A-Za-z0-9·]{2,12}\s*$")
     async def on_bare_species(self, event: AstrMessageEvent):
