@@ -222,7 +222,7 @@ def _strip_emoji(text: str) -> str:
 
 _PLUGIN_DIR = Path(__file__).resolve().parent
 _PLUGIN_NAME = "astrbot_plugin_lk_egg"
-VERSION = "2.1.52"
+VERSION = "2.1.53"
 
 
 def _cand_dirs() -> List[Path]:
@@ -454,7 +454,7 @@ def _hard_save_state(state: Dict[str, Any]) -> None:
     "astrbot_plugin_lk_egg",
     "MIKU013970 & DeepSeek",
     "洛克小肥鱼全功能 + 炫彩花种订阅",
-    "2.1.52",
+    "2.1.53",
 )
 class LkMarketNotify(Star):
     def __init__(self, context: Context, config: AstrBotConfig = None):
@@ -7325,6 +7325,8 @@ class LkMarketNotify(Star):
         lines.append(f"体重　{r['child_w_pct_mean']:.2f}%"
                      f"（{r['child_w_pct_lo']:.1f}~{r['child_w_pct_hi']:.1f}）"
                      f"　{r['rule']}")
+        lines.append("　　（体重不是定值：在「父母平均 ±1.9pp」里随机取，"
+                     "436 颗蛋实测）")
         if r.get("child_egg_w_kg") is not None:
             lines.append(f"蛋重　{r['child_egg_w_kg']} kg")
         v = g.voice(a["db"], b["db"])
@@ -7376,6 +7378,7 @@ class LkMarketNotify(Star):
         else:
             lines.append(f"→ {len(gi['steps'])} 代内没堆到线")
         lines.append("⚠ 多代是 p=(父+母)/2 反复迭代推的，源 skill 只实测过单代。")
+        lines.append("　体重列是中心值，每一代实际还会 ±1.9pp 随机（越接近 98 越看运气）。")
         return "\n".join(lines)
 
     @filter.command("洛克")
