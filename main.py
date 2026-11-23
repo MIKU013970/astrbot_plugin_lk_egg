@@ -222,7 +222,7 @@ def _strip_emoji(text: str) -> str:
 
 _PLUGIN_DIR = Path(__file__).resolve().parent
 _PLUGIN_NAME = "astrbot_plugin_lk_egg"
-VERSION = "2.1.82"
+VERSION = "2.1.83"
 
 
 def _cand_dirs() -> List[Path]:
@@ -454,7 +454,7 @@ def _hard_save_state(state: Dict[str, Any]) -> None:
     "astrbot_plugin_lk_egg",
     "MIKU013970 & DeepSeek",
     "洛克小肥鱼全功能 + 炫彩花种订阅",
-    "2.1.82",
+    "2.1.83",
 )
 class LkMarketNotify(Star):
     def __init__(self, context: Context, config: AstrBotConfig = None):
@@ -5167,12 +5167,27 @@ class LkMarketNotify(Star):
         return out
 
     def _elem_types(self, name: str) -> List[str]:
-        """精灵名 → 系别列表（没有就退到一阶段那只 / 进化链兜底）。"""
-        t = self._elements_table()
-        pets = t.get("pets") or {}
+        """精灵名 → 系别列表。
+
+        **优先用 pets 表**：同名多条时 `_pets_table()` 已经按
+        「有异色 → 正式赛季 → 有蛋组 → pet_id」排过序，能取到正确那条。
+
+        elements.json 是按名字存的，遇到重名只会留一条 —— 比如「缇塔」有
+        NO.229（机械）和 NO.464（机械/武）两个，elements.json 存的是 464 那条，
+        结果查机械组时这只 229 也被标成了「机械/武」。
+        """
         nm = str(name or "").strip()
         if not nm:
             return []
+        # 先试 pets 表（权威，重名已排序）
+        try:
+            _got = self._types_of(nm)
+            if _got:
+                return [x[:-1] if x.endswith("系") else x for x in _got]
+        except Exception:                                     # noqa: BLE001
+            pass
+        t = self._elements_table()
+        pets = t.get("pets") or {}
         got = pets.get(nm)
         if got:
             return list(got)
