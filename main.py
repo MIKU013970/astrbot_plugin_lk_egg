@@ -222,7 +222,14 @@ def _strip_emoji(text: str) -> str:
 
 _PLUGIN_DIR = Path(__file__).resolve().parent
 _PLUGIN_NAME = "astrbot_plugin_lk_egg"
-VERSION = "2.1.83"
+VERSION = "2.1.84"
+
+#: 数据来源标注（用户要求：查出结果时能看见原站）
+#: 卡片上放短名（完整 URL 太长会被截断），文字版用下面带 URL 的
+SOURCE_ROCO = "洛克魔法书"
+SOURCE_WIKI = "biligame wiki"
+SOURCE_ROCO_URL = "洛克魔法书 https://wegame.shallow.ink"
+SOURCE_WIKI_URL = "biligame wiki https://wiki.biligame.com/nrc"
 
 
 def _cand_dirs() -> List[Path]:
@@ -454,7 +461,7 @@ def _hard_save_state(state: Dict[str, Any]) -> None:
     "astrbot_plugin_lk_egg",
     "MIKU013970 & DeepSeek",
     "洛克小肥鱼全功能 + 炫彩花种订阅",
-    "2.1.83",
+    "2.1.84",
 )
 class LkMarketNotify(Star):
     def __init__(self, context: Context, config: AstrBotConfig = None):
@@ -1650,6 +1657,11 @@ class LkMarketNotify(Star):
 
         # ---- 技能不在这里：技能走独立查询「技能 呆呆铃」
 
+        # 数据来源（文字版给完整地址）
+        lines.append("")
+        lines.append("—— 来源 ——")
+        lines.append(f"图鉴 / 体型 / 蛋组：{SOURCE_ROCO_URL}")
+        lines.append(f"星光 / 回顾等 wiki 资料：{SOURCE_WIKI_URL}")
         return "\n".join(lines)
 
     # ---------------------------------------------------------------- 出图
@@ -8978,6 +8990,10 @@ class LkMarketNotify(Star):
             if st:
                 rows.append(("", "—— 全阶段体型（过线 / 极限）——"))
                 rows += st
+        # 数据来源（用户要求：查出来能看见原站）
+        rows.append(("", "—— 来源 ——"))
+        rows.append(("图鉴 / 体型 / 蛋组", SOURCE_ROCO))
+        rows.append(("星光 / 回顾等 wiki 资料", SOURCE_WIKI))
         return rows
 
     def _species_rows_core(self, rec: Dict[str, Any], dex: str = "",
@@ -9208,6 +9224,7 @@ class LkMarketNotify(Star):
                 f"没查到游戏 UID {gid} 的资料。\n"
                 f"可能是接口排队，稍等再发一次；或者这个 UID 不存在。")
         rows = [("游戏UID", gid)] + [(str(k), str(v)) for k, v in fields]
+        rows.append(("数据来源", SOURCE_ROCO))
         png = None
         if self._image_reply_on():
             try:
