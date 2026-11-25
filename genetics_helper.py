@@ -609,6 +609,11 @@ class Genetics:
             if vpct:
                 w = v                      # 带 % → 直接当体重%
                 notes.append("第2个带 % 按体重%处理")
+            elif items[0][1] and 0 <= v <= 100:
+                # 第 1 个带 %（身高%），第 2 个虽不带 % 但在 0~100
+                # → 按体重% 处理（不当声音，声音要写第 3 个数或带 %）
+                w = v
+                notes.append("第2个按体重% 处理（第1个带 %）")
             elif self.fits_weight(name, v):
                 w, _conv = self.value_to_pct(name, v, "w")
                 if _conv:

@@ -222,7 +222,7 @@ def _strip_emoji(text: str) -> str:
 
 _PLUGIN_DIR = Path(__file__).resolve().parent
 _PLUGIN_NAME = "astrbot_plugin_lk_egg"
-VERSION = "2.1.91"
+VERSION = "2.1.92"
 
 #: 数据来源标注（用户要求：查出结果时能看见原站）
 #: 卡片上放短名（完整 URL 太长会被截断），文字版用下面带 URL 的
@@ -464,7 +464,7 @@ def _hard_save_state(state: Dict[str, Any]) -> None:
     "astrbot_plugin_lk_egg",
     "MIKU013970 & DeepSeek",
     "洛克小肥鱼全功能 + 炫彩花种订阅",
-    "2.1.91",
+    "2.1.92",
 )
 class LkMarketNotify(Star):
     def __init__(self, context: Context, config: AstrBotConfig = None):
@@ -7403,8 +7403,16 @@ class LkMarketNotify(Star):
         if r.get("child_egg_w_kg") is not None:
             _dist = r.get("egg_w_dist")
         if _dist:
-            lines.append("蛋重　" + "　".join(
-                f"{g} g（{p * 100:.0f}%）" for g, p in _dist))
+            if len(_dist) <= 5:
+                # 档数少：逐档列概率（菇菇丁这种 3 档很适合）
+                lines.append("蛋重　" + "　".join(
+                    f"{g} g（{p * 100:.0f}%）" for g, p in _dist))
+            else:
+                # 档数多（蛋尺子大）：只给范围 + 中心，不刷屏
+                _gs = [g for g, _ in _dist]
+                _g_lo, _g_hi = min(_gs), max(_gs)
+                _g_mid = r.get("egg_w_g")
+                lines.append(f"蛋重　{_g_mid} g（{_g_lo}~{_g_hi} g，{len(_dist)} 档）")
         else:
             _eg = r.get("egg_w_g")
             if _eg is not None:
