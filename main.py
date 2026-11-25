@@ -222,7 +222,7 @@ def _strip_emoji(text: str) -> str:
 
 _PLUGIN_DIR = Path(__file__).resolve().parent
 _PLUGIN_NAME = "astrbot_plugin_lk_egg"
-VERSION = "2.1.93"
+VERSION = "2.1.94"
 
 #: 数据来源标注（用户要求：查出结果时能看见原站）
 #: 卡片上放短名（完整 URL 太长会被截断），文字版用下面带 URL 的
@@ -464,7 +464,7 @@ def _hard_save_state(state: Dict[str, Any]) -> None:
     "astrbot_plugin_lk_egg",
     "MIKU013970 & DeepSeek",
     "洛克小肥鱼全功能 + 炫彩花种订阅",
-    "2.1.93",
+    "2.1.94",
 )
 class LkMarketNotify(Star):
     def __init__(self, context: Context, config: AstrBotConfig = None):
@@ -7312,9 +7312,6 @@ class LkMarketNotify(Star):
         # 遗传总开关：关掉后整段遗传计算都不响应
         if not bool(self._cfg("genetics_enabled", True)):
             return
-        # 遗传总开关：关掉后整段遗传计算都不响应
-        if not bool(self._cfg("genetics_enabled", True)):
-            return
         if not bool(self._cfg("genetics_auto", True)):
             return
         raw = (getattr(event, "message_str", "") or "").strip()
@@ -7330,6 +7327,10 @@ class LkMarketNotify(Star):
             return
         if not res.get("ok"):
             if res.get("looks_like") and res.get("error"):
+                try:
+                    event.stop_event()
+                except Exception:                            # noqa: BLE001
+                    pass
                 yield await self._say(event, res["error"])
             return
         try:
@@ -7337,6 +7338,11 @@ class LkMarketNotify(Star):
         except Exception as e:                               # noqa: BLE001
             logger.warning(f"[遗传] 计算异常: {type(e).__name__}: {e}")
             return
+        # 已经给出遗传结果 → 阻止后续 handler（裸名字查询等）重复响应
+        try:
+            event.stop_event()
+        except Exception:                                    # noqa: BLE001
+            pass
         yield await self._say(event, text)
 
     def _genetics_pair_text(self, g: Any, a: Dict[str, Any],
