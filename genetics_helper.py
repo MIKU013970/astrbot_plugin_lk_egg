@@ -35,8 +35,11 @@ from typing import Any, Dict, List, Optional, Tuple
 SMALL_MAX = 2.0        # 小不点：体重% ≤ 2.0
 BIG_MIN = 98.0         # 大块头：体重% ≥ 98.0
 VOICE_ABS = 96         # |分贝| ≥ 96
-#: 体重% 的随机包络（±pp）。蛋重和孵出体重用同一个公式，所以统一 ±2%。
-RULE2_NOISE = 2.0        # 规则2 也统一成 ±2%（体重和蛋走同一个公式）
+#: **P子** 的随机包络（±%）。
+#:   P子 = (父身高% + 母身高%) / 2，然后 ±2%
+#:   蛋重(g) = MIN − 0.5 + (MAX − MIN + 1) × P子（四舍五入，超额归两端）
+#:   子代体重% 也直接取 P子（同一个值，不再有独立的体重偏移）
+P_SUB_NOISE = 2.0        # 规则2 也统一成 ±2%（体重和蛋走同一个公式）
 
 #: 子代**蛋重百分比**的随机包络（±%）。
 #: 用户公式：蛋% = (父身高% + 母身高%) / 2 ± 2%
@@ -49,7 +52,7 @@ EGG_PCT_NOISE = 2.0
 #: 也就是说子代体重不是定值，而是在「父母平均 ±1.9pp」这个区间里随机取。
 #: 源工具默认用 1.0pp 是**保守包络**（medal.py NOISE=1.0），这里改按实测上限 1.9。
 #: 想回到保守口径把下面改成 1.0 即可。
-NOISE = 2.0              # 子代体重% 的随机包络，和蛋% 用同一个数（±2%）
+NOISE = 2.0              # 【已废弃】旧体重偏移，现统一走 P_SUB_NOISE；保留名只为兼容调用
 RULE2_TOP = 0.9917     # 规则2 满端平台（368 颗蛋实测 99.17±0.56）
 RULE2_BOTTOM = 0.0083  # 规则2 低端锁定（新 skill RULE2_BOT=0.83%，按高端 99.17 对称推定）
 
@@ -245,7 +248,12 @@ class Genetics:
                 w_c = RULE2_TOP
             elif both_min:
                 w_c = RULE2_BOTTOM          # 新 skill：直接锁 0.83%
+            elif h_known:
+                # 子代体重% = P子 = (父身高% + 母身高%)/2（用户口径）
+                w_c = (p_fh + p_mh) / 2.0
             else:
+                # 有一方身高未知 → P子 算不出来，退回「父母体重%平均」兜底
+                # （不能把未知当 0%，那会误判成小不点）
                 w_c = (p_fw + p_mw) / 2.0
 
         # 子代物种 = 母本的基础形态（蛋属于基础形态）
@@ -257,7 +265,7 @@ class Genetics:
             h_at_max = hh["hatch_slot"] == hh["hatch_slots"] - 1
             h_at_min = hh["hatch_slot"] == 0
 
-        _nz = RULE2_NOISE if rule2 else noise      # 规则2 用更窄的实测包络
+        _nz = P_SUB_NOISE                          # 统一 ±2%（旧的 1.9/1.17 已废弃）
         p_small = _prob_le(w_c * 100, SMALL_MAX, _nz) if h_at_min else 0.0
         p_big = _prob_ge(w_c * 100, BIG_MIN, _nz) if h_at_max else 0.0
 
@@ -275,8 +283,8 @@ class Genetics:
                      else ("规则1(平均) · 身高未知，未判极值" if not h_known
                            else "规则1(平均)")),
             "child_w_pct_mean": round(w_c * 100, 2),
-            "child_w_pct_lo": round(max(0.0, w_c * 100 - (RULE2_NOISE if rule2 else noise)), 2),
-            "child_w_pct_hi": round(w_c * 100 + (RULE2_NOISE if rule2 else noise), 2),
+            "child_w_pct_lo": round(max(0.0, w_c * 100 - P_SUB_NOISE), 2),
+            "child_w_pct_hi": round(min(100.0, w_c * 100 + P_SUB_NOISE), 2),
             "p_small": round(p_small, 4),
             "p_big": round(p_big, 4),
             "height_at_extreme": ("max" if h_at_max else "min" if h_at_min else "none"),
@@ -312,8 +320,8 @@ class Genetics:
             wl, wh = brec["w_egg"]
             _min_g = int(round(wl * 1000))
             _max_g = int(round(wh * 1000))
-            _epc = w_c                                   # 0~1，父母体重%平均
-            _epn = (RULE2_NOISE if rule2 else noise) / 100.0
+            _epc = w_c                                   # 0~1，= P子（父母身高%平均，规则2 时锁端）
+            _epn = P_SUB_NOISE / 100.0                   # ±2%
             _epl = max(0.0, _epc - _epn)
             _eph = min(1.0, _epc + _epn)
             _g_c = egg_weight_g(_epc, _min_g, _max_g)
