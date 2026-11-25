@@ -39,7 +39,12 @@ VOICE_ABS = 96         # |分贝| ≥ 96
 #:   P子 = (父身高% + 母身高%) / 2，然后 ±2%
 #:   蛋重(g) = MIN − 0.5 + (MAX − MIN + 1) × P子（四舍五入，超额归两端）
 #:   子代体重% 也直接取 P子（同一个值，不再有独立的体重偏移）
-P_SUB_NOISE = 2.0        # 规则2 也统一成 ±2%（体重和蛋走同一个公式）
+P_SUB_NOISE = 2.0
+
+#: 规则2（双亲身高同为极值）时的包络。
+#: 源 skill 实测 334 颗「双亲身高都满」的蛋，子代体重**全部 ≥98**（最低 98.0、中位 99.2）。
+#: 锁 99.17 要覆盖到 98.0 下限 → 1.17pp，正好保证「不掉牌」。
+RULE2_NOISE = 1.17        # 规则2 也统一成 ±2%（体重和蛋走同一个公式）
 
 #: 子代**蛋重百分比**的随机包络（±%）。
 #: 用户公式：蛋% = (父身高% + 母身高%) / 2 ± 2%
@@ -305,7 +310,8 @@ class Genetics:
             h_at_max = hh["hatch_slot"] == hh["hatch_slots"] - 1
             h_at_min = hh["hatch_slot"] == 0
 
-        _nz = P_SUB_NOISE                          # 统一 ±2%（旧 1.9/1.17 已删）
+        # 规则2 用专用窄包络（实测 334/334 全 ≥98，不掉牌）；其余 ±2%
+        _nz = RULE2_NOISE if rule2 else P_SUB_NOISE
         p_small = _prob_le(w_c * 100, SMALL_MAX, _nz) if h_at_min else 0.0
         p_big = _prob_ge(w_c * 100, BIG_MIN, _nz) if h_at_max else 0.0
 
@@ -323,8 +329,8 @@ class Genetics:
                      else ("规则1(平均) · 身高未知，未判极值" if not h_known
                            else "规则1(平均)")),
             "child_w_pct_mean": round(w_c * 100, 2),
-            "child_w_pct_lo": round(max(0.0, w_c * 100 - P_SUB_NOISE), 2),
-            "child_w_pct_hi": round(min(100.0, w_c * 100 + P_SUB_NOISE), 2),
+            "child_w_pct_lo": round(max(0.0, w_c * 100 - (RULE2_NOISE if rule2 else P_SUB_NOISE)), 2),
+            "child_w_pct_hi": round(min(100.0, w_c * 100 + (RULE2_NOISE if rule2 else P_SUB_NOISE)), 2),
             "p_small": round(p_small, 4),
             "p_big": round(p_big, 4),
             "height_at_extreme": ("max" if h_at_max else "min" if h_at_min else "none"),
@@ -361,7 +367,7 @@ class Genetics:
             _min_g = int(round(wl * 1000))
             _max_g = int(round(wh * 1000))
             _epc = w_c                                   # 0~1，= P子（父母身高%平均，规则2 时锁端）
-            _epn = P_SUB_NOISE / 100.0                   # ±2%
+            _epn = (RULE2_NOISE if rule2 else P_SUB_NOISE) / 100.0
             _epl = max(0.0, _epc - _epn)
             _eph = min(1.0, _epc + _epn)
             _g_c = egg_weight_g(_epc, _min_g, _max_g)
