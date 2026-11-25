@@ -222,7 +222,7 @@ def _strip_emoji(text: str) -> str:
 
 _PLUGIN_DIR = Path(__file__).resolve().parent
 _PLUGIN_NAME = "astrbot_plugin_lk_egg"
-VERSION = "2.1.87"
+VERSION = "2.1.88"
 
 #: 数据来源标注（用户要求：查出结果时能看见原站）
 #: 卡片上放短名（完整 URL 太长会被截断），文字版用下面带 URL 的
@@ -230,6 +230,9 @@ SOURCE_ROCO = "洛克魔法书"
 SOURCE_WIKI = "biligame wiki"
 SOURCE_ROCO_URL = "洛克魔法书 https://wegame.shallow.ink"
 SOURCE_WIKI_URL = "biligame wiki https://wiki.biligame.com/nrc"
+
+#: 遗传计算的公式与实测数据出处
+SOURCE_BILI_GENETICS = "B站 Glacier625"
 
 
 def _cand_dirs() -> List[Path]:
@@ -461,7 +464,7 @@ def _hard_save_state(state: Dict[str, Any]) -> None:
     "astrbot_plugin_lk_egg",
     "MIKU013970 & DeepSeek",
     "洛克小肥鱼全功能 + 炫彩花种订阅",
-    "2.1.87",
+    "2.1.88",
 )
 class LkMarketNotify(Star):
     def __init__(self, context: Context, config: AstrBotConfig = None):
@@ -7420,6 +7423,8 @@ class LkMarketNotify(Star):
         # ---- 多代推演（一行式，含声音奖牌代数）----
         r2 = self._gen_pair(g, b, a) if a["name"] != b["name"] else None
         if not bool(self._cfg("genetics_predict_enabled", True)):
+            lines.append("")
+            lines.append(f"—— 公式与实测数据：{SOURCE_BILI_GENETICS} ——")
             return "\n".join(lines)          # 关掉子代预测：只给这一胎的结果
         lines.append("")
         lines.append("━━━ 多代推演 ━━━")
@@ -7431,6 +7436,7 @@ class LkMarketNotify(Star):
             lines.extend(self._gen_line(g, r2))
 
         lines.append("")
+        lines.append(f"—— 公式与实测数据：{SOURCE_BILI_GENETICS} ——")
         return "\n".join(lines)
 
     def _gen_pair(self, g: Any, fa: Dict[str, Any],
