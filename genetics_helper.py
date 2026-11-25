@@ -27,6 +27,7 @@ from __future__ import annotations
 
 import json
 import math
+from decimal import Decimal, ROUND_HALF_UP
 import re
 from pathlib import Path
 from typing import Any, Dict, List, Optional, Tuple
@@ -88,17 +89,17 @@ def _prob_ge(mean: float, thr: float, noise: float = P_SUB_NOISE) -> float:
 def egg_weight_dist(p_center: float, p_noise: float,
                     w_min_g: int, w_max_g: int,
                     min_prob: float = 0.005) -> List[Tuple[int, float]]:
-    """蛋重档位概率分布。
+    """蛋重档位概率分布（Decimal 版本，档位边界精确）。
 
-    P 在 `[p_center - p_noise, p_center + p_noise]`（clamp 到 [0,1]）内**均匀分布**，
+    P 在 `[p_center - p_noise, p_center + p_noise]`（clamp [0,1]）内**均匀分布**，
     按「实际蛋重(g) = MIN − 0.5 + (MAX − MIN + 1) × P」四舍五入切档，
     每档的宽度就是它的概率。
 
     菇菇丁验算（MIN=385, MAX=500, P=100% → 范围 clamp 到 [98%, 100%]）：
 
-        498 g  P∈[98.00, 98.28]  0.28%  → 13.8%
-        499 g  P∈[98.28, 99.14]  0.86%  → 43.1%
-        500 g  P∈[99.14, 100.0]  0.86%  → 43.1%
+        498 g  P∈[98.00, 98.2759]  0.2759%  → 13.8%
+        499 g  P∈[98.2759, 99.1379]  0.8621%  → 43.1%
+        500 g  P∈[99.1379, 100.0]   0.8621%  → 43.1%
 
     返回 [(克数, 概率), ...]，按克数从大到小；概率 < `min_prob` 的档位丢掉。
     """
@@ -111,30 +112,32 @@ def egg_weight_dist(p_center: float, p_noise: float,
     p_hi = min(1.0, float(p_center) + float(p_noise))
     if p_hi <= p_lo:
         return [(egg_weight_g(p_center, lo_g, hi_g), 1.0)]
-    acc: Dict[int, float] = {}
-    for g in range(lo_g, hi_g + 1):
-        # 这一档对应的 P 半开区间：(g-0.5-基, g+0.5-基]
-        base = lo_g - 0.5
-        seg_lo = (g - 0.5 - base) / n
-        seg_hi = (g + 0.5 - base) / n
-        w = max(0.0, min(p_hi, seg_hi) - max(p_lo, seg_lo))
+    dp_lo = Decimal(str(p_lo))
+    dp_hi = Decimal(str(p_hi))
+    dn = Decimal(n)
+    base = Decimal(lo_g) - Decimal("0.5")
+    acc: Dict[int, Decimal] = {}
+    for gg in range(lo_g, hi_g + 1):
+        seg_lo = (Decimal(gg) - Decimal("0.5") - base) / dn
+        seg_hi = (Decimal(gg) + Decimal("0.5") - base) / dn
+        w = max(Decimal(0), min(dp_hi, seg_hi) - max(dp_lo, seg_lo))
         if w > 0:
-            acc[g] = w
-    tot = sum(acc.values()) or 1.0
-    out = [(g, w / tot) for g, w in acc.items() if w / tot >= min_prob]
+            acc[gg] = w
+    tot = sum(acc.values()) or Decimal(1)
+    out = [(gg, float(w / tot)) for gg, w in acc.items()
+           if float(w / tot) >= min_prob]
     out.sort(key=lambda x: -x[0])
     return out
 
 
 def egg_weight_g(p_sub: float, w_min_g: int, w_max_g: int) -> int:
-    """蛋重（克）—— 用户给的公式：
+    """蛋重（克）—— 用户公式：
 
-        实际蛋重(g) = MIN - 0.5 + (MAX - MIN + 1) × P子
+        实际蛋重(g) = MIN − 0.5 + (MAX − MIN + 1) × P子
         四舍五入；超额数值归到满重蛋 / 最小蛋
 
-    验证两端：
-        P子 = 0  → MIN - 0.5      → round → MIN   ✓
-        P子 = 1  → MAX + 0.5      → round → MAX+1 → clamp → MAX   ✓
+    **全程用 Decimal**：`P = 114/116` 这种精确等于 .5 的边界，
+    浮点会算成 498.499999992（floor 后变 498），Decimal 才是 498.5 → 499。
 
     `MIN` / `MAX` 是蛋尺子的两个端点（整数克），档数 = MAX - MIN + 1。
     """
@@ -143,9 +146,14 @@ def egg_weight_g(p_sub: float, w_min_g: int, w_max_g: int) -> int:
     if hi <= lo:
         return lo
     p = max(0.0, min(1.0, float(p_sub)))
-    raw = lo - 0.5 + (hi - lo + 1) * p
-    g = int(math.floor(raw + 0.5))          # 四舍五入（half-up，负数不会出现）
-    return max(lo, min(hi, g))              # 超额归两端
+    dp = Decimal(str(p))
+    raw = Decimal(lo) - Decimal("0.5") + Decimal(hi - lo + 1) * dp
+    # 加 1e-9 消掉「114/116 这种精确 .5 被 float 表示成 .4999999999」的误差：
+    #   float(114/116) = 0.9827586206896551 → ×116 = 113.9999999999999916
+    #   raw = 498.49999999999999，不加就会落到 498 而不是 499
+    raw += Decimal("1e-9")
+    g = int(raw.quantize(Decimal("1"), rounding=ROUND_HALF_UP))
+    return max(lo, min(hi, g))
 
 
 def hatch_height(p: float,
