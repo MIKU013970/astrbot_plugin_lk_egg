@@ -222,7 +222,7 @@ def _strip_emoji(text: str) -> str:
 
 _PLUGIN_DIR = Path(__file__).resolve().parent
 _PLUGIN_NAME = "astrbot_plugin_lk_egg"
-VERSION = "2.1.86"
+VERSION = "2.1.87"
 
 #: 数据来源标注（用户要求：查出结果时能看见原站）
 #: 卡片上放短名（完整 URL 太长会被截断），文字版用下面带 URL 的
@@ -461,7 +461,7 @@ def _hard_save_state(state: Dict[str, Any]) -> None:
     "astrbot_plugin_lk_egg",
     "MIKU013970 & DeepSeek",
     "洛克小肥鱼全功能 + 炫彩花种订阅",
-    "2.1.86",
+    "2.1.87",
 )
 class LkMarketNotify(Star):
     def __init__(self, context: Context, config: AstrBotConfig = None):
@@ -7398,11 +7398,11 @@ class LkMarketNotify(Star):
         lines.append(f"体重　{r['child_w_pct_mean']:.2f}%"
                      f"（{r['child_w_pct_lo']:.1f}~{r['child_w_pct_hi']:.1f}）")
         if r.get("child_egg_w_kg") is not None:
-            _ew_lo = r.get("egg_w_lo")
-        _ew_hi = r.get("egg_w_hi")
-        if _ew_lo is not None and _ew_hi is not None:
-            lines.append(f"蛋重　{r['child_egg_w_kg']} kg"
-                         f"（{_ew_lo:g}~{_ew_hi:g}）")
+            _eg = r.get("egg_w_g")
+        _eg_lo = r.get("egg_w_g_lo")
+        _eg_hi = r.get("egg_w_g_hi")
+        if _eg is not None and _eg_lo is not None and _eg_hi is not None:
+            lines.append(f"蛋重　{_eg} g（{_eg_lo}~{_eg_hi} g）")
         else:
             lines.append(f"蛋重　{r['child_egg_w_kg']} kg")
         v = g.voice(a["db"], b["db"])
@@ -7788,10 +7788,11 @@ class LkMarketNotify(Star):
                 if _h is not None:
                     bits.append(f"身高 {_h} m（{r.get('hatch_pct', 0):.0f}%）")
                 if _egg is not None:
-                    _elo = r.get("egg_w_lo")
-                    _ehi = r.get("egg_w_hi")
-                    if _elo is not None and _ehi is not None:
-                        bits.append(f"蛋重 {_egg} kg（{_elo:g}~{_ehi:g}）")
+                    _g = r.get("egg_w_g")
+                    _glo = r.get("egg_w_g_lo")
+                    _ghi = r.get("egg_w_g_hi")
+                    if _g is not None and _glo is not None and _ghi is not None:
+                        bits.append(f"蛋重 {_g} g（{_glo}~{_ghi} g）")
                     else:
                         bits.append(f"蛋重 {_egg} kg")
                 lines.append(f"{i}. {r['mother'] if gender == '公' else r['father']}"

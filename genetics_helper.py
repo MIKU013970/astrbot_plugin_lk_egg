@@ -80,6 +80,28 @@ def _prob_ge(mean: float, thr: float, noise: float = NOISE) -> float:
     return _prob_le(-mean, -thr, noise)
 
 
+def egg_weight_g(p_sub: float, w_min_g: int, w_max_g: int) -> int:
+    """蛋重（克）—— 用户给的公式：
+
+        实际蛋重(g) = MIN - 0.5 + (MAX - MIN + 1) × P子
+        四舍五入；超额数值归到满重蛋 / 最小蛋
+
+    验证两端：
+        P子 = 0  → MIN - 0.5      → round → MIN   ✓
+        P子 = 1  → MAX + 0.5      → round → MAX+1 → clamp → MAX   ✓
+
+    `MIN` / `MAX` 是蛋尺子的两个端点（整数克），档数 = MAX - MIN + 1。
+    """
+    lo = int(w_min_g)
+    hi = int(w_max_g)
+    if hi <= lo:
+        return lo
+    p = max(0.0, min(1.0, float(p_sub)))
+    raw = lo - 0.5 + (hi - lo + 1) * p
+    g = int(math.floor(raw + 0.5))          # 四舍五入（half-up，负数不会出现）
+    return max(lo, min(hi, g))              # 超额归两端
+
+
 def hatch_height(p: float,
                  h_egg: Optional[Tuple[float, float]],
                  h_stage1: Optional[Tuple[float, float]]
@@ -284,17 +306,25 @@ class Genetics:
             out["child_hatch_h"] = hh["hatch_h"]
             out["child_h_pct_slot"] = hh.get("hatch_pct")
         # 蛋重：**蛋% = (父身高% + 母身高%)/2 ± 2%**（用户指定公式）
-        #   注意中心值用的是**身高%**，不是体重% —— 蛋是「父母体型」的产物，
-        #   之前拿 w_c（体重%）插值，口径不对。
+        #   中心值用**身高%**，不是体重% —— 蛋是「父母体型」的产物。
+        #   克数按用户公式：MIN - 0.5 + (MAX - MIN + 1) × P子，四舍五入，超额归两端。
         if brec.get("w_egg"):
             wl, wh = brec["w_egg"]
-            _span = wh - wl
+            _min_g = int(round(wl * 1000))
+            _max_g = int(round(wh * 1000))
             _epc = p_c                                   # 0~1，父母身高%平均
             _epl = max(0.0, _epc - EGG_PCT_NOISE / 100.0)
             _eph = min(1.0, _epc + EGG_PCT_NOISE / 100.0)
-            out["child_egg_w_kg"] = round(wl + _epc * _span, 3)
-            out["egg_w_lo"] = round(wl + _epl * _span, 3)
-            out["egg_w_hi"] = round(wl + _eph * _span, 3)
+            _g_c = egg_weight_g(_epc, _min_g, _max_g)
+            _g_lo = egg_weight_g(_epl, _min_g, _max_g)
+            _g_hi = egg_weight_g(_eph, _min_g, _max_g)
+            out["child_egg_w_kg"] = round(_g_c / 1000.0, 3)
+            out["egg_w_lo"] = round(_g_lo / 1000.0, 3)
+            out["egg_w_hi"] = round(_g_hi / 1000.0, 3)
+            out["egg_w_g"] = _g_c
+            out["egg_w_g_lo"] = _g_lo
+            out["egg_w_g_hi"] = _g_hi
+            out["egg_g_range"] = [_min_g, _max_g]
             out["egg_pct_center"] = round(_epc * 100, 2)
             out["egg_pct_lo"] = round(_epl * 100, 2)
             out["egg_pct_hi"] = round(_eph * 100, 2)
