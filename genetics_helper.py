@@ -40,6 +40,10 @@ VOICE_ABS = 96         # |分贝| ≥ 96
 #: 锁 99.17 要覆盖到 98.0 下限 → 1.17pp。
 RULE2_NOISE = 1.17
 
+#: 子代**蛋重百分比**的随机包络（±%）。
+#: 用户公式：蛋% = (父身高% + 母身高%) / 2 ± 2%
+EGG_PCT_NOISE = 2.0
+
 #: 子代体重% 相对双亲平均的随机包络（±pp）。
 #:
 #: 依据源 skill（medal-inherit/SKILL.md 第 251 行）的实测：
@@ -279,10 +283,21 @@ class Genetics:
         if hh.get("hatch_h") is not None:
             out["child_hatch_h"] = hh["hatch_h"]
             out["child_h_pct_slot"] = hh.get("hatch_pct")
-        # 蛋重：用基础形态的蛋尺子
+        # 蛋重：**蛋% = (父身高% + 母身高%)/2 ± 2%**（用户指定公式）
+        #   注意中心值用的是**身高%**，不是体重% —— 蛋是「父母体型」的产物，
+        #   之前拿 w_c（体重%）插值，口径不对。
         if brec.get("w_egg"):
             wl, wh = brec["w_egg"]
-            out["child_egg_w_kg"] = round(wl + w_c * (wh - wl), 3)
+            _span = wh - wl
+            _epc = p_c                                   # 0~1，父母身高%平均
+            _epl = max(0.0, _epc - EGG_PCT_NOISE / 100.0)
+            _eph = min(1.0, _epc + EGG_PCT_NOISE / 100.0)
+            out["child_egg_w_kg"] = round(wl + _epc * _span, 3)
+            out["egg_w_lo"] = round(wl + _epl * _span, 3)
+            out["egg_w_hi"] = round(wl + _eph * _span, 3)
+            out["egg_pct_center"] = round(_epc * 100, 2)
+            out["egg_pct_lo"] = round(_epl * 100, 2)
+            out["egg_pct_hi"] = round(_eph * 100, 2)
             out["egg_w_range"] = [wl, wh]
         return out
 
