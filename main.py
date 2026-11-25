@@ -222,7 +222,7 @@ def _strip_emoji(text: str) -> str:
 
 _PLUGIN_DIR = Path(__file__).resolve().parent
 _PLUGIN_NAME = "astrbot_plugin_lk_egg"
-VERSION = "2.1.84"
+VERSION = "2.1.85"
 
 #: 数据来源标注（用户要求：查出结果时能看见原站）
 #: 卡片上放短名（完整 URL 太长会被截断），文字版用下面带 URL 的
@@ -461,7 +461,7 @@ def _hard_save_state(state: Dict[str, Any]) -> None:
     "astrbot_plugin_lk_egg",
     "MIKU013970 & DeepSeek",
     "洛克小肥鱼全功能 + 炫彩花种订阅",
-    "2.1.84",
+    "2.1.85",
 )
 class LkMarketNotify(Star):
     def __init__(self, context: Context, config: AstrBotConfig = None):
@@ -2443,35 +2443,40 @@ class LkMarketNotify(Star):
                 return
             out.append((label, "是" if val else "否"))
 
-        GENDER = {1: "雄性", 2: "雌性"}
-        add("角色等级", player.get("level"))
-        add("世界等级", player.get("world_level"))
+        # 字段名与顺序按用户指定的面板格式
+        GENDER = {1: "男", 2: "女"}
+        add("昵称", player.get("nickname") or player.get("name")
+            or card.get("nickname"))
+        add("等级", player.get("level"))
         add("性别", GENDER.get(player.get("gender"), player.get("gender")))
-        add("注册时间", player.get("regist_date") or card.get("register_timestamp"),
-            ts=True)
         online = player.get("online")
         if online is None:
             online = card.get("online")
         if online is not None:
-            out.append(("在线", "在线" if online else "离线"))
+            out.append(("在线状态", "是" if online else "否"))
         _lo = player.get("last_logout_time")
         if _lo not in (None, "", 0):
-            out.append(("上次离线", LkMarketNotify._fmt_ts_hm(_lo)))
+            out.append(("最后离线时间", LkMarketNotify._fmt_ts_hm(_lo)))
         add("个性签名", player.get("signature") or brief.get("card_signature"))
-        add("图鉴收集", brief.get("card_handbook_collect_num")
-            or player.get("card_handbook_collect_num"), unit=" 种")
-        add("时装羁绊", brief.get("card_fashion_bond_collect_num"), unit=" 个")
-        add("炫彩精灵数", pet.get("collected_glass_pet_count"), unit=" 只")
-        add("异色精灵数", pet.get("collected_shining_pet_count"), unit=" 只")
-        add("话题点", card.get("topic_point"))
-        yn("好友", card.get("is_friend"))
-        yn("被拉黑", card.get("is_black_role"))
+        add("世界等级", player.get("world_level"))
+        _reg = player.get("regist_date") or card.get("register_timestamp")
+        if _reg not in (None, "", 0):
+            out.append(("注册时间", LkMarketNotify._fmt_ts_hm(_reg)))
+        add("图鉴收集数", brief.get("card_handbook_collect_num")
+            or player.get("card_handbook_collect_num"))
         add("家园名称", home.get("home_name"))
+        add("经验", home.get("home_experience") or player.get("experience"))
         add("家园等级", home.get("home_level"))
         add("房间等级", home.get("room_level"))
         add("家园舒适度", home.get("home_comfort_level"))
-        add("家园好感/经验", home.get("home_experience"))
+        # 下面这些用户格式里没有，但拿到了就附在最后，不丢信息
+        add("时装羁绊", brief.get("card_fashion_bond_collect_num"), unit=" 个")
+        add("炫彩精灵数", pet.get("collected_glass_pet_count"), unit=" 只")
+        add("异色精灵数", pet.get("collected_shining_pet_count"), unit=" 只")
         add("家园精灵数", home.get("home_pet_count"), unit=" 只")
+        add("话题点", card.get("topic_point"))
+        yn("好友", card.get("is_friend"))
+        yn("被拉黑", card.get("is_black_role"))
         return out
 
     def _rocom_cache(self) -> Dict[str, Any]:
@@ -9223,20 +9228,12 @@ class LkMarketNotify(Star):
             return event.plain_result(
                 f"没查到游戏 UID {gid} 的资料。\n"
                 f"可能是接口排队，稍等再发一次；或者这个 UID 不存在。")
-        rows = [("游戏UID", gid)] + [(str(k), str(v)) for k, v in fields]
-        rows.append(("数据来源", SOURCE_ROCO))
-        png = None
-        if self._image_reply_on():
-            try:
-                c = _card()
-                if c is not None and c.available():
-                    png = await asyncio.to_thread(
-                        c.render_card, title="游戏角色", rows=rows,
-                        **self._card_kwargs())
-            except Exception as e:
-                logger.warning(f"[出图] UID 卡失败: {type(e).__name__}: {e}")
-        text = "\n".join(f"{k}：{v}" if v else str(k) for k, v in rows)
-        return await self._reply(event, text, png)
+        # 用户要求：UID 查询**只发文字**，不出图
+        lines = [f"UID：{gid}"]
+        for k, v in fields:
+            lines.append(f"{k}：{v}" if v else str(k))
+        lines.append(f"数据来源：{SOURCE_ROCO}")
+        return event.plain_result("\n".join(lines))
 
     @filter.command("UID")
     async def cmd_uid(self, event: AstrMessageEvent):
