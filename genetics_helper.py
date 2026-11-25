@@ -735,7 +735,10 @@ class Genetics:
                 return {"error": "", "looks_like": False}
             one = self._one(nm, tail)
             if one.get("error"):
-                return {"error": one["error"], "looks_like": True}
+                # 只有 tail 里至少有一个**数字**，才算「像遗传输入」；
+                # 「治愈兔好可爱」这种纯闲聊要静默（群里乱回会被骂）
+                _has_digit = any(any(ch.isdigit() for ch in str(x)) for x in tail)
+                return {"error": one["error"], "looks_like": _has_digit}
             # 配偶按**输入的方向**补极值（用户口径）：
             #   身高 / 体重：≥50% → 100（大块头端）；<50% → 0（小不点端）
             #   声音：>0 → 100；<0 → -100；=0 → 0
@@ -767,10 +770,14 @@ class Genetics:
         seg_b = toks[idx[1] + 1:]
         a = self._one(name_a, seg_a)
         if a.get("error"):
-            return {"error": f"第一只「{name_a}」：{a['error']}", "looks_like": True}
+            _has_digit = any(any(ch.isdigit() for ch in str(x)) for x in seg_a)
+            return {"error": f"第一只「{name_a}」：{a['error']}",
+                    "looks_like": _has_digit}
         b = self._one(name_b, seg_b)
         if b.get("error"):
-            return {"error": f"第二只「{name_b}」：{b['error']}", "looks_like": True}
+            _has_digit = any(any(ch.isdigit() for ch in str(x)) for x in seg_b)
+            return {"error": f"第二只「{name_b}」：{b['error']}",
+                    "looks_like": _has_digit}
         return {"ok": True, "a": a, "b": b}
 
     @staticmethod
