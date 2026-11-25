@@ -222,7 +222,7 @@ def _strip_emoji(text: str) -> str:
 
 _PLUGIN_DIR = Path(__file__).resolve().parent
 _PLUGIN_NAME = "astrbot_plugin_lk_egg"
-VERSION = "2.1.88"
+VERSION = "2.1.89"
 
 #: 数据来源标注（用户要求：查出结果时能看见原站）
 #: 卡片上放短名（完整 URL 太长会被截断），文字版用下面带 URL 的
@@ -464,7 +464,7 @@ def _hard_save_state(state: Dict[str, Any]) -> None:
     "astrbot_plugin_lk_egg",
     "MIKU013970 & DeepSeek",
     "洛克小肥鱼全功能 + 炫彩花种订阅",
-    "2.1.88",
+    "2.1.89",
 )
 class LkMarketNotify(Star):
     def __init__(self, context: Context, config: AstrBotConfig = None):
@@ -7448,9 +7448,9 @@ class LkMarketNotify(Star):
         _m = g.resolve(mo["name"])
         _m["p_h"], _m["p_w"] = mo["h"] / 100.0, mo["w"] / 100.0
         _m["db"] = mo.get("db")
-        # 包络走配置（genetics_weight_noise，默认 3.0）
+        # 包络走配置（genetics_weight_noise，默认 2.0 —— 蛋重/体重同一个公式）
         try:
-            _nz = max(0.0, float(self._cfg("genetics_weight_noise", 1.9)))
+            _nz = max(0.0, float(self._cfg("genetics_weight_noise", 2.0)))
         except (TypeError, ValueError):
             _nz = 3.0
         return g.pair(_f, _m, noise=_nz)

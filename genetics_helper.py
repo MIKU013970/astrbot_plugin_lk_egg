@@ -35,10 +35,8 @@ from typing import Any, Dict, List, Optional, Tuple
 SMALL_MAX = 2.0        # 小不点：体重% ≤ 2.0
 BIG_MIN = 98.0         # 大块头：体重% ≥ 98.0
 VOICE_ABS = 96         # |分贝| ≥ 96
-#: 规则2（双亲身高同为极值）时的包络。
-#: 源 skill 实测 334 颗双亲身高都满的蛋：子代体重全部 ≥98（最低 98.0、中位 99.2）。
-#: 锁 99.17 要覆盖到 98.0 下限 → 1.17pp。
-RULE2_NOISE = 1.17
+#: 体重% 的随机包络（±pp）。蛋重和孵出体重用同一个公式，所以统一 ±2%。
+RULE2_NOISE = 2.0        # 规则2 也统一成 ±2%（体重和蛋走同一个公式）
 
 #: 子代**蛋重百分比**的随机包络（±%）。
 #: 用户公式：蛋% = (父身高% + 母身高%) / 2 ± 2%
@@ -51,7 +49,7 @@ EGG_PCT_NOISE = 2.0
 #: 也就是说子代体重不是定值，而是在「父母平均 ±1.9pp」这个区间里随机取。
 #: 源工具默认用 1.0pp 是**保守包络**（medal.py NOISE=1.0），这里改按实测上限 1.9。
 #: 想回到保守口径把下面改成 1.0 即可。
-NOISE = 1.9              # 规则1：436 颗蛋实测最大偏移 1.92pp
+NOISE = 2.0              # 子代体重% 的随机包络，和蛋% 用同一个数（±2%）
 RULE2_TOP = 0.9917     # 规则2 满端平台（368 颗蛋实测 99.17±0.56）
 RULE2_BOTTOM = 0.0083  # 规则2 低端锁定（新 skill RULE2_BOT=0.83%，按高端 99.17 对称推定）
 
@@ -305,16 +303,19 @@ class Genetics:
         if hh.get("hatch_h") is not None:
             out["child_hatch_h"] = hh["hatch_h"]
             out["child_h_pct_slot"] = hh.get("hatch_pct")
-        # 蛋重：**蛋% = (父身高% + 母身高%)/2 ± 2%**（用户指定公式）
-        #   中心值用**身高%**，不是体重% —— 蛋是「父母体型」的产物。
-        #   克数按用户公式：MIN - 0.5 + (MAX - MIN + 1) × P子，四舍五入，超额归两端。
+        # 蛋重与孵出体重**共用同一个公式**（都用体重%）：
+        #   P子 = 父母体重%平均（规则2 时锁 99.17 / 0.83）
+        #   蛋重(g) = MIN - 0.5 + (MAX - MIN + 1) × P子，四舍五入，超额归两端
+        #   随机包络 ±2%（NOISE）
+        # 身高另走原来的蛋档量化（p_c），不受这里影响。
         if brec.get("w_egg"):
             wl, wh = brec["w_egg"]
             _min_g = int(round(wl * 1000))
             _max_g = int(round(wh * 1000))
-            _epc = p_c                                   # 0~1，父母身高%平均
-            _epl = max(0.0, _epc - EGG_PCT_NOISE / 100.0)
-            _eph = min(1.0, _epc + EGG_PCT_NOISE / 100.0)
+            _epc = w_c                                   # 0~1，父母体重%平均
+            _epn = (RULE2_NOISE if rule2 else noise) / 100.0
+            _epl = max(0.0, _epc - _epn)
+            _eph = min(1.0, _epc + _epn)
             _g_c = egg_weight_g(_epc, _min_g, _max_g)
             _g_lo = egg_weight_g(_epl, _min_g, _max_g)
             _g_hi = egg_weight_g(_eph, _min_g, _max_g)
