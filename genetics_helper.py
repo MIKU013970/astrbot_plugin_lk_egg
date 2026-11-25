@@ -685,11 +685,19 @@ class Genetics:
             one = self._one(nm, tail)
             if one.get("error"):
                 return {"error": one["error"], "looks_like": True}
+            # 配偶：体型补满阶（冲体型用），**声音跟输入那只保持一致**
+            # —— 你发 -100，配偶也要 -100，不然子代声音会凭空变成 0
+            _mate_db = one.get("db")
+            _mate_db_default = _mate_db is None
+            if _mate_db_default:
+                _mate_db = self.DEFAULT_DB
             mate = {
                 "name": nm,
-                "h": self.DEFAULT_PCT, "w": self.DEFAULT_PCT, "db": self.DEFAULT_DB,
-                "h_default": True, "w_default": True, "db_default": True,
-                "notes": ["配偶按同种满阶自动补（100% 身高 / 100% 体重 / 100 声音）"],
+                "h": self.DEFAULT_PCT, "w": self.DEFAULT_PCT, "db": _mate_db,
+                "h_default": True, "w_default": True,
+                "db_default": _mate_db_default,
+                "notes": [f"配偶按同种满阶自动补（100% 身高 / 100% 体重 / "
+                          f"{_mate_db:g} 声音，声音跟随输入）"],
                 "auto_mate": True,
             }
             return {"ok": True, "a": one, "b": mate, "auto_mate": True}
