@@ -222,7 +222,7 @@ def _strip_emoji(text: str) -> str:
 
 _PLUGIN_DIR = Path(__file__).resolve().parent
 _PLUGIN_NAME = "astrbot_plugin_lk_egg"
-VERSION = "2.1.99"
+VERSION = "2.2.0"
 
 #: 数据来源标注（用户要求：查出结果时能看见原站）
 #: 卡片上放短名（完整 URL 太长会被截断），文字版用下面带 URL 的
@@ -464,7 +464,7 @@ def _hard_save_state(state: Dict[str, Any]) -> None:
     "astrbot_plugin_lk_egg",
     "MIKU013970 & DeepSeek",
     "洛克小肥鱼全功能 + 炫彩花种订阅",
-    "2.1.99",
+    "2.2.0",
 )
 class LkMarketNotify(Star):
     def __init__(self, context: Context, config: AstrBotConfig = None):
@@ -1659,6 +1659,27 @@ class LkMarketNotify(Star):
                     lines.append(f"{_k}　{_v}" if _k else f"　　{_v}")
 
         # ---- 技能不在这里：技能走独立查询「技能 呆呆铃」
+
+        # 异色奖牌及格线（父母平均身高% 要到多少才出牌）
+        _ml = self._medal_line_of(str(r.get("精灵") or ""))
+        if _ml:
+            _b = _ml.get("big") or {}
+            _s = _ml.get("small") or {}
+            _mlines = []
+            if _b.get("pass") is not None:
+                _t2 = f"及格 ≥{_b['pass']:g}%"
+                if _b.get("safe") is not None:
+                    _t2 += f"　稳出 ≥{_b['safe']:g}%"
+                _mlines.append(f"大块头：{_t2}")
+            if _s.get("pass") is not None:
+                _t2 = f"及格 ≤{_s['pass']:g}%"
+                if _s.get("safe") is not None:
+                    _t2 += f"　稳出 ≤{_s['safe']:g}%"
+                _mlines.append(f"小不点：{_t2}")
+            if _mlines:
+                lines.append("")
+                lines.append("—— 异色奖牌及格线（父母平均身高%）——")
+                lines.extend(_mlines)
 
         # 数据来源（文字版给完整地址）
         lines.append("")
@@ -8606,6 +8627,36 @@ class LkMarketNotify(Star):
     #: 官方精灵表（pets.json）：名字 → 记录（赛季 / 图鉴号 / 阶段 / 异色 / 同乘 / 蛋组 / 系别）
     _PETS_TABLE: Optional[Dict[str, Dict[str, Any]]] = None
 
+    #: 「异色精灵大块头/小不点及格线」数据（tools 转出来的 medal_lines.json）
+    _MEDAL_LINES: Optional[Dict[str, Any]] = None
+
+    @classmethod
+    def _medal_lines(cls) -> Dict[str, Any]:
+        if cls._MEDAL_LINES is not None:
+            return cls._MEDAL_LINES
+        out: Dict[str, Any] = {}
+        try:
+            fp = _PLUGIN_DIR / "medal_lines.json"
+            if fp.is_file():
+                out = json.loads(fp.read_text(encoding="utf-8-sig"))
+        except Exception as e:                               # noqa: BLE001
+            logger.warning(f"[奖牌线] medal_lines.json 读取失败: {type(e).__name__}: {e}")
+        cls._MEDAL_LINES = out
+        return out
+
+    def _medal_line_of(self, name: str) -> Optional[Dict[str, Any]]:
+        """查某只精灵（或它所在进化链的初始形态）的奖牌及格线。"""
+        d = self._medal_lines().get("species") or {}
+        nm = str(name or "").strip()
+        if not nm:
+            return None
+        if nm in d:
+            return d[nm]
+        for _base, rec in d.items():
+            if nm in (rec.get("chain") or []):
+                return rec
+        return None
+
     @classmethod
     def _pets_table(cls) -> Dict[str, Dict[str, Any]]:
         if cls._PETS_TABLE is not None:
@@ -9057,6 +9108,25 @@ class LkMarketNotify(Star):
         rows.append(("", "—— 来源 ——"))
         rows.append(("图鉴 / 体型 / 蛋组", SOURCE_ROCO))
         rows.append(("星光 / 回顾等 wiki 资料", SOURCE_WIKI))
+        # 异色奖牌及格线（父母平均身高% 要到多少才出牌）
+        _ml = self._medal_line_of(_nm)
+        if _ml:
+            _b = _ml.get("big") or {}
+            _s = _ml.get("small") or {}
+            _lines: List[tuple] = []
+            if _b.get("pass") is not None:
+                _txt = f"及格 ≥{_b['pass']:g}%"          # s*−2
+                if _b.get("safe") is not None:
+                    _txt += f"　稳出 ≥{_b['safe']:g}%"
+                _lines.append(("大块头", _txt))
+            if _s.get("pass") is not None:
+                _txt = f"及格 ≤{_s['pass']:g}%"
+                if _s.get("safe") is not None:
+                    _txt += f"　稳出 ≤{_s['safe']:g}%"
+                _lines.append(("小不点", _txt))
+            if _lines:
+                rows.append(("", "—— 异色奖牌及格线（父母平均身高%）——"))
+                rows += _lines
         return rows
 
     def _species_rows_core(self, rec: Dict[str, Any], dex: str = "",
