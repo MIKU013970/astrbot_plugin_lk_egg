@@ -659,6 +659,44 @@ class Genetics:
                 "h_default": h is None, "w_default": w is None, "db_default": db is None,
                 "notes": notes}
 
+    @property
+    def _names_by_len(self) -> List[str]:
+        """已知精灵名，**按长度降序**（连写拆分时优先匹配长名）。"""
+        cache = getattr(self, "_NBL", None)
+        if cache is None:
+            cache = sorted(self._species.keys(), key=len, reverse=True)
+            self._NBL = cache
+        return cache
+
+    def _split_by_names(self, tok: str) -> List[str]:
+        """把「100缇塔10%100」拆成 ['100', '缇塔', '10%', '100']。"""
+        s = str(tok or "")
+        if not s:
+            return []
+        names = self._names_by_len
+        out: List[str] = []
+        buf = ""
+        i = 0
+        n = len(s)
+        while i < n:
+            hit = None
+            for nm in names:
+                if s.startswith(nm, i):
+                    hit = nm
+                    break
+            if hit:
+                if buf:
+                    out.append(buf)
+                    buf = ""
+                out.append(hit)
+                i += len(hit)
+            else:
+                buf += s[i]
+                i += 1
+        if buf:
+            out.append(buf)
+        return out
+
     def parse_pair(self, text: str) -> Dict[str, Any]:
         """整条消息 → 两只精灵。成功 {"ok":True,"a":..,"b":..}；否则 {"error":..}。
 
@@ -668,7 +706,12 @@ class Genetics:
         raw = str(text or "").replace("+", " ").strip()
         if not raw:
             return {"error": "", "looks_like": False}
-        toks = [t for t in raw.replace("　", " ").split(" ") if t]
+        _raw = [t for t in raw.replace("　", " ").split(" ") if t]
+        # 名字和数字连写（100缇塔10%100）→ 先按已知精灵名拆开
+        toks: List[str] = []
+        for _tk in _raw:
+            toks.extend(self._split_by_names(_tk))
+        toks = [x for x in toks if x]
         idx = [i for i, t in enumerate(toks) if self.get(t)]
         if not idx:
             return {"error": "", "looks_like": False}
@@ -685,19 +728,28 @@ class Genetics:
             one = self._one(nm, tail)
             if one.get("error"):
                 return {"error": one["error"], "looks_like": True}
-            # 配偶：体型补满阶（冲体型用），**声音跟输入那只保持一致**
-            # —— 你发 -100，配偶也要 -100，不然子代声音会凭空变成 0
-            _mate_db = one.get("db")
-            _mate_db_default = _mate_db is None
-            if _mate_db_default:
+            # 配偶按**输入的方向**补极值（用户口径）：
+            #   身高 / 体重：≥50% → 100（大块头端）；<50% → 0（小不点端）
+            #   声音：>0 → 100；<0 → -100；=0 → 0
+            _oh = one.get("h")
+            _ow = one.get("w")
+            _od = one.get("db")
+            _mate_h = (100.0 if (_oh is None or _oh >= 50) else 0.0)
+            _mate_w = (100.0 if (_ow is None or _ow >= 50) else 0.0)
+            if _od is None:
                 _mate_db = self.DEFAULT_DB
+            elif _od > 0:
+                _mate_db = 100
+            elif _od < 0:
+                _mate_db = -100
+            else:
+                _mate_db = 0
             mate = {
                 "name": nm,
-                "h": self.DEFAULT_PCT, "w": self.DEFAULT_PCT, "db": _mate_db,
-                "h_default": True, "w_default": True,
-                "db_default": _mate_db_default,
-                "notes": [f"配偶按同种满阶自动补（100% 身高 / 100% 体重 / "
-                          f"{_mate_db:g} 声音，声音跟随输入）"],
+                "h": _mate_h, "w": _mate_w, "db": _mate_db,
+                "h_default": True, "w_default": True, "db_default": True,
+                "notes": [f"配偶按方向补极值（身高 {_mate_h:g}% / "
+                          f"体重 {_mate_w:g}% / 声音 {_mate_db:+g}）"],
                 "auto_mate": True,
             }
             return {"ok": True, "a": one, "b": mate, "auto_mate": True}
