@@ -126,6 +126,12 @@ def egg_weight_dist(p_center: float, p_noise: float,
     tot = sum(acc.values()) or Decimal(1)
     out = [(gg, float(w / tot)) for gg, w in acc.items()
            if float(w / tot) >= min_prob]
+    if not out and acc:
+        # 蛋尺子极宽（>200 档）时每档概率都低于 min_prob → 至少留概率最高的几档
+        _top = sorted(acc.items(), key=lambda kv: -kv[1])[:3]
+        out = [(gg, float(w / tot)) for gg, w in _top]
+        out.sort(key=lambda x: -x[0])
+        return out
     out.sort(key=lambda x: -x[0])
     return out
 
@@ -581,6 +587,9 @@ class Genetics:
         for t in toks:
             s = str(t).strip()
             # 支持连写：0%1.37%  →  0% + 1.37%
+            # 纯符号（#, +, /, 、 等）直接跳过，别把整条搞成错误
+            if s and not any(ch.isalnum() or ch in ".%" or "\u4e00" <= ch <= "\u9fff" for ch in s):
+                continue
             _parts = re.findall(r"-?\d+(?:\.\d+)?%?", s)
             if not _parts or "".join(_parts) != s:
                 return {"error": f"「{t}」不是数字"}
@@ -714,7 +723,7 @@ class Genetics:
         raw = str(text or "").replace("+", " ").strip()
         if not raw:
             return {"error": "", "looks_like": False}
-        _raw = [t for t in raw.replace("　", " ").split(" ") if t]
+        _raw = [t for t in raw.replace("　", " ").replace("＋", "+").split(" ") if t]
         # 名字和数字连写（100缇塔10%100）→ 先按已知精灵名拆开
         toks: List[str] = []
         for _tk in _raw:
@@ -737,7 +746,9 @@ class Genetics:
             if one.get("error"):
                 # 只有 tail 里至少有一个**数字**，才算「像遗传输入」；
                 # 「治愈兔好可爱」这种纯闲聊要静默（群里乱回会被骂）
-                _has_digit = any(any(ch.isdigit() for ch in str(x)) for x in tail)
+                _has_digit = any(
+                    re.fullmatch(r"-?\d+(?:\.\d+)?%?", str(x).strip())
+                    for x in tail)
                 return {"error": one["error"], "looks_like": _has_digit}
             # 配偶按**输入的方向**补极值（用户口径）：
             #   身高 / 体重：≥50% → 100（大块头端）；<50% → 0（小不点端）
@@ -770,12 +781,16 @@ class Genetics:
         seg_b = toks[idx[1] + 1:]
         a = self._one(name_a, seg_a)
         if a.get("error"):
-            _has_digit = any(any(ch.isdigit() for ch in str(x)) for x in seg_a)
+            _has_digit = any(
+                re.fullmatch(r"-?\d+(?:\.\d+)?%?", str(x).strip())
+                for x in seg_a)
             return {"error": f"第一只「{name_a}」：{a['error']}",
                     "looks_like": _has_digit}
         b = self._one(name_b, seg_b)
         if b.get("error"):
-            _has_digit = any(any(ch.isdigit() for ch in str(x)) for x in seg_b)
+            _has_digit = any(
+                re.fullmatch(r"-?\d+(?:\.\d+)?%?", str(x).strip())
+                for x in seg_b)
             return {"error": f"第二只「{name_b}」：{b['error']}",
                     "looks_like": _has_digit}
         return {"ok": True, "a": a, "b": b}

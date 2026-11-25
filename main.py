@@ -222,7 +222,7 @@ def _strip_emoji(text: str) -> str:
 
 _PLUGIN_DIR = Path(__file__).resolve().parent
 _PLUGIN_NAME = "astrbot_plugin_lk_egg"
-VERSION = "2.1.98"
+VERSION = "2.1.99"
 
 #: 数据来源标注（用户要求：查出结果时能看见原站）
 #: 卡片上放短名（完整 URL 太长会被截断），文字版用下面带 URL 的
@@ -464,7 +464,7 @@ def _hard_save_state(state: Dict[str, Any]) -> None:
     "astrbot_plugin_lk_egg",
     "MIKU013970 & DeepSeek",
     "洛克小肥鱼全功能 + 炫彩花种订阅",
-    "2.1.98",
+    "2.1.99",
 )
 class LkMarketNotify(Star):
     def __init__(self, context: Context, config: AstrBotConfig = None):
@@ -7406,8 +7406,7 @@ class LkMarketNotify(Star):
             lines.append(f"身高　{r['child_h_pct_mean']:.2f}%")
         lines.append(f"体重　{r['child_w_pct_mean']:.2f}%"
                      f"（{r['child_w_pct_lo']:.1f}~{r['child_w_pct_hi']:.1f}）")
-        if r.get("child_egg_w_kg") is not None:
-            _dist = r.get("egg_w_dist")
+        _dist = r.get("egg_w_dist")      # 母本缺蛋尺子时是 None，后面统一判空
         if _dist:
             if len(_dist) <= 5:
                 # 档数少：逐档列概率（菇菇丁这种 3 档很适合）
@@ -7421,10 +7420,14 @@ class LkMarketNotify(Star):
                 lines.append(f"蛋重　{_g_mid} g（{_g_lo}~{_g_hi} g，{len(_dist)} 档）")
         else:
             _eg = r.get("egg_w_g")
+            _ekg = r.get("child_egg_w_kg")
             if _eg is not None:
                 lines.append(f"蛋重　{_eg} g")
+            elif _ekg is not None:
+                lines.append(f"蛋重　{_ekg} kg")
             else:
-                lines.append(f"蛋重　{r['child_egg_w_kg']} kg")
+                # 母本基础形态没有蛋尺子（88/538 个物种）→ 明确说一声，别静悄悄少一行
+                lines.append("蛋重　（母本基础形态无蛋重数据，算不了）")
         v = g.voice(a["db"], b["db"])
         if v:
             # 只显示结果数字，不print公式、不带「婉转声/粗嗓门」标签
@@ -7578,18 +7581,38 @@ class LkMarketNotify(Star):
             # 组合奖牌按声音方向四选一（源 skill）：
             #   大块头+婉转声=大婉　大块头+粗嗓门=大粗
             #   小不点+婉转声=小婉　小不点+粗嗓门=小粗
-            if _snd_ok and _v_snd >= 96:
-                _cname = "大婉" if _t == "big" else "小婉"
-            elif _snd_ok and _v_snd <= -96:
-                _cname = "大粗" if _t == "big" else "小粗"
+            _pos_name = "大婉" if _t == "big" else "小婉"
+            _neg_name = "大粗" if _t == "big" else "小粗"
+            _fallback = ("大块头双牌" if _t == "big" else "小不点双牌")
+            if _mixed:
+                # 一正一负：两个方向都可能可达 → 组合名都列出来
+                _names = []
+                _cgs = []
+                if _vp is not None:
+                    _names.append(_pos_name)
+                    _cgs.append((_gp or 0) + 1)
+                if _vn is not None:
+                    _names.append(_neg_name)
+                    _cgs.append((_gn or 0) + 1)
+                _cname = " / ".join(_names) if _names else _fallback
+                if _g is not None and _names:
+                    _cg = max([_g] + _cgs)
+                    _bits.append(f"→ {_cname} 第{_cg}代 ✓")
+                else:
+                    _bits.append(f"→ {_cname} 不可达")
             else:
-                _cname = ("大块头双牌" if _t == "big" else "小不点双牌")
-            # 双牌 = 体型代数（声音这一项要么 0 代，要么永远没有）
-            if _g is not None and _snd_ok:
-                _cg = max(_g, (_sg or 0) + 1)
-                _bits.append(f"→ {_cname} 第{_cg}代 ✓")
-            else:
-                _bits.append(f"→ {_cname} 不可达")
+                if _snd_ok and _v_snd >= 96:
+                    _cname = _pos_name
+                elif _snd_ok and _v_snd <= -96:
+                    _cname = _neg_name
+                else:
+                    _cname = _fallback
+                # 双牌 = 体型代数（声音这一项要么 0 代，要么永远没有）
+                if _g is not None and _snd_ok:
+                    _cg = max(_g, (_sg or 0) + 1)
+                    _bits.append(f"→ {_cname} 第{_cg}代 ✓")
+                else:
+                    _bits.append(f"→ {_cname} 不可达")
             # 「等效达标」提示：前面某一代身高已到端、但体重没过线 → 不带牌
             _near = next((s for s in gi["steps"]
                           if _raw_g and s["gen"] != _raw_g and
@@ -7816,7 +7839,7 @@ class LkMarketNotify(Star):
                     _ghi = r.get("egg_w_g_hi")
                     if _g is not None and _glo is not None and _ghi is not None:
                         bits.append(f"蛋重 {_g} g（{_glo}~{_ghi} g）")
-                    else:
+                    elif _egg is not None:
                         bits.append(f"蛋重 {_egg} kg")
                 lines.append(f"{i}. {r['mother'] if gender == '公' else r['father']}"
                              f" {r.get('dex') or ''}".rstrip())
