@@ -52,7 +52,6 @@ EGG_PCT_NOISE = 2.0
 #: 也就是说子代体重不是定值，而是在「父母平均 ±1.9pp」这个区间里随机取。
 #: 源工具默认用 1.0pp 是**保守包络**（medal.py NOISE=1.0），这里改按实测上限 1.9。
 #: 想回到保守口径把下面改成 1.0 即可。
-NOISE = 2.0              # 【已废弃】旧体重偏移，现统一走 P_SUB_NOISE；保留名只为兼容调用
 RULE2_TOP = 0.9917     # 规则2 满端平台（368 颗蛋实测 99.17±0.56）
 RULE2_BOTTOM = 0.0083  # 规则2 低端锁定（新 skill RULE2_BOT=0.83%，按高端 99.17 对称推定）
 
@@ -70,15 +69,56 @@ def _slots(lo: float, hi: float) -> int:
     return int(round((hi - lo) / 0.01)) + 1
 
 
-def _prob_le(mean: float, thr: float, noise: float = NOISE) -> float:
+def _prob_le(mean: float, thr: float, noise: float = P_SUB_NOISE) -> float:
     """子代 = mean ± noise（均匀分布）时 P(子代 ≤ thr)。"""
     if noise <= 0:
         return 1.0 if mean <= thr else 0.0
     return max(0.0, min(1.0, (thr - (mean - noise)) / (2.0 * noise)))
 
 
-def _prob_ge(mean: float, thr: float, noise: float = NOISE) -> float:
+def _prob_ge(mean: float, thr: float, noise: float = P_SUB_NOISE) -> float:
     return _prob_le(-mean, -thr, noise)
+
+
+def egg_weight_dist(p_center: float, p_noise: float,
+                    w_min_g: int, w_max_g: int,
+                    min_prob: float = 0.005) -> List[Tuple[int, float]]:
+    """蛋重档位概率分布。
+
+    P 在 `[p_center - p_noise, p_center + p_noise]`（clamp 到 [0,1]）内**均匀分布**，
+    按「实际蛋重(g) = MIN − 0.5 + (MAX − MIN + 1) × P」四舍五入切档，
+    每档的宽度就是它的概率。
+
+    菇菇丁验算（MIN=385, MAX=500, P=100% → 范围 clamp 到 [98%, 100%]）：
+
+        498 g  P∈[98.00, 98.28]  0.28%  → 13.8%
+        499 g  P∈[98.28, 99.14]  0.86%  → 43.1%
+        500 g  P∈[99.14, 100.0]  0.86%  → 43.1%
+
+    返回 [(克数, 概率), ...]，按克数从大到小；概率 < `min_prob` 的档位丢掉。
+    """
+    lo_g = int(w_min_g)
+    hi_g = int(w_max_g)
+    n = hi_g - lo_g + 1
+    if n <= 1:
+        return [(lo_g, 1.0)]
+    p_lo = max(0.0, float(p_center) - float(p_noise))
+    p_hi = min(1.0, float(p_center) + float(p_noise))
+    if p_hi <= p_lo:
+        return [(egg_weight_g(p_center, lo_g, hi_g), 1.0)]
+    acc: Dict[int, float] = {}
+    for g in range(lo_g, hi_g + 1):
+        # 这一档对应的 P 半开区间：(g-0.5-基, g+0.5-基]
+        base = lo_g - 0.5
+        seg_lo = (g - 0.5 - base) / n
+        seg_hi = (g + 0.5 - base) / n
+        w = max(0.0, min(p_hi, seg_hi) - max(p_lo, seg_lo))
+        if w > 0:
+            acc[g] = w
+    tot = sum(acc.values()) or 1.0
+    out = [(g, w / tot) for g, w in acc.items() if w / tot >= min_prob]
+    out.sort(key=lambda x: -x[0])
+    return out
 
 
 def egg_weight_g(p_sub: float, w_min_g: int, w_max_g: int) -> int:
@@ -218,7 +258,7 @@ class Genetics:
 
     # ---------------------------------------------------------------- 配对
     def pair(self, fa: Dict[str, Any], mo: Dict[str, Any],
-             model: str = "auto", noise: float = NOISE) -> Dict[str, Any]:
+             model: str = "auto", noise: float = P_SUB_NOISE) -> Dict[str, Any]:
         """算这一对的子代：身高档、体重%、奖牌概率。
 
         ⚠ 身高未知时**不能当 0%（最矮）**处理 —— 那会误触发「规则2（双亲同为极值）」，
@@ -265,7 +305,7 @@ class Genetics:
             h_at_max = hh["hatch_slot"] == hh["hatch_slots"] - 1
             h_at_min = hh["hatch_slot"] == 0
 
-        _nz = P_SUB_NOISE                          # 统一 ±2%（旧的 1.9/1.17 已废弃）
+        _nz = P_SUB_NOISE                          # 统一 ±2%（旧 1.9/1.17 已删）
         p_small = _prob_le(w_c * 100, SMALL_MAX, _nz) if h_at_min else 0.0
         p_big = _prob_ge(w_c * 100, BIG_MIN, _nz) if h_at_max else 0.0
 
@@ -333,6 +373,8 @@ class Genetics:
             out["egg_w_g"] = _g_c
             out["egg_w_g_lo"] = _g_lo
             out["egg_w_g_hi"] = _g_hi
+            # 档位概率分布（P 均匀分布在 ±2% 内）
+            out["egg_w_dist"] = egg_weight_dist(_epc, _epn, _min_g, _max_g)
             out["egg_g_range"] = [_min_g, _max_g]
             out["egg_pct_center"] = round(_epc * 100, 2)
             out["egg_pct_lo"] = round(_epl * 100, 2)
@@ -400,8 +442,8 @@ class Genetics:
                 "ok": (at_max and w_pct >= BIG_MIN) if target == "big"
                       else (at_min and w_pct <= SMALL_MAX),
                 # ±1pp 包络下「有概率拿到」的判定
-                "maybe": (at_max and w_pct + NOISE >= BIG_MIN) if target == "big"
-                         else (at_min and w_pct - NOISE <= SMALL_MAX),
+                "maybe": (at_max and w_pct + P_SUB_NOISE >= BIG_MIN) if target == "big"
+                         else (at_min and w_pct - P_SUB_NOISE <= SMALL_MAX),
             })
             if steps[-1]["ok"] and hit_gen is None:
                 hit_gen = gen

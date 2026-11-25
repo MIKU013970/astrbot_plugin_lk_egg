@@ -222,7 +222,7 @@ def _strip_emoji(text: str) -> str:
 
 _PLUGIN_DIR = Path(__file__).resolve().parent
 _PLUGIN_NAME = "astrbot_plugin_lk_egg"
-VERSION = "2.1.90"
+VERSION = "2.1.91"
 
 #: 数据来源标注（用户要求：查出结果时能看见原站）
 #: 卡片上放短名（完整 URL 太长会被截断），文字版用下面带 URL 的
@@ -464,7 +464,7 @@ def _hard_save_state(state: Dict[str, Any]) -> None:
     "astrbot_plugin_lk_egg",
     "MIKU013970 & DeepSeek",
     "洛克小肥鱼全功能 + 炫彩花种订阅",
-    "2.1.90",
+    "2.1.91",
 )
 class LkMarketNotify(Star):
     def __init__(self, context: Context, config: AstrBotConfig = None):
@@ -7401,13 +7401,16 @@ class LkMarketNotify(Star):
         lines.append(f"体重　{r['child_w_pct_mean']:.2f}%"
                      f"（{r['child_w_pct_lo']:.1f}~{r['child_w_pct_hi']:.1f}）")
         if r.get("child_egg_w_kg") is not None:
-            _eg = r.get("egg_w_g")
-        _eg_lo = r.get("egg_w_g_lo")
-        _eg_hi = r.get("egg_w_g_hi")
-        if _eg is not None and _eg_lo is not None and _eg_hi is not None:
-            lines.append(f"蛋重　{_eg} g（{_eg_lo}~{_eg_hi} g）")
+            _dist = r.get("egg_w_dist")
+        if _dist:
+            lines.append("蛋重　" + "　".join(
+                f"{g} g（{p * 100:.0f}%）" for g, p in _dist))
         else:
-            lines.append(f"蛋重　{r['child_egg_w_kg']} kg")
+            _eg = r.get("egg_w_g")
+            if _eg is not None:
+                lines.append(f"蛋重　{_eg} g")
+            else:
+                lines.append(f"蛋重　{r['child_egg_w_kg']} kg")
         v = g.voice(a["db"], b["db"])
         if v:
             # 只显示结果数字，不print公式、不带「婉转声/粗嗓门」标签
