@@ -222,7 +222,7 @@ def _strip_emoji(text: str) -> str:
 
 _PLUGIN_DIR = Path(__file__).resolve().parent
 _PLUGIN_NAME = "astrbot_plugin_lk_egg"
-VERSION = "2.5.1"
+VERSION = "2.5.2"
 
 #: 数据来源标注（用户要求：查出结果时能看见原站）
 #: 卡片上放短名（完整 URL 太长会被截断），文字版用下面带 URL 的
@@ -464,7 +464,7 @@ def _hard_save_state(state: Dict[str, Any]) -> None:
     "astrbot_plugin_lk_egg",
     "MIKU013970 & DeepSeek",
     "洛克小肥鱼全功能 + 炫彩花种订阅",
-    "2.5.1",
+    "2.5.2",
 )
 class LkMarketNotify(Star):
     def __init__(self, context: Context, config: AstrBotConfig = None):
@@ -1580,7 +1580,7 @@ class LkMarketNotify(Star):
                  f"公母比例：{r.get('公母') or '未知'}"]
         if _types:
             lines.append(f"系别：{' / '.join(_types)}")
-        _star, _review = self._star_review_of(str(r.get("精灵") or ""))
+        _star, _review = self._star_review_chain_vals(str(r.get("精灵") or ""))
         if _star is not None:
             lines.append(f"星光值：★{_star}")
         if _review is not None:
@@ -5523,16 +5523,6 @@ class LkMarketNotify(Star):
                     ("大块头", f"过线 ≥{self._fmt_num(w_hi - delta)}"
                                f"  极限 {self._fmt_num(w_hi)}", (194, 88, 40)),
                 ]}))
-            # 星光值 / 回顾值：图标 + 数值（不再拼成「★16 / 回顾 1200」纯文字）
-            # 每个阶段各自不同，跟着阶段走；缺数据就整条不画，不留空图标
-            _facts: List[tuple] = []
-            _star, _review = self._star_review_of(n)
-            if _star is not None:
-                _facts.append((self._fact_icon_path("星光值"), str(_star)))
-            if _review is not None:
-                _facts.append((self._fact_icon_path("回顾"), str(_review)))
-            if _facts:
-                rows.append(("", "", {"facts": _facts}))
         return rows
 
     _SKILL_TABLE: Optional[Dict[str, Dict[str, List[Dict[str, Any]]]]] = None
@@ -5700,7 +5690,11 @@ class LkMarketNotify(Star):
         return self._star_review_short(nm)
 
     def _star_review_chain_vals(self, name: str) -> tuple:
-        """链上从最高阶段往回找第一个有值的阶段 → (星光值, 回顾值)。"""
+        """链上从最低阶段（链首）往上找第一个有值的阶段 → (星光值, 回顾值)。
+
+        用户要求：卡片和详情都按进化链**最低一档**展示星光/回顾
+        （蛋是按一阶段下的，数值也跟一阶段走）。
+        """
         nm = str(name or "").strip()
         if not nm:
             return None, None
@@ -5708,7 +5702,7 @@ class LkMarketNotify(Star):
         chain = (chains.get(nm)
                  or chains.get(self._chain_map().get(nm) or nm)
                  or [nm])
-        for cand in reversed(list(chain)):
+        for cand in list(chain):
             s, r = self._star_review_of(cand)
             if s is not None or r is not None:
                 return s, r
@@ -9131,6 +9125,15 @@ class LkMarketNotify(Star):
         # 孵化时间（普通 / 风场 / 5 倍 / 风场+5 倍）
         if bool(self._cfg("hatch_time_enabled", True)):
             rows += self._hatch_rows(rec)
+        # 星光/回顾：按进化链最低一档展示（一阶段没有才往上找）
+        _star, _review = self._star_review_chain_vals(_nm)
+        _facts: List[tuple] = []
+        if _star is not None:
+            _facts.append((self._fact_icon_path("星光值"), str(_star)))
+        if _review is not None:
+            _facts.append((self._fact_icon_path("回顾"), str(_review)))
+        if _facts:
+            rows.append(("", "", {"facts": _facts}))
         # 全阶段体型 + 每个阶段各自的星光值/回顾值（这两个值逐阶段不同，不放在基础资料里）
         if bool(self._cfg("chain_stages_enabled", True)):
             st = self._chain_stage_rows(rec)
