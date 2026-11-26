@@ -176,7 +176,7 @@
 | 卡片 | 白磨砂底 + 1px 暖边框 + 18px 圆角 |
 | 左上角小胶囊 | 系别 `龙/翼`、`火系`…（浅底 + 系别名色字） |
 | 右上角小字 | **区间 N**（这颗蛋有几个身高体重区间） |
-| 头像 | **最高阶段本体图**（3px 系别细圈 + 奶油底；`grid_avatar=stage1` 可切回一阶段） |
+| 头像 | **一阶段精灵图**（3px 系别细圈 + 奶油底；查红绒十字显示治愈兔） |
 | 头像右下 | 精灵蛋 / 异色蛋徽标（最多两枚） |
 | 名字下小字 | `图鉴 224 · 2 形态` |
 | 小字下一行 | 星光值 / 回顾值（进化链最低一档，图标 + 数字） |
@@ -198,7 +198,7 @@
   热态约 100 毫秒一张，任何环境都能出图
 
 配置：`grid_enabled`、`grid_engine`、`grid_per_page`（默认 20）、`grid_max_pages`、
-`grid_width`、`grid_cols`、`grid_avatar`（own / stage1 / shiny）、
+`grid_width`、`grid_cols`、`grid_avatar`（stage1 默认 / shiny）、
 `grid_show_ride`（both / yes / off）、`grid_elem_tint`、`grid_theme`、
 `grid_season_titles`、`grid_timeout`。
 

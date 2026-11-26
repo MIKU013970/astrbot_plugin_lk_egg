@@ -233,8 +233,8 @@
   "grid_avatar": {
     "description": "网格图卡片头像用哪张图",
     "type": "string",
-    "default": "own",
-    "hint": "own（默认）=显示卡片名字对应的最高阶段本体图；stage1=强制一阶段图；shiny=异色立绘"
+    "default": "stage1",
+    "hint": "stage1（默认）=一阶段精灵图（查红绒十字显示治愈兔）；shiny=异色立绘"
   },
   "grid_show_ride": {
     "description": "卡片上标不标「是否同乘」",

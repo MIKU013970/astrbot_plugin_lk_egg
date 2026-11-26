@@ -222,7 +222,7 @@ def _strip_emoji(text: str) -> str:
 
 _PLUGIN_DIR = Path(__file__).resolve().parent
 _PLUGIN_NAME = "astrbot_plugin_lk_egg"
-VERSION = "2.5.4"
+VERSION = "2.5.5"
 
 #: 数据来源标注（用户要求：查出结果时能看见原站）
 #: 卡片上放短名（完整 URL 太长会被截断），文字版用下面带 URL 的
@@ -464,7 +464,7 @@ def _hard_save_state(state: Dict[str, Any]) -> None:
     "astrbot_plugin_lk_egg",
     "MIKU013970 & DeepSeek",
     "洛克小肥鱼全功能 + 炫彩花种订阅",
-    "2.5.4",
+    "2.5.5",
 )
 class LkMarketNotify(Star):
     def __init__(self, context: Context, config: AstrBotConfig = None):
@@ -5204,8 +5204,10 @@ class LkMarketNotify(Star):
 
     def _grid_avatar_mode(self) -> str:
         """头像用哪个图：stage1（一阶段，默认）| shiny（异色立绘）"""
-        s = str(self._cfg("grid_avatar", "own") or "own").strip().lower()
-        return s if s in ("own", "stage1", "shiny") else "own"
+        s = str(self._cfg("grid_avatar", "stage1") or "stage1").strip().lower()
+        if s == "own":          # 旧值兼容：v2.5.1~2.5.4 的 own 现在统一回到一阶段
+            s = "stage1"
+        return s if s in ("stage1", "shiny") else "stage1"
 
     def _grid_ride_mode(self) -> str:
         """同乘怎么标：yes（只标可同乘，默认）| both（可/不可都标）| off（不标）"""
