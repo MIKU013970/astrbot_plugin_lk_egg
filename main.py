@@ -222,7 +222,7 @@ def _strip_emoji(text: str) -> str:
 
 _PLUGIN_DIR = Path(__file__).resolve().parent
 _PLUGIN_NAME = "astrbot_plugin_lk_egg"
-VERSION = "2.2.6"
+VERSION = "2.2.7"
 
 #: 数据来源标注（用户要求：查出结果时能看见原站）
 #: 卡片上放短名（完整 URL 太长会被截断），文字版用下面带 URL 的
@@ -464,7 +464,7 @@ def _hard_save_state(state: Dict[str, Any]) -> None:
     "astrbot_plugin_lk_egg",
     "MIKU013970 & DeepSeek",
     "洛克小肥鱼全功能 + 炫彩花种订阅",
-    "2.2.6",
+    "2.2.7",
 )
 class LkMarketNotify(Star):
     def __init__(self, context: Context, config: AstrBotConfig = None):
@@ -7514,10 +7514,12 @@ class LkMarketNotify(Star):
                                partner_w_pct=_pw, max_gen=20)
             # 代数口径：**这一胎本身就是第 1 代**。
             # 所以「这一胎就带牌」→ 第 1 代；再配 n 次才带牌 → 第 n+1 代。
+            # 「带牌」按**有概率**算（不要求中心值达标）：
+            #   体重 97.5% + 2% 包络 = 99.5 ≥ 98 → 有概率 → 算达标
             _pr_big = (r.get("height_at_extreme") == "max"
-                       and (r.get("child_w_pct_mean") or 0) >= 98.0)
+                       and (r.get("p_big") or 0) > 0)
             _pr_small = (r.get("height_at_extreme") == "min"
-                         and (r.get("child_w_pct_mean") or 99.0) <= 2.0)
+                         and (r.get("p_small") or 0) > 0)
             _this_ok = _pr_big if _t == "big" else _pr_small
             if _this_ok:
                 _g = 1
@@ -7616,10 +7618,17 @@ class LkMarketNotify(Star):
                 else:
                     _bits.append(f"→ {_cname} 不可达")
             # 「等效达标」提示：前面某一代身高已到端、但体重没过线 → 不带牌
-            _near = next((s for s in gi["steps"]
-                          if _raw_g and s["gen"] != _raw_g and
-                          ((s["at_max"] if _t == "big" else s["at_min"]))
-                          and not s["ok"]), None)
+            # 先看**这一胎**（用户口径里的第 1 代）
+            _near = None
+            _this_at_edge = (r.get("height_at_extreme") == ("max" if _t == "big"
+                                                           else "min"))
+            if _this_at_edge and not _this_ok:
+                _near = {"gen": 0, "w_pct": r.get("child_w_pct_mean") or 0.0}
+            else:
+                _near = next((s for s in gi["steps"]
+                              if _raw_g and s["gen"] != _raw_g and
+                              ((s["at_max"] if _t == "big" else s["at_min"]))
+                              and not s["ok"]), None)
             if _near is not None:
                 _cn = "一二三四五六七八九十"
                 _n = _near["gen"] + 1
@@ -7793,23 +7802,30 @@ class LkMarketNotify(Star):
             try:
                 gi = g.generations(_iter, _target, partner_h_pct=_ph,
                                    partner_w_pct=_pw, max_gen=20)
-                lines.append("代　身高%　　身高　　满档/空档　体重%　　规则2　达标")
+                lines.append("代　身高%　　身高　　满档/空档　体重%　　规则2　有概率/稳了")
                 for s in gi["steps"]:
                     _edge = ("是" if (s["at_max"] if _target == "big" else s["at_min"])
                              else "否")
+                    # 达标列按「有概率」判（和结论口径一致）：
+                    #   ✓ = ±2% 包络能覆盖到线（maybe）；✓✓ = 中心值已过线（稳了）
+                    _mark = ("✓✓" if s["ok"] else
+                             ("✓" if s.get("maybe") else ""))
                     lines.append(
                         f"{s['gen']}　{s['h_pct']:.1f}%　"
                         f"{s['hatch_h'] if s['hatch_h'] is not None else '—'}m　"
                         f"{_edge}　{s['w_pct']:.2f}%　"
                         f"{'是' if s['rule2'] else '否'}　"
-                        f"{'✓' if s['ok'] else ''}")
+                        f"{_mark}")
                 if gi["gen"]:
                     _s = gi["steps"][-1]
                     _why = (f"规则2 触发：双亲身高都到端 → 体重锁至 "
                             f"{self.RULE2_TEXT[_target]}" if _s.get("rule2")
                             else "体重逐代累积到位")
                     lines.append("")
-                    lines.append(f"→ 第 {gi['gen']} 代出{_tname}　（{_why}）")
+                    _s2 = gi["steps"][-1] if gi["steps"] else {}
+                    _st = ("稳了" if _s2.get("ok")
+                           else "有概率（±2% 包络能覆盖到线）")
+                    lines.append(f"→ 第 {gi['gen']} 代起{_st}能出{_tname}　（{_why}）")
                 else:
                     lines.append("")
                     lines.append(f"→ {len(gi['steps'])} 代内没堆到线，"

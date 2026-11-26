@@ -465,7 +465,9 @@ class Genetics:
                 "maybe": (at_max and w_pct + P_SUB_NOISE >= BIG_MIN) if target == "big"
                          else (at_min and w_pct - P_SUB_NOISE <= SMALL_MAX),
             })
-            if steps[-1]["ok"] and hit_gen is None:
+            # 按「有概率拿牌」判达标（不要求中心值过线）：
+            #   体重 97.5% + 2% 包络 = 99.5 ≥ 98 → 算达标
+            if steps[-1]["maybe"] and hit_gen is None:
                 hit_gen = gen
                 break
 
