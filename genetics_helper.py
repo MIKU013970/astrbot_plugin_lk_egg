@@ -712,7 +712,19 @@ class Genetics:
                 i += 1
         if buf:
             out.append(buf)
-        return out
+        # 再把「非名字」片段按数字边界切开：0%100 → ['0%', '100']
+        _ns = set(names)
+        out2: List[str] = []
+        for _x in out:
+            if _x in _ns:
+                out2.append(_x)
+                continue
+            _ps = re.findall(r"-?\d+(?:\.\d+)?%?", _x)
+            if _ps and "".join(_ps) == _x:
+                out2.extend(_ps)
+            else:
+                out2.append(_x)
+        return out2
 
     def parse_pair(self, text: str) -> Dict[str, Any]:
         """整条消息 → 两只精灵。成功 {"ok":True,"a":..,"b":..}；否则 {"error":..}。
@@ -729,6 +741,28 @@ class Genetics:
         for _tk in _raw:
             toks.extend(self._split_by_names(_tk))
         toks = [x for x in toks if x]
+        # ① 必须以**精灵名开头**：中间夹名字的句子（"我今天画精灵花了3小时"）不算
+        _head = None
+        for _nm in self._names_by_len:
+            if raw.startswith(_nm):
+                _head = _nm
+                break
+        if not _head:
+            return {"error": "", "looks_like": False}
+        # ② 最低判定：**名字 + 数字 + 数字**（% 可有可无）
+        #    治愈兔 100 100     → 触发
+        #    治愈兔 100% 100%   → 触发
+        #    治愈兔 100         → 只有 1 个数字，不触发
+        #    治愈兔好可爱 / 治愈兔 火红尾 → 无数字，不触发
+        _num_cnt = sum(
+            1 for t in toks
+            if re.fullmatch(r"-?\d+(?:\.\d+)?%?", str(t).strip()))
+        _name_cnt = sum(1 for t in toks if self.get(t))
+        # 1 只精灵：要 2 个数字（名字 + 数字 + 数字）
+        # 2 只以上精灵：1 个数字就够（已经明确是遗传输入了）
+        _need = 2 if _name_cnt < 2 else 1
+        if _num_cnt < _need:
+            return {"error": "", "looks_like": False}
         idx = [i for i, t in enumerate(toks) if self.get(t)]
         if not idx:
             return {"error": "", "looks_like": False}
