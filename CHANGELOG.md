@@ -4,6 +4,74 @@
 > `页面更新`（控制台 8777 那套，要重启控制台）。没有改动的那节写成「无」，不许省。
 > 对应推送的更新文档：`洛克王国蛋神助手\更新说明-vX.Y.Z.md`。
 
+## v2.2.9
+
+### 插件更新：修 QQ 群聊撤回不生效 + 新增「屏蔽用户」名单
+
+#### 1. 撤回不生效的原因
+
+旧实现走 `await event.send(chain)` 拿返回值 —— **AstrBot 的 `event.send()` 不返回 message_id**，
+`_extract_msg_id()` 挖不到东西，于是只记一句日志就跳过了撤回。
+
+#### 修法：直接调 OneBot 的 `send_msg`
+
+```python
+ret = await api.call_action("send_msg", message_type="group",
+                            group_id=gid, message=[{...}])
+mid = ret["data"]["message_id"]        # 这里才有 id
+await api.call_action("delete_msg", message_id=mid)
+```
+
+实测（伪造 OneBot 返回体）：
+
+```
+[撤回] 已发出 message_id=777888999，0.2 秒后撤回
+[撤回] 已撤回 message_id=777888999
+```
+
+群聊 / 私聊自动判别：`message_obj.group_id` 有值走 group，否则走 private。
+
+#### 2. 屏蔽用户名单（`user_block.json`）
+
+```json
+{
+  "ids": ["100931754"],
+  "names": ["一个路人甲"]
+}
+```
+
+**按 QQ 号或群昵称任一命中就整条消息不回复**，已加在这 8 个入口：
+
+`on_genetics_pair`（遗传）、`cmd_uid`、`on_uid_loose`、`cmd_species`、
+`cmd_species_alias`、`on_species_loose`、`on_bare_species`、`cmd_menu`
+
+实测：
+
+```
+[屏蔽] 命中 QQ 号 100931754，不回复    ✓
+[屏蔽] 命中昵称 一个路人甲，不回复      ✓
+普通人放行                              ✓
+```
+
+改名单直接编辑 `user_block.json`，重启插件生效（或者用下面的验证脚本确认）。
+
+#### 3. 撤回的额外说明
+
+配置项 `uid_recall_seconds`：
+
+| 值 | 行为 |
+|---|---|
+| 0（默认） | 不撤回，正常 yield |
+| > 0 | 直接 send_msg 拿 id，N 秒后 delete_msg |
+
+**QQ 群聊的两条限制**：
+- 撤回自己的消息一般都可以
+- 超过 **2 分钟** 的撤回可能被平台拒绝（会记 warning 日志）
+
+### 页面更新
+
+无（只改了插件侧）
+
 ## v2.2.8
 
 ### 插件更新：查 UID 只保留用户指定的 14 项字段

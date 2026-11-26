@@ -222,7 +222,7 @@ def _strip_emoji(text: str) -> str:
 
 _PLUGIN_DIR = Path(__file__).resolve().parent
 _PLUGIN_NAME = "astrbot_plugin_lk_egg"
-VERSION = "2.2.8"
+VERSION = "2.2.9"
 
 #: 数据来源标注（用户要求：查出结果时能看见原站）
 #: 卡片上放短名（完整 URL 太长会被截断），文字版用下面带 URL 的
@@ -464,7 +464,7 @@ def _hard_save_state(state: Dict[str, Any]) -> None:
     "astrbot_plugin_lk_egg",
     "MIKU013970 & DeepSeek",
     "洛克小肥鱼全功能 + 炫彩花种订阅",
-    "2.2.8",
+    "2.2.9",
 )
 class LkMarketNotify(Star):
     def __init__(self, context: Context, config: AstrBotConfig = None):
@@ -7291,6 +7291,8 @@ class LkMarketNotify(Star):
 
     @filter.command("菜单")
     async def cmd_menu(self, event: AstrMessageEvent):
+        if self._is_user_blocked(event):
+            return
         """和 /帮助 同一张卡片（以前只注册了「帮助」，「菜单」发出去一点反应都没有）。"""
         yield await self._say(event, await self._menu_for(event))
 
@@ -7309,6 +7311,8 @@ class LkMarketNotify(Star):
     # ---------------------------------------------------------------- 遗传（直接发两只）
     @filter.regex(r"^[\s\S]{3,200}$")
     async def on_genetics_pair(self, event: AstrMessageEvent):
+        if self._is_user_blocked(event):
+            return
         """整条消息 = 两只已知精灵 + 可选数值 → 直接回遗传结果。
 
         解析不出来就**静默**（不干扰聊天）；只有明显是遗传输入但数据有错时才提示一次。
@@ -7916,6 +7920,8 @@ class LkMarketNotify(Star):
 
     @filter.regex(r"^\s*[\u4e00-\u9fa5A-Za-z0-9·]{2,12}\s*$")
     async def on_bare_species(self, event: AstrMessageEvent):
+        if self._is_user_blocked(event):
+            return
         """私聊里直接发精灵名字也能查；群里必须带 /"""
         if not bool(self._cfg("bare_name_private", True)):
             return
@@ -9298,6 +9304,48 @@ class LkMarketNotify(Star):
     #: UID 命令词：UID / 查UID / 游戏ID，后面跟纯数字
     _UID_CMD_RE = re.compile(r"^\s*(?:查\s*)?(?:[Uu][Ii][Dd]|游戏[Ii][Dd])\s*(\d{5,15})\s*$")
 
+    # ------------------------------------------------ 屏蔽名单
+    _USER_BLOCK: Optional[Dict[str, Any]] = None
+
+    @classmethod
+    def _user_block(cls) -> Dict[str, Any]:
+        """屏蔽名单（user_block.json）：ids = QQ号，names = 群昵称。"""
+        if cls._USER_BLOCK is None:
+            out: Dict[str, Any] = {}
+            try:
+                fp = _PLUGIN_DIR / "user_block.json"
+                if fp.is_file():
+                    out = json.loads(fp.read_text(encoding="utf-8-sig"))
+            except Exception as e:                            # noqa: BLE001
+                logger.warning(f"[屏蔽] user_block.json 读取失败: {type(e).__name__}: {e}")
+            cls._USER_BLOCK = out
+        return cls._USER_BLOCK
+
+    def _is_user_blocked(self, event: Any) -> bool:
+        """这个人是不是在屏蔽名单里（QQ 号或昵称任一命中）。"""
+        cfg = self._user_block()
+        ids = {str(x).strip() for x in (cfg.get("ids") or []) if str(x).strip()}
+        names = {str(x).strip() for x in (cfg.get("names") or []) if str(x).strip()}
+        if not ids and not names:
+            return False
+        mo = getattr(event, "message_obj", None)
+        sender = getattr(mo, "sender", None)
+        # QQ 号
+        for v in (getattr(sender, "user_id", None),
+                  getattr(mo, "sender_id", None),
+                  getattr(event, "get_sender_id", lambda: None)()):
+            if v is not None and str(v).strip() in ids:
+                logger.info(f"[屏蔽] 命中 QQ 号 {v}，不回复")
+                return True
+        # 昵称
+        for v in (getattr(sender, "nickname", None),
+                  getattr(sender, "card", None),
+                  getattr(sender, "name", None)):
+            if v and str(v).strip() in names:
+                logger.info(f"[屏蔽] 命中昵称 {v}，不回复")
+                return True
+        return False
+
     # ------------------------------------------------ 自动撤回
     @staticmethod
     def _extract_msg_id(obj: Any) -> Optional[Any]:
@@ -9329,37 +9377,59 @@ class LkMarketNotify(Star):
                     return got
         return None
 
-    async def _send_then_recall(self, event: Any, chain: Any,
+    async def _send_then_recall(self, event: Any, text: str,
                                 seconds: float) -> Any:
-        """发一条消息，并在 seconds 秒后尝试撤回。seconds <= 0 就原样返回。"""
+        """发一条**纯文本**消息，并在 seconds 秒后撤回。
+
+        关键：`event.send()` 在 AstrBot 里拿不到 message_id，
+        所以这里直接调 OneBot 的 `send_msg`，用返回值里的 message_id 去 `delete_msg`。
+        拿不到 api / 发送失败 → 退回 `event.plain_result(text)` 交给上层 yield。
+        """
         if seconds <= 0:
-            return chain                      # 不撤回 → 交给上层 yield
-        try:
-            ret = await event.send(chain)
-        except Exception as e:                                # noqa: BLE001
-            logger.warning(f"[撤回] 主动发送失败: {type(e).__name__}: {e}")
-            return chain                      # 发不出去就退回 yield
-        mid = self._extract_msg_id(ret) or self._extract_msg_id(
-            getattr(event, "message_obj", None))
-        if not mid:
-            logger.warning("[撤回] 拿不到 message_id，这条不撤回")
-            return None                       # 已经发出去了，别再 yield
+            return event.plain_result(text)      # 不撤回，正常 yield
+
         api = getattr(getattr(event, "bot", None), "api", None)
+        if api is None:
+            logger.warning("[撤回] 没有 event.bot.api，退回普通发送（不撤回）")
+            return event.plain_result(text)
+
+        mo = getattr(event, "message_obj", None)
+        gid = getattr(mo, "group_id", None)
+        sender = getattr(mo, "sender", None)
+        uid = getattr(sender, "user_id", None) or getattr(mo, "sender_id", None)
+
+        if gid:
+            params = {"message_type": "group", "group_id": str(gid),
+                      "message": [{"type": "text", "data": {"text": text}}]}
+        elif uid:
+            params = {"message_type": "private", "user_id": str(uid),
+                      "message": [{"type": "text", "data": {"text": text}}]}
+        else:
+            logger.warning("[撤回] 认不出群/私聊，退回普通发送")
+            return event.plain_result(text)
+
+        try:
+            ret = await api.call_action("send_msg", **params)
+        except Exception as e:                                # noqa: BLE001
+            logger.warning(f"[撤回] send_msg 失败: {type(e).__name__}: {e}")
+            return event.plain_result(text)
+
+        mid = self._extract_msg_id(ret)
+        if not mid:
+            logger.warning(f"[撤回] send_msg 返回里没有 message_id：{ret!r}")
+            return None                        # 已经发出去了，别再 yield
+        logger.info(f"[撤回] 已发出 message_id={mid}，{seconds:g} 秒后撤回")
 
         async def _job() -> None:
             await asyncio.sleep(float(seconds))
             try:
-                if api is not None:
-                    await api.call_action("delete_msg",
-                                          **{"message_id": mid})
-                else:
-                    logger.warning("[撤回] 没有 event.bot.api，跳过")
+                await api.call_action("delete_msg", **{"message_id": mid})
+                logger.info(f"[撤回] 已撤回 message_id={mid}")
             except Exception as e:                            # noqa: BLE001
                 logger.warning(f"[撤回] delete_msg 失败: {type(e).__name__}: {e}")
 
         asyncio.create_task(_job())
-        logger.info(f"[撤回] 已排程：{seconds:g} 秒后撤回 message_id={mid}")
-        return None                           # 已主动发，不再 yield
+        return None
 
     async def _uid_result(self, event: Any, gid: str):
         """用游戏 UID 查角色资料（注册时间 / 家园 / 收集度 等），能列的全列。"""
@@ -9396,18 +9466,20 @@ class LkMarketNotify(Star):
         for k, v in fields:
             lines.append(f"{k}：{v}" if v else str(k))
         lines.append(f"数据来源：{SOURCE_ROCO}")
-        _chain = event.plain_result("\n".join(lines))
+        _text = "\n".join(lines)
         # 配置了 uid_recall_seconds > 0 就主动发 + 延迟撤回
         try:
             _sec = float(self._cfg("uid_recall_seconds", 0) or 0)
         except (TypeError, ValueError):
             _sec = 0.0
         if _sec > 0:
-            return await self._send_then_recall(event, _chain, _sec)
-        return _chain
+            return await self._send_then_recall(event, _text, _sec)
+        return event.plain_result(_text)
 
     @filter.command("UID")
     async def cmd_uid(self, event: AstrMessageEvent):
+        if self._is_user_blocked(event):
+            return
         """UID 503671642 —— 用游戏角色 UID 查注册信息 / 家园"""
         arg = self._cmd_args(event)
         if not arg:
@@ -9418,6 +9490,8 @@ class LkMarketNotify(Star):
 
     @filter.regex(r"^\s*[/#]?\s*(?:查\s*)?(?:[Uu][Ii][Dd]|游戏[Ii][Dd])\s*\d{5,15}\s*$")
     async def on_uid_loose(self, event: AstrMessageEvent):
+        if self._is_user_blocked(event):
+            return
         """兜底入口：/UID503671642 这种不加空格的写法。"""
         if not self._sp_dedupe(event):
             return
@@ -9508,6 +9582,8 @@ class LkMarketNotify(Star):
 
     @filter.command("查询")
     async def cmd_species(self, event: AstrMessageEvent):
+        if self._is_user_blocked(event):
+            return
         """查询 火花 / 查询 火花 最近 —— 进化链上的名字都行"""
         if not self._sp_dedupe(event):
             return
@@ -9520,6 +9596,8 @@ class LkMarketNotify(Star):
 
     @filter.command("查蛋")
     async def cmd_species_alias(self, event: AstrMessageEvent):
+        if self._is_user_blocked(event):
+            return
         """查蛋 火花 —— 和 查询 完全一样"""
         if not self._sp_dedupe(event):
             return
@@ -9532,6 +9610,8 @@ class LkMarketNotify(Star):
 
     @filter.regex(r"^\s*[/#]?\s*(?:查\s*询|查\s*蛋)(?!\s*[Ii][Dd]).*$")
     async def on_species_loose(self, event: AstrMessageEvent):
+        if self._is_user_blocked(event):
+            return
         """兜底入口：/查询火花、/查蛋火花 这些 filter.command 派发不到的写法。"""
         if not self._sp_dedupe(event):
             return
