@@ -222,7 +222,7 @@ def _strip_emoji(text: str) -> str:
 
 _PLUGIN_DIR = Path(__file__).resolve().parent
 _PLUGIN_NAME = "astrbot_plugin_lk_egg"
-VERSION = "2.2.9"
+VERSION = "2.3.0"
 
 #: 数据来源标注（用户要求：查出结果时能看见原站）
 #: 卡片上放短名（完整 URL 太长会被截断），文字版用下面带 URL 的
@@ -464,7 +464,7 @@ def _hard_save_state(state: Dict[str, Any]) -> None:
     "astrbot_plugin_lk_egg",
     "MIKU013970 & DeepSeek",
     "洛克小肥鱼全功能 + 炫彩花种订阅",
-    "2.2.9",
+    "2.3.0",
 )
 class LkMarketNotify(Star):
     def __init__(self, context: Context, config: AstrBotConfig = None):
@@ -7291,8 +7291,6 @@ class LkMarketNotify(Star):
 
     @filter.command("菜单")
     async def cmd_menu(self, event: AstrMessageEvent):
-        if self._is_user_blocked(event):
-            return
         """和 /帮助 同一张卡片（以前只注册了「帮助」，「菜单」发出去一点反应都没有）。"""
         yield await self._say(event, await self._menu_for(event))
 
@@ -7311,8 +7309,6 @@ class LkMarketNotify(Star):
     # ---------------------------------------------------------------- 遗传（直接发两只）
     @filter.regex(r"^[\s\S]{3,200}$")
     async def on_genetics_pair(self, event: AstrMessageEvent):
-        if self._is_user_blocked(event):
-            return
         """整条消息 = 两只已知精灵 + 可选数值 → 直接回遗传结果。
 
         解析不出来就**静默**（不干扰聊天）；只有明显是遗传输入但数据有错时才提示一次。
@@ -7488,26 +7484,6 @@ class LkMarketNotify(Star):
             _nz = 3.0
         return g.pair(_f, _m, noise=_nz)
 
-    @staticmethod
-    def _gen_targets(fa: Dict[str, Any], mo: Dict[str, Any],
-                     r: Optional[Dict[str, Any]] = None) -> List[str]:
-        """目标方向列表。
-
-        常规按这一胎的身高分：<50 冲小不点，≥50 冲大块头。
-        特例：父母身高一个 0% 一个 100%（子代正好 50%）→ 两个方向都推。
-        """
-        try:
-            hs = {round(float(fa.get("h", 0)), 2), round(float(mo.get("h", 0)), 2)}
-        except (TypeError, ValueError):
-            hs = set()
-        if hs == {0.0, 100.0}:
-            return ["big", "small"]
-        if r is None:
-            return ["big"]
-        if abs(float(r.get("child_h_pct_mean", 0)) - 50.0) < 0.01:
-            return ["big", "small"]
-        return ["big" if r["child_h_pct_mean"] >= 50 else "small"]
-
     def _gen_line(self, g: Any, r: Dict[str, Any]) -> List[str]:
         """一行式推演：大块头/小不点各一行，后面带 100 和 −100 的声音代数。"""
         out: List[str] = []
@@ -7647,23 +7623,6 @@ class LkMarketNotify(Star):
                 _bits.append(f"（{_ntxt}等效"
                              f"{'大块头' if _t == 'big' else '小不点'}）")
             out.append(f"{self._gen_tname(_t)}：" + "　".join(_bits))
-        return out
-
-    def _gen_block(self, g: Any, tag: str, fa: Dict[str, Any],
-                   mo: Dict[str, Any], r: Dict[str, Any],
-                   targets: List[str]) -> List[str]:
-        """一个父母顺序的推演块（可能挂两个目标）。"""
-        out: List[str] = []
-        _c = (g.get(mo["name"]) or {}).get("base") or mo["name"]
-        out.append(f"{tag} 父={fa['name']}　母={mo['name']}　→ 子代 {_c}")
-        if len(targets) == 1:
-            out.extend(self._gen_steps(g, fa, mo, r, targets[0]))
-        else:
-            for i, _t in enumerate(targets):
-                if i:
-                    out.append("")
-                out.append(f"【目标 {self._gen_tname(_t)}】")
-                out.extend(self._gen_steps(g, fa, mo, r, _t))
         return out
 
     @staticmethod
@@ -7920,8 +7879,6 @@ class LkMarketNotify(Star):
 
     @filter.regex(r"^\s*[\u4e00-\u9fa5A-Za-z0-9·]{2,12}\s*$")
     async def on_bare_species(self, event: AstrMessageEvent):
-        if self._is_user_blocked(event):
-            return
         """私聊里直接发精灵名字也能查；群里必须带 /"""
         if not bool(self._cfg("bare_name_private", True)):
             return
@@ -9304,48 +9261,6 @@ class LkMarketNotify(Star):
     #: UID 命令词：UID / 查UID / 游戏ID，后面跟纯数字
     _UID_CMD_RE = re.compile(r"^\s*(?:查\s*)?(?:[Uu][Ii][Dd]|游戏[Ii][Dd])\s*(\d{5,15})\s*$")
 
-    # ------------------------------------------------ 屏蔽名单
-    _USER_BLOCK: Optional[Dict[str, Any]] = None
-
-    @classmethod
-    def _user_block(cls) -> Dict[str, Any]:
-        """屏蔽名单（user_block.json）：ids = QQ号，names = 群昵称。"""
-        if cls._USER_BLOCK is None:
-            out: Dict[str, Any] = {}
-            try:
-                fp = _PLUGIN_DIR / "user_block.json"
-                if fp.is_file():
-                    out = json.loads(fp.read_text(encoding="utf-8-sig"))
-            except Exception as e:                            # noqa: BLE001
-                logger.warning(f"[屏蔽] user_block.json 读取失败: {type(e).__name__}: {e}")
-            cls._USER_BLOCK = out
-        return cls._USER_BLOCK
-
-    def _is_user_blocked(self, event: Any) -> bool:
-        """这个人是不是在屏蔽名单里（QQ 号或昵称任一命中）。"""
-        cfg = self._user_block()
-        ids = {str(x).strip() for x in (cfg.get("ids") or []) if str(x).strip()}
-        names = {str(x).strip() for x in (cfg.get("names") or []) if str(x).strip()}
-        if not ids and not names:
-            return False
-        mo = getattr(event, "message_obj", None)
-        sender = getattr(mo, "sender", None)
-        # QQ 号
-        for v in (getattr(sender, "user_id", None),
-                  getattr(mo, "sender_id", None),
-                  getattr(event, "get_sender_id", lambda: None)()):
-            if v is not None and str(v).strip() in ids:
-                logger.info(f"[屏蔽] 命中 QQ 号 {v}，不回复")
-                return True
-        # 昵称
-        for v in (getattr(sender, "nickname", None),
-                  getattr(sender, "card", None),
-                  getattr(sender, "name", None)):
-            if v and str(v).strip() in names:
-                logger.info(f"[屏蔽] 命中昵称 {v}，不回复")
-                return True
-        return False
-
     # ------------------------------------------------ 自动撤回
     @staticmethod
     def _extract_msg_id(obj: Any) -> Optional[Any]:
@@ -9478,8 +9393,6 @@ class LkMarketNotify(Star):
 
     @filter.command("UID")
     async def cmd_uid(self, event: AstrMessageEvent):
-        if self._is_user_blocked(event):
-            return
         """UID 503671642 —— 用游戏角色 UID 查注册信息 / 家园"""
         arg = self._cmd_args(event)
         if not arg:
@@ -9490,8 +9403,6 @@ class LkMarketNotify(Star):
 
     @filter.regex(r"^\s*[/#]?\s*(?:查\s*)?(?:[Uu][Ii][Dd]|游戏[Ii][Dd])\s*\d{5,15}\s*$")
     async def on_uid_loose(self, event: AstrMessageEvent):
-        if self._is_user_blocked(event):
-            return
         """兜底入口：/UID503671642 这种不加空格的写法。"""
         if not self._sp_dedupe(event):
             return
@@ -9582,8 +9493,6 @@ class LkMarketNotify(Star):
 
     @filter.command("查询")
     async def cmd_species(self, event: AstrMessageEvent):
-        if self._is_user_blocked(event):
-            return
         """查询 火花 / 查询 火花 最近 —— 进化链上的名字都行"""
         if not self._sp_dedupe(event):
             return
@@ -9596,8 +9505,6 @@ class LkMarketNotify(Star):
 
     @filter.command("查蛋")
     async def cmd_species_alias(self, event: AstrMessageEvent):
-        if self._is_user_blocked(event):
-            return
         """查蛋 火花 —— 和 查询 完全一样"""
         if not self._sp_dedupe(event):
             return
@@ -9610,8 +9517,6 @@ class LkMarketNotify(Star):
 
     @filter.regex(r"^\s*[/#]?\s*(?:查\s*询|查\s*蛋)(?!\s*[Ii][Dd]).*$")
     async def on_species_loose(self, event: AstrMessageEvent):
-        if self._is_user_blocked(event):
-            return
         """兜底入口：/查询火花、/查蛋火花 这些 filter.command 派发不到的写法。"""
         if not self._sp_dedupe(event):
             return
