@@ -222,7 +222,7 @@ def _strip_emoji(text: str) -> str:
 
 _PLUGIN_DIR = Path(__file__).resolve().parent
 _PLUGIN_NAME = "astrbot_plugin_lk_egg"
-VERSION = "2.5.2"
+VERSION = "2.5.3"
 
 #: 数据来源标注（用户要求：查出结果时能看见原站）
 #: 卡片上放短名（完整 URL 太长会被截断），文字版用下面带 URL 的
@@ -464,7 +464,7 @@ def _hard_save_state(state: Dict[str, Any]) -> None:
     "astrbot_plugin_lk_egg",
     "MIKU013970 & DeepSeek",
     "洛克小肥鱼全功能 + 炫彩花种订阅",
-    "2.5.2",
+    "2.5.3",
 )
 class LkMarketNotify(Star):
     def __init__(self, context: Context, config: AstrBotConfig = None):
@@ -5787,10 +5787,21 @@ class LkMarketNotify(Star):
                  or chains.get(nm)
                  or chains.get(self._chain_map().get(nm) or nm)
                  or [])
+        sp = self.ranges.get("species") or {}
+        alias = self.ranges.get("alias") or {}
         for cand in chain:
             if not cand or cand == nm:
                 continue
-            r2 = self._find_species(str(cand))
+            # 只认精确记录/精确别名：不要用模糊匹配，否则「疾光千兽」会被
+            # 模糊成「绒绒」，把别人的孵化时间套过来。
+            r2 = sp.get(str(cand))
+            if not r2:
+                _tgt = alias.get(str(cand)) or ""
+                r2 = sp.get(_tgt)
+                # 别名可能串到别的链（疾光千兽 → 绒绒）；目标链里没有这个名字就不认
+                if r2 and str(cand) not in str(r2.get("进化链") or "") and not any(
+                        str(x) == str(cand) for x in (r2.get("_chain") or [])):
+                    r2 = None
             if r2:
                 n = _from_record(r2)
                 if n:
@@ -5808,7 +5819,7 @@ class LkMarketNotify(Star):
                      egg_name[:-1] if egg_name.endswith("蛋") else ""):
             if not cand:
                 continue
-            r2 = self._find_species(cand)
+            r2 = sp.get(cand) or sp.get(alias.get(cand) or "")
             if r2 and str(r2.get("精灵") or "") != nm:
                 n = _from_record(r2)
                 if n:
@@ -5827,21 +5838,59 @@ class LkMarketNotify(Star):
             return 5.0
 
     def _hatch_rows(self, rec: Dict[str, Any]) -> List[tuple]:
-        """孵化时间：普通 / 挂风场 / 周末加速 / 风场 + 加速（压成两行，卡片不臃肿）。"""
-        base = self._hatch_base_seconds(rec)
-        if not base:
-            # 源数据没有孵化时间也别整段消失：明确写「暂无数据」，方便用户判断
-            return [("", "—— 孵化 ——"), ("孵化时间", "暂无数据")]
+        """孵化时间：原始 / 风场 ×6 / 周末 ×5 / 风场＋周末 ×30。
+
+        多形态且孵化时间不同（蹦蹦种子：海神球 8h、其它球 12h）时，
+        按形态各列一行，避免整张卡只显示第一形态的错误时间。
+        """
         wind = self.hatch_wind_mult
         wk = self.hatch_weekend_mult
-        return [
-            ("", "—— 孵化 ——"),
-            ("原始", self._fmt_duration(base)),
-            (f"风场 ×{wind:g}", self._fmt_duration(base / wind)),
-            (f"周末 ×{wk:g}", self._fmt_duration(base / wk)),
-            (f"风场＋周末 ×{wind * wk:g}",
-             self._fmt_duration(base / (wind * wk))),
-        ]
+
+        def four(base: int) -> List[tuple]:
+            return [
+                ("原始", self._fmt_duration(base)),
+                (f"风场 ×{wind:g}", self._fmt_duration(base / wind)),
+                (f"周末 ×{wk:g}", self._fmt_duration(base / wk)),
+                (f"风场＋周末 ×{wind * wk:g}",
+                 self._fmt_duration(base / (wind * wk))),
+            ]
+
+        vs = [v for v in (rec.get("variants") or [rec])
+              if "异色" not in str(v.get("蛋名") or "")]
+        multi_form = len(vs) > 1
+        entries: List[tuple] = []
+        for v in vs:
+            h = self._parse_hatch_seconds(v.get("孵蛋时间"))
+            if not h and not multi_form:
+                # 单形态回退：沿进化链 / 按蛋名找
+                h = self._hatch_base_seconds({
+                    "精灵": rec.get("精灵"),
+                    "蛋名": v.get("蛋名") or rec.get("蛋名"),
+                    "variants": [v],
+                })
+            raw = str(v.get("形态") or v.get("蛋名") or "孵化")
+            m = re.search(r"[（(](.+?)[)）]", raw)
+            label = (m.group(1) if m else raw).strip() or "孵化"
+            entries.append((label, h))
+        if not entries:
+            entries = [("孵化时间", self._hatch_base_seconds(rec))]
+
+        vals = [h for _l, h in entries if h]
+        if not vals:
+            return [("", "—— 孵化 ——"), ("孵化时间", "暂无数据")]
+        if len(entries) == 1 or (len(set(vals)) == 1 and all(h for _l, h in entries)):
+            return [("", "—— 孵化 ——")] + four(int(vals[0]))
+
+        rows: List[tuple] = [("", "—— 孵化 ——")]
+        for i, (label, h) in enumerate(entries, 1):
+            if not h:
+                rows.append((f"{i}. {label}", "暂无数据"))
+                continue
+            rows.append((f"{i}. {label}",
+                         f"原始 {self._fmt_duration(h)}｜风场 {self._fmt_duration(h / wind)}"
+                         f"｜周末 {self._fmt_duration(h / wk)}"
+                         f"｜叠加 {self._fmt_duration(h / (wind * wk))}"))
+        return rows
 
     def _shiny_grid_cards(self, rows: List[Dict[str, Any]]) -> List[Dict[str, Any]]:
         """名单行 → 网格图卡片。

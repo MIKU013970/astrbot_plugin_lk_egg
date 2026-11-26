@@ -821,8 +821,15 @@ def render_card(
                 # 奶油色块 + 系别色左竖条 + 金色细边
                 dr.rounded_rectangle([bx, cy, bx + bw, cy + box_h - 4], 10,
                                      fill=colors["标签底"], outline=colors["边框"], width=1)
+                # 左侧色块做成和胶囊同高的「左耳」：贴住上下边、左侧同圆角、右缘平直，
+                # 不再是一条悬空的小竖条
                 bar_col = col or colors["强调"]
-                dr.rounded_rectangle([bx, cy + 4, bx + 3, cy + box_h - 8], 1, fill=bar_col)
+                cap_r = 9
+                cap_w = 9
+                dr.rounded_rectangle([bx + 1, cy + 1, bx + 1 + cap_w, cy + box_h - 5],
+                                     cap_r, fill=bar_col)
+                dr.rectangle([bx + 1 + cap_w - 4, cy + 1,
+                              bx + 1 + cap_w, cy + box_h - 5], fill=bar_col)
                 lw = (dr.textlength(str(lbl), font=fonts["次要"]) + 10
                       if fonts["次要"] else 40)
                 dr.text((bx + 15, cy + 6), _fit(dr, lbl, fonts["次要"], bw * 0.4),
