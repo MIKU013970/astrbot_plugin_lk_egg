@@ -222,7 +222,7 @@ def _strip_emoji(text: str) -> str:
 
 _PLUGIN_DIR = Path(__file__).resolve().parent
 _PLUGIN_NAME = "astrbot_plugin_lk_egg"
-VERSION = "2.2.5"
+VERSION = "2.2.6"
 
 #: 数据来源标注（用户要求：查出结果时能看见原站）
 #: 卡片上放短名（完整 URL 太长会被截断），文字版用下面带 URL 的
@@ -464,7 +464,7 @@ def _hard_save_state(state: Dict[str, Any]) -> None:
     "astrbot_plugin_lk_egg",
     "MIKU013970 & DeepSeek",
     "洛克小肥鱼全功能 + 炫彩花种订阅",
-    "2.2.5",
+    "2.2.6",
 )
 class LkMarketNotify(Star):
     def __init__(self, context: Context, config: AstrBotConfig = None):
@@ -5763,11 +5763,11 @@ class LkMarketNotify(Star):
         wk = self.hatch_weekend_mult
         return [
             ("", "—— 孵化 ——"),
-            ("", f"普通 {self._fmt_duration(base)}"
-                 f"　·　挂风场（×{wind:g}） {self._fmt_duration(base / wind)}"),
-            ("", f"周末 {wk:g} 倍速 {self._fmt_duration(base / wk)}"
-                 f"　·　风场 + {wk:g} 倍速（×{wind * wk:g}） "
-                 f"{self._fmt_duration(base / (wind * wk))}"),
+            ("原始", self._fmt_duration(base)),
+            (f"风场（×{wind:g}）", self._fmt_duration(base / wind)),
+            (f"周末（×{wk:g}）", self._fmt_duration(base / wk)),
+            (f"风场＋周末（×{wind * wk:g}）",
+             self._fmt_duration(base / (wind * wk))),
         ]
 
     def _shiny_grid_cards(self, rows: List[Dict[str, Any]]) -> List[Dict[str, Any]]:
