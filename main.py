@@ -222,7 +222,7 @@ def _strip_emoji(text: str) -> str:
 
 _PLUGIN_DIR = Path(__file__).resolve().parent
 _PLUGIN_NAME = "astrbot_plugin_lk_egg"
-VERSION = "2.2.3"
+VERSION = "2.2.4"
 
 #: 数据来源标注（用户要求：查出结果时能看见原站）
 #: 卡片上放短名（完整 URL 太长会被截断），文字版用下面带 URL 的
@@ -464,7 +464,7 @@ def _hard_save_state(state: Dict[str, Any]) -> None:
     "astrbot_plugin_lk_egg",
     "MIKU013970 & DeepSeek",
     "洛克小肥鱼全功能 + 炫彩花种订阅",
-    "2.2.3",
+    "2.2.4",
 )
 class LkMarketNotify(Star):
     def __init__(self, context: Context, config: AstrBotConfig = None):
@@ -5747,11 +5747,11 @@ class LkMarketNotify(Star):
 
     @property
     def hatch_wind_mult(self) -> float:
-        """风场孵化加速倍率（默认 2 倍；按你服实测改）。"""
+        """风场孵化加速倍率（默认 6 倍）。"""
         try:
-            return max(1.0, float(self._cfg("hatch_wind_mult", 2)))
+            return max(1.0, float(self._cfg("hatch_wind_mult", 6)))
         except (TypeError, ValueError):
-            return 2.0
+            return 6.0
 
     def _hatch_base_seconds(self, rec: Dict[str, Any]) -> Optional[int]:
         """这只精灵的蛋基础孵化时长（秒）。取第一个非异色形态的「孵蛋时间」。"""
@@ -5767,15 +5767,12 @@ class LkMarketNotify(Star):
     def hatch_weekend_mult(self) -> float:
         """周末（孵蛋加速日）的加速倍率。
 
-        wiki 上的活动名是「500% 孵蛋加速日」，这里有两种读法：
-          · 加速 **+500%** → 总速度 600% = **6 倍**（现在的默认）
-          · 速度 **变为 500%** → **5 倍**
-        你服实测是几倍就在配置里填几，默认按 6 倍。
+        用户实测：**周末 5 倍速**，和风场（6 倍）叠加 = **30 倍速**。
         """
         try:
-            return max(1.0, float(self._cfg("hatch_weekend_mult", 6)))
+            return max(1.0, float(self._cfg("hatch_weekend_mult", 5)))
         except (TypeError, ValueError):
-            return 6.0
+            return 5.0
 
     def _hatch_rows(self, rec: Dict[str, Any]) -> List[tuple]:
         """孵化时间：普通 / 挂风场 / 周末加速 / 风场 + 加速（压成两行，卡片不臃肿）。"""
@@ -5784,7 +5781,6 @@ class LkMarketNotify(Star):
             return []
         wind = self.hatch_wind_mult
         wk = self.hatch_weekend_mult
-        wind = self.hatch_wind_mult
         return [
             ("", "—— 孵化 ——"),
             ("", f"普通 {self._fmt_duration(base)}"
@@ -7431,14 +7427,19 @@ class LkMarketNotify(Star):
         if _dist:
             if len(_dist) <= 5:
                 # 档数少：逐档列概率（菇菇丁这种 3 档很适合）
+                _fr = self._full_weight_rate(r)
+                _fr_txt = f"　满重率 {_fr * 100:.2f}%" if _fr is not None else ""
                 lines.append("蛋重　" + "　".join(
-                    f"{g} g（{p * 100:.0f}%）" for g, p in _dist))
+                    f"{g} g（{p * 100:.0f}%）" for g, p in _dist) + _fr_txt)
             else:
                 # 档数多（蛋尺子大）：只给范围 + 中心，不刷屏
                 _gs = [g for g, _ in _dist]
                 _g_lo, _g_hi = min(_gs), max(_gs)
                 _g_mid = r.get("egg_w_g")
-                lines.append(f"蛋重　{_g_mid} g（{_g_lo}~{_g_hi} g，{len(_dist)} 档）")
+                _fr = self._full_weight_rate(r)
+                _fr_txt = f"，满重率 {_fr * 100:.2f}%" if _fr is not None else ""
+                lines.append(f"蛋重　{_g_mid} g（{_g_lo}~{_g_hi} g，"
+                             f"{len(_dist)} 档{_fr_txt}）")
         else:
             _eg = r.get("egg_w_g")
             _ekg = r.get("child_egg_w_kg")
@@ -9084,6 +9085,23 @@ class LkMarketNotify(Star):
             return c.fact_icon(lbl) or ""
         except Exception:                                    # noqa: BLE001
             return ""
+
+    @staticmethod
+    def _full_weight_rate(r: Dict[str, Any]) -> Optional[float]:
+        """精灵蛋「满重率」= 50 / D。
+
+        D = 蛋档位（1 克一档）= MAX − MIN + 1，单位克。
+        验证：菇菇丁 385~500 g → D=116 → 50/116 = 43.1%
+        （正好等于之前算的 500 g 那档概率）。
+        """
+        rng = r.get("egg_g_range")
+        if not rng or len(rng) != 2:
+            return None
+        lo, hi = int(rng[0]), int(rng[1])
+        d = hi - lo + 1
+        if d <= 0:
+            return None
+        return round(50.0 / d, 6)
 
     def _extra_species_rows(self, rec: Dict[str, Any]) -> List[tuple]:
         """星光/回顾 + 孵化时间 + 全阶段体型，追加在图鉴行末尾。
