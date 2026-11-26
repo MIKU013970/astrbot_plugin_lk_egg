@@ -373,6 +373,12 @@
     "default": true,
     "hint": "关掉后只显示这一胎的结果（身高/体重/蛋重/声音/奖牌），不再推演几代能出双牌"
   },
+  "uid_recall_seconds": {
+    "description": "查 UID 结果多少秒后自动撤回（0 = 不撤回）",
+    "type": "int",
+    "default": 0,
+    "hint": "填 60 表示 60 秒后撤回。需要机器人有撤回权限（撤回自己的消息一般都可以；群聊里超过 2 分钟可能被平台拒绝）"
+  },
   "genetics_enabled": {
     "description": "启用遗传计算",
     "type": "bool",

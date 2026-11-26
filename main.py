@@ -222,7 +222,7 @@ def _strip_emoji(text: str) -> str:
 
 _PLUGIN_DIR = Path(__file__).resolve().parent
 _PLUGIN_NAME = "astrbot_plugin_lk_egg"
-VERSION = "2.2.2"
+VERSION = "2.2.3"
 
 #: 数据来源标注（用户要求：查出结果时能看见原站）
 #: 卡片上放短名（完整 URL 太长会被截断），文字版用下面带 URL 的
@@ -464,7 +464,7 @@ def _hard_save_state(state: Dict[str, Any]) -> None:
     "astrbot_plugin_lk_egg",
     "MIKU013970 & DeepSeek",
     "洛克小肥鱼全功能 + 炫彩花种订阅",
-    "2.2.2",
+    "2.2.3",
 )
 class LkMarketNotify(Star):
     def __init__(self, context: Context, config: AstrBotConfig = None):
@@ -9326,6 +9326,69 @@ class LkMarketNotify(Star):
     #: UID 命令词：UID / 查UID / 游戏ID，后面跟纯数字
     _UID_CMD_RE = re.compile(r"^\s*(?:查\s*)?(?:[Uu][Ii][Dd]|游戏[Ii][Dd])\s*(\d{5,15})\s*$")
 
+    # ------------------------------------------------ 自动撤回
+    @staticmethod
+    def _extract_msg_id(obj: Any) -> Optional[Any]:
+        """从各种返回结构里挖出 message_id。"""
+        if obj is None:
+            return None
+        # 直接属性
+        for attr in ("message_id", "msg_id"):
+            v = getattr(obj, attr, None)
+            if v:
+                return v
+        # dict
+        if isinstance(obj, dict):
+            for k in ("message_id", "msg_id"):
+                if obj.get(k):
+                    return obj[k]
+            for k in ("data", "result"):
+                v = obj.get(k)
+                if isinstance(v, dict):
+                    for k2 in ("message_id", "msg_id"):
+                        if v.get(k2):
+                            return v[k2]
+        # AstrBot 的 MessageEventResult / 包装对象
+        for attr in ("raw", "message_obj", "result", "data"):
+            v = getattr(obj, attr, None)
+            if v is not None and v is not obj:
+                got = LkMarketNotify._extract_msg_id(v)
+                if got:
+                    return got
+        return None
+
+    async def _send_then_recall(self, event: Any, chain: Any,
+                                seconds: float) -> Any:
+        """发一条消息，并在 seconds 秒后尝试撤回。seconds <= 0 就原样返回。"""
+        if seconds <= 0:
+            return chain                      # 不撤回 → 交给上层 yield
+        try:
+            ret = await event.send(chain)
+        except Exception as e:                                # noqa: BLE001
+            logger.warning(f"[撤回] 主动发送失败: {type(e).__name__}: {e}")
+            return chain                      # 发不出去就退回 yield
+        mid = self._extract_msg_id(ret) or self._extract_msg_id(
+            getattr(event, "message_obj", None))
+        if not mid:
+            logger.warning("[撤回] 拿不到 message_id，这条不撤回")
+            return None                       # 已经发出去了，别再 yield
+        api = getattr(getattr(event, "bot", None), "api", None)
+
+        async def _job() -> None:
+            await asyncio.sleep(float(seconds))
+            try:
+                if api is not None:
+                    await api.call_action("delete_msg",
+                                          **{"message_id": mid})
+                else:
+                    logger.warning("[撤回] 没有 event.bot.api，跳过")
+            except Exception as e:                            # noqa: BLE001
+                logger.warning(f"[撤回] delete_msg 失败: {type(e).__name__}: {e}")
+
+        asyncio.create_task(_job())
+        logger.info(f"[撤回] 已排程：{seconds:g} 秒后撤回 message_id={mid}")
+        return None                           # 已主动发，不再 yield
+
     async def _uid_result(self, event: Any, gid: str):
         """用游戏 UID 查角色资料（注册时间 / 家园 / 收集度 等），能列的全列。"""
         gid = str(gid or "").strip()
@@ -9361,7 +9424,15 @@ class LkMarketNotify(Star):
         for k, v in fields:
             lines.append(f"{k}：{v}" if v else str(k))
         lines.append(f"数据来源：{SOURCE_ROCO}")
-        return event.plain_result("\n".join(lines))
+        _chain = event.plain_result("\n".join(lines))
+        # 配置了 uid_recall_seconds > 0 就主动发 + 延迟撤回
+        try:
+            _sec = float(self._cfg("uid_recall_seconds", 0) or 0)
+        except (TypeError, ValueError):
+            _sec = 0.0
+        if _sec > 0:
+            return await self._send_then_recall(event, _chain, _sec)
+        return _chain
 
     @filter.command("UID")
     async def cmd_uid(self, event: AstrMessageEvent):

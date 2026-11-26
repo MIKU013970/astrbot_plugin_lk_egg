@@ -4,6 +4,58 @@
 > `页面更新`（控制台 8777 那套，要重启控制台）。没有改动的那节写成「无」，不许省。
 > 对应推送的更新文档：`洛克王国蛋神助手\更新说明-vX.Y.Z.md`。
 
+## v2.2.3
+
+### 插件更新：查 UID 结果支持定时自动撤回
+
+新配置项 **`uid_recall_seconds`**（默认 0 = 不撤回）：
+
+```
+查 UID 结果多少秒后自动撤回
+填 60 表示 60 秒后撤回
+```
+
+#### 实现
+
+配置 > 0 时，`_uid_result` 不再 `yield`，而是：
+
+```python
+ret = await event.send(chain)                  # 主动发，拿返回值
+mid = self._extract_msg_id(ret)                # 挖出 message_id
+asyncio.create_task(_job())                    # 延迟后撤回
+    await asyncio.sleep(seconds)
+    await event.bot.api.call_action("delete_msg", message_id=mid)
+```
+
+`_extract_msg_id()` 兼容多种返回结构：
+
+```python
+{"message_id": 42}              → 42
+obj.message_id = 7              → 7
+{"data": {"message_id": 9}}     → 9
+None                            → None
+```
+
+拿不到 `message_id` 时会在日志里记一句「拿不到 message_id，这条不撤回」，不静默失败。
+
+#### 实测
+
+| 配置 | event.send | delete_msg | 返回 |
+|---|---|---|---|
+| **0**（默认） | 不调用 | 不调用 | 原样 yield 给框架 |
+| **0.2** | 调用 1 次 | **调用，message_id 正确** | None（不再 yield） |
+
+#### 注意事项
+
+撤回需要平台支持：
+- **私聊/群聊撤回自己的消息** —— 一般都可以
+- **群聊超过 2 分钟** —— 部分平台会拒绝（会记日志，不影响其它功能）
+- 需要 `event.bot.api`（OneBot v11 的 `call_action`）；没有就跳过并记日志
+
+### 页面更新
+
+无（只改了插件侧）
+
 ## v2.2.2
 
 ### 插件更新：清掉 7 条串数据的假精灵（记石显示成妖精组就是这个原因）
