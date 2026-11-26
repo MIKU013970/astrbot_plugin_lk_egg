@@ -222,7 +222,7 @@ def _strip_emoji(text: str) -> str:
 
 _PLUGIN_DIR = Path(__file__).resolve().parent
 _PLUGIN_NAME = "astrbot_plugin_lk_egg"
-VERSION = "2.2.7"
+VERSION = "2.2.8"
 
 #: 数据来源标注（用户要求：查出结果时能看见原站）
 #: 卡片上放短名（完整 URL 太长会被截断），文字版用下面带 URL 的
@@ -464,7 +464,7 @@ def _hard_save_state(state: Dict[str, Any]) -> None:
     "astrbot_plugin_lk_egg",
     "MIKU013970 & DeepSeek",
     "洛克小肥鱼全功能 + 炫彩花种订阅",
-    "2.2.7",
+    "2.2.8",
 )
 class LkMarketNotify(Star):
     def __init__(self, context: Context, config: AstrBotConfig = None):
@@ -2384,6 +2384,10 @@ class LkMarketNotify(Star):
 
     #: 角色资料缓存有效期（秒）
     ROCOM_TTL = 6 * 3600
+    #: 不回显的字段（用户要求删掉）：新拉的数据不再产出，
+    #: 旧缓存（rocom_roles.json）里已存的读的时候也一并过滤 —— 不然改完还得等 6 小时 TTL。
+    ROCOM_HIDDEN = ("话题点", "好友", "被拉黑",
+                    "时装羁绊", "炫彩精灵数", "异色精灵数", "家园精灵数")
 
     @staticmethod
     def _fmt_ts_hm(v: Any) -> str:
@@ -2442,11 +2446,6 @@ class LkMarketNotify(Star):
                 return
             out.append((label, (LkMarketNotify._fmt_ts(val) if ts else str(val)) + unit))
 
-        def yn(label: str, val: Any) -> None:
-            if val is None:
-                return
-            out.append((label, "是" if val else "否"))
-
         # 字段名与顺序按用户指定的面板格式
         GENDER = {1: "男", 2: "女"}
         add("昵称", player.get("nickname") or player.get("name")
@@ -2474,13 +2473,7 @@ class LkMarketNotify(Star):
         add("房间等级", home.get("room_level"))
         add("家园舒适度", home.get("home_comfort_level"))
         # 下面这些用户格式里没有，但拿到了就附在最后，不丢信息
-        add("时装羁绊", brief.get("card_fashion_bond_collect_num"), unit=" 个")
-        add("炫彩精灵数", pet.get("collected_glass_pet_count"), unit=" 只")
-        add("异色精灵数", pet.get("collected_shining_pet_count"), unit=" 只")
-        add("家园精灵数", home.get("home_pet_count"), unit=" 只")
-        add("话题点", card.get("topic_point"))
-        yn("好友", card.get("is_friend"))
-        yn("被拉黑", card.get("is_black_role"))
+        # 用户要求（2026-11-26）：话题点 / 好友 / 被拉黑 这三行不显示
         return out
 
     def _rocom_cache(self) -> Dict[str, Any]:
@@ -2576,7 +2569,7 @@ class LkMarketNotify(Star):
                    or "https://wegame.shallow.ink").rstrip("/")
         out: Dict[str, Any] = {}
         # player/search 一次就带全：等级 / 世界等级 / 上次离线 / 性别 / 家园，
-        # player/card 补 图鉴收集、炫彩·异色精灵数、话题点。
+        # player/card 补 图鉴收集、炫彩·异色精灵数。
         # 两个并发打，各 1.2 秒左右；**不再调 home/info**（那个要走任务队列，慢 4 秒，
         # 而且家园数据 player/search 里已经有了）。
         search, card = await asyncio.gather(
@@ -2686,10 +2679,24 @@ class LkMarketNotify(Star):
         if not game_id or not self._rocom_on():
             return []
         rec = self._rocom_cache().get(str(game_id)) or {}
-        fields = rec.get("fields") or []
+        fields = self._rocom_visible(rec.get("fields") or [])
         if fields:
             return [(str(k), str(v)) for k, v in fields]
         return [("角色资料", "后台采集中，稍后再查一次就有了")]
+
+    @classmethod
+    def _rocom_visible(cls, fields: Any) -> List[tuple]:
+        """过滤掉用户要求不显示的字段（旧缓存里可能还留着）。"""
+        out: List[tuple] = []
+        for f in (fields or []):
+            try:
+                k, v = f[0], f[1]
+            except (TypeError, IndexError):
+                continue
+            if str(k) in cls.ROCOM_HIDDEN:
+                continue
+            out.append((k, v))
+        return out
 
     @staticmethod
     def _cand_text(c: Dict[str, Any]) -> str:
@@ -9379,7 +9386,7 @@ class LkMarketNotify(Star):
                 rec = c[gid]
             elif rec.get("fields"):
                 pass                       # 拉失败就用旧缓存
-        fields = rec.get("fields") or []
+        fields = self._rocom_visible(rec.get("fields") or [])
         if not fields:
             return event.plain_result(
                 f"没查到游戏 UID {gid} 的资料。\n"
