@@ -126,13 +126,13 @@
     "description": "风场加速倍速",
     "type": "int",
     "default": 6.0,
-    "hint": "风场 6 倍速"
+    "hint": "固定 6 倍速；旧配置里的值已不再生效"
   },
   "hatch_weekend_mult": {
     "description": "周末加速倍速",
     "type": "float",
     "default": 5.0,
-    "hint": "周末 5 倍速；和风场叠加 = 30 倍"
+    "hint": "固定 5 倍速；和风场叠加 = 30 倍；旧配置里的值已不再生效"
   },
   "market_quote_enabled": {
     "description": "查蛋时附带实时行情",

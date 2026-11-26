@@ -222,7 +222,7 @@ def _strip_emoji(text: str) -> str:
 
 _PLUGIN_DIR = Path(__file__).resolve().parent
 _PLUGIN_NAME = "astrbot_plugin_lk_egg"
-VERSION = "2.5.3"
+VERSION = "2.5.4"
 
 #: 数据来源标注（用户要求：查出结果时能看见原站）
 #: 卡片上放短名（完整 URL 太长会被截断），文字版用下面带 URL 的
@@ -464,7 +464,7 @@ def _hard_save_state(state: Dict[str, Any]) -> None:
     "astrbot_plugin_lk_egg",
     "MIKU013970 & DeepSeek",
     "洛克小肥鱼全功能 + 炫彩花种订阅",
-    "2.5.3",
+    "2.5.4",
 )
 class LkMarketNotify(Star):
     def __init__(self, context: Context, config: AstrBotConfig = None):
@@ -1536,7 +1536,8 @@ class LkMarketNotify(Star):
         raw = "\x1f".join([
             str(rec.get("精灵") or ""), str(query or ""), _items_sig,
             str(kw.get("theme") or ""), str(kw.get("font_path") or ""),
-            str(kw.get("width")), str(kw.get("font_size")),
+            str(kw.get("width")), str(kw.get("font_size")), VERSION,
+            str(self._render_sig()),
         ])
         key = hashlib.sha1(raw.encode("utf-8")).hexdigest()
         hit = _SPECIES_CACHE.get(key)
@@ -1655,6 +1656,13 @@ class LkMarketNotify(Star):
                     if isinstance(_x, dict) and _x.get("boxes"):
                         for _b in _x["boxes"]:
                             lines.append(f"　　{_b[0]}：{_b[1]}")
+                        continue
+                    if isinstance(_x, dict) and _x.get("facts"):
+                        _bits = []
+                        for _ip, _val in _x["facts"]:
+                            _lbl = "星光值" if "星光" in str(_ip) else ("回顾" if "回顾" in str(_ip) else "")
+                            _bits.append(f"{_lbl}：★{_val}" if _lbl == "星光值" else f"{_lbl}：{_val}")
+                        lines.append("　　" + "　".join(_bits))
                         continue
                     lines.append(f"{_k}　{_v}" if _k else f"　　{_v}")
 
@@ -2284,8 +2292,9 @@ class LkMarketNotify(Star):
         # magic_egg 是通用占位白蛋：通行证精灵官方只有异色蛋、没有普通蛋，别拿它凑数
         if egg_path and Path(egg_path).stem == "magic_egg":
             egg_path = None
-        own = c.icon_path("pet", pet, form0) or c.icon_path("pet_stage1", pet, form0)
-        out = [self._form_sprite_path(rec, v) or own, egg_path]
+        # 查询单只精灵时，标题前第一张图用「一阶段」：查红绒十字显示治愈兔
+        s1 = self._stage1_path(pet, form0)
+        out = [s1 or self._form_sprite_path(rec, v), egg_path]
         # 异色
         try:
             _s1n = json.loads((_PLUGIN_DIR / "stage1name.json").read_text(encoding="utf-8"))
@@ -5523,6 +5532,15 @@ class LkMarketNotify(Star):
                     ("大块头", f"过线 ≥{self._fmt_num(w_hi - delta)}"
                                f"  极限 {self._fmt_num(w_hi)}", (194, 88, 40)),
                 ]}))
+            # 每个阶段自己的星光值 / 回顾值（详情卡「全阶段体型」下方一行）
+            _facts: List[tuple] = []
+            _star, _review = self._star_review_of(n)
+            if _star is not None:
+                _facts.append((self._fact_icon_path("星光值"), str(_star)))
+            if _review is not None:
+                _facts.append((self._fact_icon_path("回顾"), str(_review)))
+            if _facts:
+                rows.append(("", "", {"facts": _facts}))
         return rows
 
     _SKILL_TABLE: Optional[Dict[str, Dict[str, List[Dict[str, Any]]]]] = None
@@ -5756,11 +5774,8 @@ class LkMarketNotify(Star):
 
     @property
     def hatch_wind_mult(self) -> float:
-        """风场孵化加速倍率（默认 6 倍）。"""
-        try:
-            return max(1.0, float(self._cfg("hatch_wind_mult", 6)))
-        except (TypeError, ValueError):
-            return 6.0
+        """风场孵化加速倍率：固定 6 倍（不再读旧配置，避免老配置里的 2 倍）。"""
+        return 6.0
 
     def _hatch_base_seconds(self, rec: Dict[str, Any]) -> Optional[int]:
         """这只精灵的蛋基础孵化时长（秒）。
@@ -5828,14 +5843,11 @@ class LkMarketNotify(Star):
 
     @property
     def hatch_weekend_mult(self) -> float:
-        """周末（孵蛋加速日）的加速倍率。
+        """周末（孵蛋加速日）的加速倍率：固定 5 倍。
 
-        用户实测：**周末 5 倍速**，和风场（6 倍）叠加 = **30 倍速**。
+        风场 6 倍 × 周末 5 倍 = 叠加 30 倍；不再读旧配置，避免出现 6/2。
         """
-        try:
-            return max(1.0, float(self._cfg("hatch_weekend_mult", 5)))
-        except (TypeError, ValueError):
-            return 5.0
+        return 5.0
 
     def _hatch_rows(self, rec: Dict[str, Any]) -> List[tuple]:
         """孵化时间：原始 / 风场 ×6 / 周末 ×5 / 风场＋周末 ×30。
@@ -6123,7 +6135,7 @@ class LkMarketNotify(Star):
         if cached:
             return cached
         h = hashlib.sha1()
-        for n in ("grid.py", "templates/grid.html"):
+        for n in ("grid.py", "card.py", "main.py", "templates/grid.html"):
             try:
                 h.update((_PLUGIN_DIR / n).read_bytes())
             except Exception:
