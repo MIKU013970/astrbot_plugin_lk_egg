@@ -222,7 +222,7 @@ def _strip_emoji(text: str) -> str:
 
 _PLUGIN_DIR = Path(__file__).resolve().parent
 _PLUGIN_NAME = "astrbot_plugin_lk_egg"
-VERSION = "2.3.0"
+VERSION = "2.5.1"
 
 #: 数据来源标注（用户要求：查出结果时能看见原站）
 #: 卡片上放短名（完整 URL 太长会被截断），文字版用下面带 URL 的
@@ -464,7 +464,7 @@ def _hard_save_state(state: Dict[str, Any]) -> None:
     "astrbot_plugin_lk_egg",
     "MIKU013970 & DeepSeek",
     "洛克小肥鱼全功能 + 炫彩花种订阅",
-    "2.3.0",
+    "2.5.1",
 )
 class LkMarketNotify(Star):
     def __init__(self, context: Context, config: AstrBotConfig = None):
@@ -1976,7 +1976,8 @@ class LkMarketNotify(Star):
             form0 = (forms[0] if forms else "") or str(x.get("形态简称") or "")
             # 顺序：普通一阶段 → 普通精灵蛋 → 异色一阶段 → 异色精灵蛋
             egg_nm = str(x.get("蛋名") or "")
-            four = [self._stage1_path(nm, form0), c.icon_path("egg", egg_nm, form0)]
+            four = [c.icon_path("pet", nm, form0) or self._stage1_path(nm, form0),
+                    c.icon_path("egg", egg_nm, form0)]
             shiny_pet = c.icon_path("shiny", nm, form0)
             if shiny_pet:
                 four.append(shiny_pet)
@@ -2283,7 +2284,8 @@ class LkMarketNotify(Star):
         # magic_egg 是通用占位白蛋：通行证精灵官方只有异色蛋、没有普通蛋，别拿它凑数
         if egg_path and Path(egg_path).stem == "magic_egg":
             egg_path = None
-        out = [self._form_sprite_path(rec, v) or self._stage1_path(pet, form0), egg_path]
+        own = c.icon_path("pet", pet, form0) or c.icon_path("pet_stage1", pet, form0)
+        out = [self._form_sprite_path(rec, v) or own, egg_path]
         # 异色
         try:
             _s1n = json.loads((_PLUGIN_DIR / "stage1name.json").read_text(encoding="utf-8"))
@@ -2929,8 +2931,13 @@ class LkMarketNotify(Star):
         info_h = ROW_H * len(info)
         H = PAD + HEAD_H + info_h + 12 + flowers_h + tiles_h + PAD
 
-        img = Image.new("RGB", (W, H), bg)
-        dr = ImageDraw.Draw(img)
+        try:
+            img, _sheet = c.paint_sheet(W, H, kw.get("theme") or "")
+            dr = ImageDraw.Draw(img)
+            line_rgb = _sheet["纸边"]
+        except Exception:
+            img = Image.new("RGB", (W, H), bg)
+            dr = ImageDraw.Draw(img)
 
         # ============ 头部 ============
         y = PAD
@@ -3967,17 +3974,24 @@ class LkMarketNotify(Star):
             theme = c._norm_theme(kw.get("theme") or "")
             bg = c._to_rgb(theme.get("背景", "#FCFAF6"))
             card_bg = c._to_rgb(theme.get("卡片", "#FFFFFF"))
+            zebra_bg = c._to_rgb(theme.get("标签底", "#F7F0E0"))
             title_rgb = c._to_rgb(theme.get("标题", "#2C2A26"))
             body_rgb = c._to_rgb(theme.get("正文", "#4A4740"))
             sub_rgb = c._to_rgb(theme.get("次要", "#9A958C"))
             accent_rgb = c._to_rgb(theme.get("强调", "#C25828"))
         except Exception:
-            bg, card_bg = (252, 250, 246), (255, 255, 255)
+            bg, card_bg = (243, 237, 224), (255, 253, 248)
+            zebra_bg = (247, 240, 224)
             title_rgb, body_rgb = (44, 42, 38), (74, 71, 64)
             sub_rgb, accent_rgb = (154, 149, 140), (194, 88, 40)
 
-        img = Image.new("RGB", (W, H), bg)
-        dr = ImageDraw.Draw(img)
+        try:
+            img, _sheet = c.paint_sheet(W, H, kw.get("theme") or "")
+            dr = ImageDraw.Draw(img)
+            line_rgb = _sheet["纸边"]
+        except Exception:
+            img = Image.new("RGB", (W, H), bg)
+            dr = ImageDraw.Draw(img)
 
         # 字体
         try:
@@ -4006,7 +4020,7 @@ class LkMarketNotify(Star):
             # 隔行底色
             if i % 2 == 0:
                 dr.rectangle([PAD - 6, y + 2, W - PAD + 6, y + ROW_H - 4],
-                             fill=card_bg)
+                             fill=zebra_bg)
 
             c1 = self._hex_to_rgb(b["c1"], (222, 222, 222))
             sx = PAD
@@ -4531,17 +4545,24 @@ class LkMarketNotify(Star):
             theme = c._norm_theme(kw.get("theme") or "")
             bg = c._to_rgb(theme.get("背景", "#FCFAF6"))
             card_bg = c._to_rgb(theme.get("卡片", "#FFFFFF"))
+            zebra_bg = c._to_rgb(theme.get("标签底", "#F7F0E0"))
             title_rgb = c._to_rgb(theme.get("标题", "#2C2A26"))
             body_rgb = c._to_rgb(theme.get("正文", "#4A4740"))
             sub_rgb = c._to_rgb(theme.get("次要", "#9A958C"))
             accent_rgb = c._to_rgb(theme.get("强调", "#C25828"))
         except Exception:
-            bg, card_bg = (252, 250, 246), (255, 255, 255)
+            bg, card_bg = (243, 237, 224), (255, 253, 248)
+            zebra_bg = (247, 240, 224)
             title_rgb, body_rgb = (44, 42, 38), (74, 71, 64)
             sub_rgb, accent_rgb = (154, 149, 140), (194, 88, 40)
 
-        img = Image.new("RGB", (W, H), bg)
-        dr = ImageDraw.Draw(img)
+        try:
+            img, _sheet = c.paint_sheet(W, H, kw.get("theme") or "")
+            dr = ImageDraw.Draw(img)
+            line_rgb = _sheet["纸边"]
+        except Exception:
+            img = Image.new("RGB", (W, H), bg)
+            dr = ImageDraw.Draw(img)
 
         try:
             fpath = c.find_font(str(kw.get("font_path") or ""))
@@ -4564,7 +4585,7 @@ class LkMarketNotify(Star):
             y = HEAD_H + i * ROW_H
             if i % 2 == 0:
                 dr.rectangle([PAD - 6, y + 2, W - PAD + 6, y + ROW_H - 4],
-                             fill=card_bg)
+                             fill=zebra_bg)
 
             # 左：异色 → 异色图标；炫彩 → 官方色卡图
             cx, cy = PAD, y + (ROW_H - CARD_H) // 2
@@ -5121,7 +5142,11 @@ class LkMarketNotify(Star):
                         0 if nm in sp else 1,                     # 图鉴里有记录优先
                         order.get(nm, 0))                         # 花名册原顺序
             rep = sorted(members, key=rank)[0]
-            nm = str(rep.get("name") or "")
+            nm = str(rep.get("name") or "")          # 链首（一阶段）：蛋名/区间按它取
+            _chains = self._chains_json()
+            _head = cmap.get(nm)
+            _chain = _chains.get(_head or nm) or [nm]
+            display = str(_chain[-1] or nm)          # 链尾（最高阶段）：卡片显示/立绘/星光按它取
             marks: List[str] = []
             for r in members:
                 for k in (r.get("marks") or []):
@@ -5151,9 +5176,12 @@ class LkMarketNotify(Star):
                     if str(r.get("no") or ""):
                         no = str(r["no"])
                         break
+            _dinfo = self._pets_table().get(display) or {}
+            disp_no = str(_dinfo.get("no") or "").strip()
             out.append({
-                "name": nm,
-                "no": no,
+                "name": display,
+                "head": nm,
+                "no": disp_no or no,
                 "groups": groups,
                 "group": str(rep.get("group") or ""),
                 "marks": marks,
@@ -5167,8 +5195,8 @@ class LkMarketNotify(Star):
 
     def _grid_avatar_mode(self) -> str:
         """头像用哪个图：stage1（一阶段，默认）| shiny（异色立绘）"""
-        s = str(self._cfg("grid_avatar", "stage1") or "stage1").strip().lower()
-        return s if s in ("stage1", "shiny") else "stage1"
+        s = str(self._cfg("grid_avatar", "own") or "own").strip().lower()
+        return s if s in ("own", "stage1", "shiny") else "own"
 
     def _grid_ride_mode(self) -> str:
         """同乘怎么标：yes（只标可同乘，默认）| both（可/不可都标）| off（不标）"""
@@ -5741,14 +5769,57 @@ class LkMarketNotify(Star):
             return 6.0
 
     def _hatch_base_seconds(self, rec: Dict[str, Any]) -> Optional[int]:
-        """这只精灵的蛋基础孵化时长（秒）。取第一个非异色形态的「孵蛋时间」。"""
+        """这只精灵的蛋基础孵化时长（秒）。
+
+        先取本条记录第一个非异色形态的「孵蛋时间」；没有再沿进化链找
+        —— 蛋是按一阶段下的，二/三阶段记录经常不重复填孵化时间
+        （例如查「红绒十字」时，数据只在链首「治愈兔」上）。
+        """
+        def _from_record(r: Dict[str, Any]) -> Optional[int]:
+            for v in (r.get("variants") or [r]):
+                if "异色" in str(v.get("蛋名") or ""):
+                    continue
+                n = self._parse_hatch_seconds(v.get("孵蛋时间"))
+                if n:
+                    return n
+            return self._parse_hatch_seconds(r.get("孵蛋时间"))
+
+        n = _from_record(rec)
+        if n:
+            return n
+        nm = str(rec.get("精灵") or "").strip()
+        chains = self._chains_json()
+        chain = (rec.get("_chain")
+                 or chains.get(nm)
+                 or chains.get(self._chain_map().get(nm) or nm)
+                 or [])
+        for cand in chain:
+            if not cand or cand == nm:
+                continue
+            r2 = self._find_species(str(cand))
+            if r2:
+                n = _from_record(r2)
+                if n:
+                    return n
+        # 再按「蛋名」找：长江豚下的是「云梦豚的蛋」，数据挂在云梦豚那条上
+        egg_name = ""
         for v in (rec.get("variants") or [rec]):
             if "异色" in str(v.get("蛋名") or ""):
                 continue
-            n = self._parse_hatch_seconds(v.get("孵蛋时间"))
-            if n:
-                return n
-        return self._parse_hatch_seconds(rec.get("孵蛋时间"))
+            egg_name = str(v.get("蛋名") or "")
+            if egg_name:
+                break
+        for cand in (egg_name,
+                     egg_name.replace("的蛋", "") if egg_name else "",
+                     egg_name[:-1] if egg_name.endswith("蛋") else ""):
+            if not cand:
+                continue
+            r2 = self._find_species(cand)
+            if r2 and str(r2.get("精灵") or "") != nm:
+                n = _from_record(r2)
+                if n:
+                    return n
+        return None
 
     @property
     def hatch_weekend_mult(self) -> float:
@@ -5765,15 +5836,16 @@ class LkMarketNotify(Star):
         """孵化时间：普通 / 挂风场 / 周末加速 / 风场 + 加速（压成两行，卡片不臃肿）。"""
         base = self._hatch_base_seconds(rec)
         if not base:
-            return []
+            # 源数据没有孵化时间也别整段消失：明确写「暂无数据」，方便用户判断
+            return [("", "—— 孵化 ——"), ("孵化时间", "暂无数据")]
         wind = self.hatch_wind_mult
         wk = self.hatch_weekend_mult
         return [
             ("", "—— 孵化 ——"),
             ("原始", self._fmt_duration(base)),
-            (f"风场（×{wind:g}）", self._fmt_duration(base / wind)),
-            (f"周末（×{wk:g}）", self._fmt_duration(base / wk)),
-            (f"风场＋周末（×{wind * wk:g}）",
+            (f"风场 ×{wind:g}", self._fmt_duration(base / wind)),
+            (f"周末 ×{wk:g}", self._fmt_duration(base / wk)),
+            (f"风场＋周末 ×{wind * wk:g}",
              self._fmt_duration(base / (wind * wk))),
         ]
 
@@ -5794,17 +5866,21 @@ class LkMarketNotify(Star):
         ride_mode = self._grid_ride_mode()
         out: List[Dict[str, Any]] = []
         for grp in self._shiny_grid_groups(rows):
-            nm = str(grp.get("name") or "").strip()
+            nm = str(grp.get("name") or "").strip()          # 链尾（最高阶段）
             if not nm:
                 continue
+            head = str(grp.get("head") or nm).strip()        # 链首（一阶段）
             marks = list(grp.get("marks") or [])
             members = [x for x in (grp.get("members") or []) if x]
-            st1 = self._stage1_path(nm)
-            shiny = c.icon_path("shiny", nm)
-            if avatar_mode == "shiny" and shiny:
-                main = shiny
-            else:
-                main = st1 or c.icon_path("pet", nm) or shiny
+            st1 = self._stage1_path(head)
+            own = c.icon_path("pet", nm) or c.icon_path("pet", head)
+            shiny = c.icon_path("shiny", nm) or c.icon_path("shiny", head)
+            if avatar_mode == "shiny":
+                main = shiny or own or st1
+            elif avatar_mode == "stage1":
+                main = st1 or own or shiny
+            else:                                             # own（默认）：显示最高阶段本体
+                main = own or st1 or shiny
             sats: List[Dict[str, Any]] = []
             # 一阶段立绘缩略图排在**最后**：卡片只取前 2 枚，前两枚必须是蛋和异色蛋
             st1_sat: Optional[Dict[str, Any]] = None
@@ -5888,7 +5964,7 @@ class LkMarketNotify(Star):
             out.append(g.card(
                 name=nm,
                 sub=" · ".join(sub_parts),
-                bins=self._bins_of(nm),
+                bins=self._bins_of(head),
                 icon=main,
                 ring=g.ring_color(grp.get("group") or (gs[0] if gs else "")),
                 tags=tags,
@@ -6253,8 +6329,9 @@ class LkMarketNotify(Star):
         cap2 = max(2, per // 2)                  # 两栏时每栏最多 per/2 只
         pages: List[List[Dict[str, Any]]] = []
         if cards_res and cards_enc:
-            pages.append([{"title": "", "cards": cards_res[:cap2]},
-                          {"title": "", "cards": cards_enc[:cap2]}])
+            # 两栏给金色小标签（常驻 / 奇遇），一眼分得清左右
+            pages.append([{"title": "常驻", "color": "#2F9E6E", "cards": cards_res[:cap2]},
+                          {"title": "奇遇", "color": "#3D7FD8", "cards": cards_enc[:cap2]}])
             tail = cards_res[cap2:] + cards_enc[cap2:]
             for i in range(0, len(tail), per):
                 pages.append([{"title": "", "cards": tail[i:i + per]}])
@@ -6290,9 +6367,11 @@ class LkMarketNotify(Star):
 
         pngs: List[bytes] = []
         for p in want:
-            sub = f"第 {p} / {pages} 页 · 共 {total} 只" if pages > 1 else f"共 {total} 只"
+            # 标题带里已经有「共 N 只」胶囊，这里不再重复；多页时补页码
+            sub = f"第 {p} / {pages} 页" if pages > 1 else ""
             if cards_res and cards_enc:
-                sub += f"（常驻 {len(cards_res)} + 奇遇 {len(cards_enc)}）"
+                _pair = f"常驻 {len(cards_res)} + 奇遇 {len(cards_enc)}"
+                sub = f"{sub} · {_pair}" if sub else _pair
             png = await self._grid_png(
                 header=header, panels=pages_panels[p - 1],
                 subtitle=sub, footer="", page=p, total_pages=pages, total=total)
@@ -9061,7 +9140,7 @@ class LkMarketNotify(Star):
         # 数据来源（用户要求：查出来能看见原站）
         rows.append(("", "—— 来源 ——"))
         rows.append(("图鉴 / 体型 / 蛋组", SOURCE_ROCO))
-        rows.append(("星光 / 回顾等 wiki 资料", SOURCE_WIKI))
+        rows.append(("星光 / 回顾", SOURCE_WIKI))
         return rows
 
     def _species_rows_core(self, rec: Dict[str, Any], dex: str = "",
@@ -9074,7 +9153,8 @@ class LkMarketNotify(Star):
             _gd = _gd.replace("雄性", "♂ 雄性").replace("雌性", "♀ 雌性")
         _eg = str(rec.get("蛋组") or "")
         if "未发现" in _eg:
-            _eg = "无法孵蛋"
+            # 「未发现蛋组」= 不能生蛋，不是不能孵化；活动蛋照样有孵化时间
+            _eg = "无法生蛋"
         rows: List[tuple] = [("蛋组", _eg),
                              ("公母", _gd),
                              ("进化链", rec.get("进化链") or "")]

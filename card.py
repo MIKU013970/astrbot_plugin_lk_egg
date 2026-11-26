@@ -14,6 +14,7 @@ from __future__ import annotations
 
 import io
 import json
+import math
 import os
 import re
 from pathlib import Path
@@ -22,21 +23,31 @@ from typing import Any, Dict, List, Optional, Sequence, Tuple
 # ---------------------------------------------------------------- 主题与字体
 
 #: 配色默认值（键 → #RRGGBB）。用户可以在配置里逐项覆盖。
+# 暖纸图鉴风：纸底 + 白磨砂卡 + 单一金强调（参考 rocom / gamewiki）。
 THEME_DEFAULT: Dict[str, str] = {
-    "背景": "#FCFAF6",
-    "卡片": "#FFFFFF",
-    "边框": "#E8E2D8",
-    "标题": "#262220",
-    "正文": "#4A4642",
-    "次要": "#8C867E",
-    "强调": "#C25828",
-    "标签底": "#F6F0E6",
+    "背景": "#F3EDE0",   # 暖纸底
+    "卡片": "#FFFDF8",   # 白卡
+    "边框": "#E9DFCC",   # 1px 边框
+    "标题": "#2C2418",   # 深褐
+    "正文": "#4A4032",   # 褐
+    "次要": "#8E8170",   # 暖灰
+    "强调": "#E8A72C",   # 金
+    "标签底": "#F7F0E0", # 浅奶油
+    "天空顶": "#F6F0E3", # 纸面渐变顶
+    "天空底": "#EFE5D3", # 纸面渐变底
+    "金": "#E8A72C",
+    "金深": "#B9771D",
+    "纸": "#F3EDE0",
+    "纸边": "#E9DFCC",
+    "云": "#FFFDF8",
+    "星": "#FFD978",
+    "网格线": "#DED2BC",
 }
 
 #: 字号比例：以配置里的「正文字号」为基准推导其它字号
 SIZE_RATIO = {
-    "标题": 12,     # 正文 + 12
-    "名字": 1,      # 正文 + 1
+    "标题": 14,     # 正文 + 14（拉大主次对比，标题更突出）
+    "名字": 2,      # 正文 + 2
     "正文": 0,
     "次要": -3,
     "更小": -4,
@@ -127,6 +138,136 @@ def _to_rgb(val: Any) -> Optional[Tuple[int, int, int]]:
     if len(s) == 6 and all(c in "0123456789abcdefABCDEF" for c in s):
         return int(s[0:2], 16), int(s[2:4], 16), int(s[4:6], 16)
     return None
+
+
+# ---------------------------------------------------------------- 洛克风装饰
+
+def _lerp_rgb(a, b, t: float):
+    t = max(0.0, min(1.0, float(t)))
+    return tuple(int(a[i] + (b[i] - a[i]) * t) for i in range(3))
+
+
+def _vgrad(size, top, bottom):
+    """竖向渐变（宽 1 拉伸）。"""
+    Image, _, _ = _pil()  # type: ignore[misc]
+    w, h = max(1, int(size[0])), max(1, int(size[1]))
+    strip = Image.new("RGB", (1, h))
+    px = strip.load()
+    for y in range(h):
+        px[0, y] = _lerp_rgb(top, bottom, y / float(max(1, h - 1)))
+    return strip.resize((w, h))
+
+
+def _paper_noise(size: int = 96, seed: int = 7):
+    """暖纸纹理（和 grid.py 同一套颗粒）。"""
+    Image, _, _ = _pil()  # type: ignore[misc]
+    import random
+    rnd = random.Random(seed)
+    im = Image.new("RGBA", (size, size), (0, 0, 0, 0))
+    px = im.load()
+    for _ in range(size * size // 8):
+        x, y = rnd.randrange(size), rnd.randrange(size)
+        tone = rnd.choice(((96, 78, 48), (140, 120, 86), (70, 58, 36)))
+        px[x, y] = (tone[0], tone[1], tone[2], rnd.randint(2, 6))
+    return im
+
+
+def _grad_round(img, box, radius: float, c1, c2, *, outline=None,
+                width: int = 2, horizontal: bool = False) -> None:
+    """圆角矩形内填渐变。"""
+    Image, ImageDraw, _ = _pil()  # type: ignore[misc]
+    x0, y0, x1, y1 = [int(v) for v in box]
+    w, h = max(1, x1 - x0), max(1, y1 - y0)
+    if horizontal:
+        strip = Image.new("RGB", (w, 1))
+        px = strip.load()
+        for x in range(w):
+            px[x, 0] = _lerp_rgb(c1, c2, x / float(max(1, w - 1)))
+        grad = strip.resize((w, h))
+    else:
+        grad = _vgrad((w, h), c1, c2)
+    mask = Image.new("L", (w, h), 0)
+    ImageDraw.Draw(mask).rounded_rectangle([0, 0, w - 1, h - 1],
+                                           radius=max(0, int(radius)), fill=255)
+    img.paste(grad, (x0, y0), mask)
+    if outline:
+        ImageDraw.Draw(img).rounded_rectangle(
+            [x0, y0, x1 - 1, y1 - 1], radius=max(0, int(radius)),
+            outline=outline, width=width)
+
+
+def _star_poly(draw, cx: float, cy: float, r: float, fill) -> None:
+    pts = []
+    for i in range(10):
+        ang = math.radians(-90 + i * 36)
+        rr = r if i % 2 == 0 else r * 0.46
+        pts.append((cx + rr * math.cos(ang), cy + rr * math.sin(ang)))
+    draw.polygon(pts, fill=fill)
+
+
+def _diamond(draw, cx: float, cy: float, r: float, fill, outline=None) -> None:
+    draw.polygon([(cx, cy - r), (cx + r, cy), (cx, cy + r), (cx - r, cy)],
+                 fill=fill, outline=outline)
+
+
+def _dotted(draw, x0: float, x1: float, y: float, color,
+            width: int = 2, dash: float = 6.0, gap: float = 5.0) -> None:
+    x = x0
+    while x < x1:
+        draw.line([(x, y), (min(x + dash, x1), y)], fill=color, width=width)
+        x += dash + gap
+
+
+def paint_sheet(width: int, height: int, theme=None,
+                margin: int = 10, radius: int = 22):
+    """给自定义画图函数铺「天空渐变 + 羊皮纸卡 + 金边」底。
+
+    返回 (RGB 图, 配色表)。main.py 里的商家卡 / 花种卡等手绘画布
+    统一走这里，和 render_card / render_grid 同一套皮肤。
+    """
+    Image, ImageDraw, _ = _pil()  # type: ignore[misc]
+    colors = _norm_theme(theme)
+    w, h = max(1, int(width)), max(1, int(height))
+    img = _vgrad((w, h), colors["天空顶"], colors["天空底"]).convert("RGB")
+    _tex = _paper_noise(96, 7)
+    for _ty in range(0, h, _tex.height):
+        for _tx in range(0, w, _tex.width):
+            img.paste(_tex, (_tx, _ty), _tex)
+    dr = ImageDraw.Draw(img)
+    dr.rounded_rectangle([margin, margin, width - margin - 1, height - margin - 1],
+                         radius=radius, fill=colors["卡片"],
+                         outline=colors["边框"], width=1)
+    return img, colors
+
+
+def _corner_brackets(draw, box, inset: float, size: float, color,
+                     width: int = 3) -> None:
+    x0, y0, x1, y1 = box
+    for x, y, sx, sy in ((x0 + inset, y0 + inset, 1, 1),
+                         (x1 - inset, y0 + inset, -1, 1),
+                         (x0 + inset, y1 - inset, 1, -1),
+                         (x1 - inset, y1 - inset, -1, -1)):
+        draw.line([(x, y), (x + sx * size, y)], fill=color, width=width)
+        draw.line([(x, y), (x, y + sy * size)], fill=color, width=width)
+
+
+def _load_font(path: str, size: int):
+    """按路径加载字体；path 为空/加载失败就用 Pillow 默认字体。
+
+    以前 card.py 里多处调 `_load_font` 却没有定义（只在配了
+    `card_font_path` 或画版本水印时触发），异常被外层 try 吞掉，
+    表现为「副标题/水印偶尔不画」。这里补上统一定义。
+    """
+    _, _, ImageFont = _pil()  # type: ignore[misc]
+    try:
+        if path:
+            return ImageFont.truetype(str(path), int(size))
+    except Exception:
+        pass
+    try:
+        return ImageFont.load_default()
+    except Exception:
+        return None
 
 
 def find_font(custom: str = "") -> Optional[str]:
@@ -483,11 +624,14 @@ def render_card(
     sizes = _sizes(int(font_size))
     fonts = _fonts(font_path or find_font(""), sizes)
 
-    pad = max(14, round(width * 0.037))
-    inner = width - pad * 2
-    lh_row = sizes["正文"] + 13
-    box_h = sizes["正文"] + 18
-    head_h = sizes["数字"] + 18
+# ---- 版面：暖纸 + 顶部金横幅 + 白内容卡（参考 rocom / gamewiki）
+    outer = 12
+    pad = 30
+    x0, x1 = pad, width - pad
+    inner = x1 - x0
+    lh_row = sizes["正文"] + 17
+    box_h = sizes["正文"] + 22
+    head_h = sizes["数字"] + 20
 
     rows = list(rows or [])
     boxes = list(boxes or [])
@@ -497,32 +641,33 @@ def render_card(
     tl = [x for x in (tiles or []) if x]
     hl = [x for x in (hits or []) if x]
     tb = [x for x in (type_badges or []) if x]
-    #: 系别球边长 + 这一行占的高度
     type_ico = max(18, min(30, int(sizes["正文"] * 1.5)))
     type_h = type_ico if tb else 0
 
     tile_ico = int(tile_icon)
-    # 头部图标：默认用 head_icon（不受多形态 tile_icon=140 影响），
-    # 而且图标数量多时按「总宽不超过卡片 42%」自动收窄，避免把标题挤掉
     hi_base = int(head_icon or 64)
     if hi:
-        _maxw = int(width * 0.42)
+        _maxw = int(width * 0.34)
         _fitw = (_maxw - (len(hi) - 1) * 8 - 12) // max(1, len(hi))
         hi_size = max(36, min(hi_base, _fitw))
     else:
         hi_size = hi_base
     hi_w = (len(hi) * hi_size + (len(hi) - 1) * 8 + 12) if hi else 0
-    title_h = max(sizes["标题"] + 22, (hi_size + 10) if hi else 0)
+    title_block_h = sizes["标题"] + (sizes["次要"] + 8 if subtitle else 0)
+    title_h = max(title_block_h, (hi_size + 4) if hi else 0)
+    band_pad = 22
+    band_h = int(band_pad + title_h + (type_h + 8 if tb else 0) + 20)
+    content_top = band_h + 12 + 20
 
     tile_line = sizes["更小"] + 6
     per_row = max(1, int(tiles_per_row))
     tile_w = inner // per_row
     max_caps = min(3, max((len(x[1]) for x in tl if len(x) > 1 and x[1]), default=0))
-    tile_h = (tile_ico + tile_line * max_caps + 12) if tl else 0
+    tile_h = (tile_ico + tile_line * max_caps + 18) if tl else 0
     tile_rows = ((len(tl) + per_row - 1) // per_row) if tl else 0
 
     hit_ico = tile_ico
-    key_w = max(56, round(inner * 0.16))
+    key_w = max(56, round(inner * 0.20))
 
     def hit_h(item) -> int:
         subs = item[3] if len(item) > 3 and item[3] else []
@@ -530,11 +675,9 @@ def render_card(
 
     probe = Image.new("RGB", (width, 10), colors["背景"])
     pd = ImageDraw.Draw(probe)
-
     bw_box = (inner - 14) // 2
 
     def _row_h(item) -> int:
-        """一行占的高度。带 inline boxes 的行按框组算。"""
         extra = item[2] if len(item) > 2 else None
         if isinstance(extra, dict) and extra.get("boxes"):
             n = len(extra["boxes"])
@@ -542,99 +685,128 @@ def render_card(
         return lh_row
 
     def measure(_d) -> int:
-        y = pad
-        y += title_h
-        if tb:
-            y += type_h + 6
+        y = content_top
         if rows or boxes or titems or tl or hl:
-            y += 10
+            y += 2
         y += sum(_row_h(x) for x in rows)
         if boxes:
-            y += 10 + box_h * ((len(boxes) + 1) // 2)
+            y += 12 + box_h * ((len(boxes) + 1) // 2)
         if tcols or titems:
-            y += 12 + head_h + head_h * len(titems)
+            y += 14 + head_h + head_h * len(titems)
         if hl:
-            y += 12 + sum(hit_h(x) for x in hl)
+            y += 14 + sum(hit_h(x) for x in hl)
         if tl:
-            y += 12 + tile_h * tile_rows
-        y += pad
+            y += 14 + tile_h * tile_rows
+        y += outer + 24
         return y
 
     height = measure(pd)
 
-    img = Image.new("RGB", (width, height), colors["背景"])
-    dr = ImageDraw.Draw(img)
-    dr.rounded_rectangle([6, 6, width - 7, height - 7], 16,
-                         fill=colors["卡片"], outline=colors["边框"], width=2)
+    # 暖纸底 + 纸纹
+    img = _vgrad((width, height), colors["天空顶"], colors["天空底"]).convert("RGBA")
+    _tex = _paper_noise(96, 7)
+    for _ty in range(0, height, _tex.height):
+        for _tx in range(0, width, _tex.width):
+            img.alpha_composite(_tex, (_tx, _ty))
+    draw = ImageDraw.Draw(img)
 
-    x0, x1 = pad, width - pad
-    y = pad
+    # ---------------- 顶部金横幅（满幅） ----------------
+    _grad_round(img, (-2, -2, width + 2, band_h), 0,
+                colors["星"], colors["强调"], horizontal=True)
 
-    # ---- 标题行：图在最前面
+    # 横幅幽灵字（裁在横幅内）
+    _gh = "ROCO KINGDOM"
+    _gs = max(20, int(band_h * 0.52))
+    _gf = _load_font(font_path or find_font(""), _gs)
+    if _gf is not None:
+        _gw = draw.textlength(_gh, font=_gf)
+        if _gw > width * 0.56:
+            _gs = max(16, int(_gs * width * 0.56 / max(1.0, _gw)))
+            _gf = _load_font(font_path or find_font(""), _gs)
+            _gw = draw.textlength(_gh, font=_gf)
+        _gl = Image.new("RGBA", (width, band_h), (0, 0, 0, 0))
+        ImageDraw.Draw(_gl).text((width - 20 - _gw, band_h - _gs - 4), _gh,
+                                 font=_gf, fill=(255, 255, 255, 46))
+        img.alpha_composite(_gl)
+
+    # 标题区
+    _cy = band_pad
+    _half = max(0.0, (hi_size - title_block_h) / 2.0) if hi else 0.0
+    _title_y = _cy + _half
     if hi:
-        cx = x0
+        _ix = 30
         for pth in hi:
             ic = _load_icon(pth, hi_size)
             if ic is None:
                 continue
-            img.paste(ic, (cx, y), ic)
-            cx += hi_size + 8
-    tx = x0 + hi_w
-    title_txt = _fit(dr, title, fonts["标题"], max(60, inner - hi_w - 90))
-    dr.text((tx, y), title_txt, font=fonts["标题"], fill=colors["标题"])
-    tw = dr.textlength(title_txt, font=fonts["标题"]) if fonts["标题"] else 0
+            img.paste(ic, (int(_ix), int(_cy)), ic)
+            _ix += hi_size + 8
+    _tx = 30 + hi_w
+
+    # 右上角标签
+    _tag_w = 0
+    if tag:
+        _tg = _fit(draw, str(tag), fonts["次要"], inner * 0.30)
+        _tag_w = int(draw.textlength(_tg, font=fonts["次要"])) + 26
+        _tag_h = sizes["次要"] + 16
+        _tx1 = width - 30
+        draw.rounded_rectangle([_tx1 - _tag_w, 18, _tx1, 18 + _tag_h],
+                               radius=_tag_h / 2.0, fill=(255, 255, 255, 150),
+                               outline=(255, 255, 255, 190), width=1)
+        draw.text((_tx1 - _tag_w + 13, 18 + (_tag_h - sizes["次要"]) / 2.0 - 2),
+                  _tg, font=fonts["次要"], fill=colors["金深"])
+
+    _title_lim = width - 30 - _tx - (_tag_w + 12 if tag else 0)
+    title_txt = _fit(draw, title, fonts["标题"], max(60, _title_lim))
+    draw.text((_tx, _title_y), title_txt, font=fonts["标题"], fill=colors["标题"])
+
     if subtitle:
-        _st = _fit(dr, subtitle, fonts["次要"], max(40, inner - hi_w - tw - 30))
-        _sx = tx + tw + 12
-        _sy = y + sizes["标题"] - sizes["次要"] - 4
-        _sf = _load_font(font_path, sizes["次要"] + 2) if font_path else fonts["次要"]
+        _st = _fit(draw, subtitle, fonts["次要"], max(40, _title_lim))
+        _sy = _title_y + sizes["标题"] + 2
+        _sf = _load_font(font_path or find_font(""), sizes["次要"] + 2)
+        _sx = _tx
         if "\x01" in _st or "\x02" in _st:
-            # 分段着色：标记字符本身不画出来，只用来切换颜色
             _cur, _buf = "t", ""
             for _ch in _st:
                 if _ch in ("\x01", "\x02"):
                     if _buf:
-                        _c0 = (colors["次要"] if _cur == "t" else
-                               ((26, 148, 84) if _cur == "1" else (200, 55, 65)))
-                        dr.text((_sx, _sy), _buf, font=_sf, fill=_c0)
-                        _sx += dr.textlength(_buf, font=_sf)
+                        _c0 = (colors["正文"] if _cur == "t" else
+                               ((26, 128, 74) if _cur == "1" else (190, 55, 65)))
+                        draw.text((_sx, _sy), _buf, font=_sf, fill=_c0)
+                        _sx += draw.textlength(_buf, font=_sf)
                     _cur, _buf = ("1" if _ch == "\x01" else "2"), ""
                 else:
                     _buf += _ch
             if _buf:
-                _c0 = (colors["次要"] if _cur == "t" else
-                       ((26, 148, 84) if _cur == "1" else (200, 55, 65)))
-                dr.text((_sx, _sy), _buf, font=_sf, fill=_c0)
+                _c0 = (colors["正文"] if _cur == "t" else
+                       ((26, 128, 74) if _cur == "1" else (190, 55, 65)))
+                draw.text((_sx, _sy), _buf, font=_sf, fill=_c0)
         else:
-            dr.text((_sx, _sy), _st, font=_sf, fill=colors["次要"])
-    if tag:
-        tgw = dr.textlength(str(tag), font=fonts["次要"]) + 20
-        dr.rounded_rectangle([x1 - tgw, y + 2, x1, y + sizes["次要"] + 24], 12,
-                             fill=colors["标签底"])
-        dr.text((x1 - tgw + 10, y + 8), str(tag), font=fonts["次要"], fill=colors["强调"])
-    y += title_h
+            draw.text((_sx, _sy), _st, font=_sf, fill=colors["正文"])
 
-    # ---- 系别球行：标题下面一排「⚪萌系 ⚪草系」，球就是 wiki 的系别圆标
+    # 系别球行
     if tb:
-        _cx = x0
-        _f = fonts["次要"]
+        _bx = 30
+        _by = band_pad + title_h + 6
         for item in tb:
             ipath = item[0] if len(item) > 0 else None
             label = str(item[1]) if len(item) > 1 else ""
             ic = _load_icon(ipath, type_ico) if ipath else None
             if ic is not None:
-                # paste 的 box 只吃 int；textlength 返回 float，累加后必须取整
-                img.paste(ic, (int(_cx), int(y)), ic)
-                _cx += type_ico + 6
+                img.paste(ic, (int(_bx), int(_by)), ic)
+                _bx += type_ico + 6
             if label:
-                _ty = y + max(0, (type_ico - sizes["次要"]) // 2)
-                dr.text((_cx, _ty), label, font=_f, fill=colors["正文"])
-                _cx += int(dr.textlength(label, font=_f)) + 16
-        y += type_h + 6
+                draw.text((_bx, _by + max(0, (type_ico - sizes["次要"]) // 2)),
+                          label, font=fonts["次要"], fill=colors["标题"])
+                _bx += int(draw.textlength(label, font=fonts["次要"])) + 16
 
-    if rows or boxes or titems or tl or hl:
-        dr.line([x0, y, x1, y], fill=colors["边框"], width=1)
-        y += 10
+    # ---------------- 白色内容卡 ----------------
+    body_y = band_h + 12
+    draw.rounded_rectangle([outer, body_y, width - outer, height - outer],
+                           radius=18, fill=colors["卡片"],
+                           outline=colors["边框"], width=1)
+    dr = draw
+    y = content_top
 
     def draw_boxes(box_list, top: int) -> None:
         """画一组两列色块（小块头 / 大块头那种）。"""
@@ -646,15 +818,18 @@ def render_card(
                 txt = box[1] if len(box) > 1 else ""
                 col = _to_rgb(box[2]) if len(box) > 2 else colors["强调"]
                 bx = x0 + j * (bw + 14)
-                dr.rounded_rectangle([bx, cy, bx + bw, cy + box_h - 6], 9,
-                                     fill=colors["标签底"], outline=colors["边框"])
+                # 奶油色块 + 系别色左竖条 + 金色细边
+                dr.rounded_rectangle([bx, cy, bx + bw, cy + box_h - 4], 10,
+                                     fill=colors["标签底"], outline=colors["边框"], width=1)
+                bar_col = col or colors["强调"]
+                dr.rounded_rectangle([bx, cy + 4, bx + 3, cy + box_h - 8], 1, fill=bar_col)
                 lw = (dr.textlength(str(lbl), font=fonts["次要"]) + 10
                       if fonts["次要"] else 40)
-                dr.text((bx + 10, cy + 5), _fit(dr, lbl, fonts["次要"], bw * 0.4),
-                        font=fonts["次要"], fill=col or colors["强调"])
-                dr.text((bx + lw + 10, cy + 5),
-                        _fit(dr, txt, fonts["更小"], bw - lw - 22),
-                        font=fonts["更小"], fill=colors["正文"])
+                dr.text((bx + 15, cy + 6), _fit(dr, lbl, fonts["次要"], bw * 0.4),
+                        font=fonts["次要"], fill=bar_col)
+                dr.text((bx + lw + 15, cy + 6),
+                        _fit(dr, txt, fonts["更小"], bw - lw - 28),
+                        font=fonts["更小"], fill=colors["标题"])
 
     for item in rows:
         k = item[0] if len(item) > 0 else ""
@@ -692,18 +867,18 @@ def render_card(
         if not k and v:
             _lab = _divider_label(str(v))
             if _lab is not None:
-                _mid = (x0 + x1) / 2
+                _mid = (x0 + x1) / 2.0
                 _cy = int(y + lh_row / 2)
                 if _lab:
                     _lw = dr.textlength(_lab, font=fonts["更小"]) if fonts["更小"] else 0
-                    dr.line([int(x0), _cy, int(_mid - _lw / 2 - 12), _cy],
-                            fill=colors["边框"], width=1)
-                    dr.line([int(_mid + _lw / 2 + 12), _cy, int(x1), _cy],
-                            fill=colors["边框"], width=1)
-                    dr.text((int(_mid), int(y + 2)), _lab, font=fonts["更小"],
-                            fill=colors["强调"], anchor="ma")
+                    dr.ellipse([x0 + 1, _cy - 3, x0 + 7, _cy + 3], fill=colors["强调"])
+                    dr.text((x0 + 13, _cy - sizes["更小"] / 2 - 1), _lab,
+                            font=fonts["更小"], fill=colors["金深"])
+                    _sx2 = x0 + 13 + _lw + 10
+                    if _sx2 < x1:
+                        dr.line([(_sx2, _cy), (x1, _cy)], fill=colors["网格线"], width=1)
                 else:
-                    dr.line([int(x0), _cy, int(x1), _cy], fill=colors["边框"], width=1)
+                    dr.line([(x0, _cy), (x1, _cy)], fill=colors["网格线"], width=1)
                 y += lh_row
                 continue
         if k:
@@ -741,12 +916,15 @@ def render_card(
             elif i - 1 < len(right_x):
                 dr.text((right_x[i - 1], y), str(cname), font=fonts["次要"],
                         fill=colors["次要"], anchor="ra")
+        dr.line([(x0, y + head_h - 10), (x1, y + head_h - 10)],
+                fill=colors["网格线"], width=1)
         y += head_h - 4
 
-        for item in titems:
+        for _ri, item in enumerate(titems):
             values = list(item)
-            dr.rounded_rectangle([x0 - 4, y - 2, x1 + 4, y + head_h - 8], 8,
-                                 fill=colors["标签底"])
+            if _ri % 2 == 0:
+                dr.rectangle([x0 - 4, y - 2, x1 + 4, y + head_h - 8],
+                             fill=(250, 246, 237))
             if values:
                 dr.text((x0 + 4, y), _fit(dr, values[0], fonts["名字"], inner * 0.3),
                         font=fonts["名字"], fill=colors["标题"])
@@ -795,6 +973,9 @@ def render_card(
             rw = i // per_row
             tx2 = x0 + col * tile_w
             ty = y + rw * tile_h
+            dr.rounded_rectangle([tx2 + 3, ty - 2, tx2 + tile_w - 3, ty + tile_h - 8],
+                                 radius=12, fill=(250, 246, 237),
+                                 outline=colors["边框"], width=1)
             icon = _load_icon(tile[0] if len(tile) > 0 else None, tile_ico)
             if icon is not None:
                 img.paste(icon, (tx2 + (tile_w - tile_ico) // 2, ty), icon)
@@ -813,8 +994,8 @@ def render_card(
             _vf = _load_font(font_path, 17)
             _txt = f"v{card_version}"
             _tw = _vd.textlength(_txt, font=_vf)
-            _vd.text(((img.width - _tw) / 2, img.height - 20), _txt,
-                     font=_vf, fill=(150, 150, 150))
+            _vd.text(((img.width - _tw) / 2, img.height - 24), _txt,
+                     font=_vf, fill=(170, 150, 112))
         except Exception:
             pass
     return _png_bytes(img)
@@ -1041,10 +1222,14 @@ def render_text_card(
     h += pad
     h = max(h, pad * 2 + 40)
 
-    img = Image.new("RGB", (width, h), colors["背景"])
+    img = _vgrad((width, h), colors["天空顶"], colors["天空底"]).convert("RGB")
+    _tex = _paper_noise(96, 7)
+    for _ty in range(0, h, _tex.height):
+        for _tx in range(0, width, _tex.width):
+            img.paste(_tex, (_tx, _ty), _tex)
     dr = ImageDraw.Draw(img)
-    dr.rounded_rectangle([6, 6, width - 7, h - 7], 16,
-                         fill=colors["卡片"], outline=colors["边框"], width=2)
+    dr.rounded_rectangle([10, 10, width - 11, h - 11], 18,
+                         fill=colors["卡片"], outline=colors["边框"], width=1)
 
     x0, x1 = pad, width - pad
     y = pad
@@ -1070,14 +1255,16 @@ def render_text_card(
         elif b[0] == "div":
             label = b[1]
             cy = y + sizes["次要"] // 2 + 4
-            dr.line([x0, cy, x1, cy], fill=colors["边框"], width=1)
             if label:
-                tw = dr.textlength(label, font=fonts["次要"]) + 16
-                cx = x0 + (inner - tw) // 2
-                dr.rectangle([cx - 2, cy - sizes["次要"], cx + tw + 2, cy + sizes["次要"]],
-                             fill=colors["卡片"])
-                dr.text((cx + 8, cy - sizes["次要"] // 2 - 4), label,
-                        font=fonts["次要"], fill=colors["强调"])
+                tw = dr.textlength(label, font=fonts["次要"])
+                dr.ellipse([x0 + 1, cy - 3, x0 + 7, cy + 3], fill=colors["强调"])
+                dr.text((x0 + 13, cy - sizes["次要"] // 2 - 1), label,
+                        font=fonts["次要"], fill=colors["金深"])
+                _sx2 = x0 + 13 + tw + 10
+                if _sx2 < x1:
+                    dr.line([(_sx2, cy), (x1, cy)], fill=colors["网格线"], width=1)
+            else:
+                dr.line([(x0, cy), (x1, cy)], fill=colors["网格线"], width=1)
             y += sizes["次要"] + 22
         elif b[0] == "col":
             left, wrapped = b[1], b[2]
@@ -1099,8 +1286,8 @@ def render_text_card(
             _vf = _load_font(font_path, 17)
             _txt = f"v{card_version}"
             _tw = _vd.textlength(_txt, font=_vf)
-            _vd.text(((img.width - _tw) / 2, img.height - 20), _txt,
-                     font=_vf, fill=(150, 150, 150))
+            _vd.text(((img.width - _tw) / 2, img.height - 24), _txt,
+                     font=_vf, fill=(170, 150, 112))
         except Exception:
             pass
     return _png_bytes(img)

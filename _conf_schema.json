@@ -117,10 +117,10 @@
     "hint": "v2.1.34 起技能改成独立查询（技能 精灵名），一次最多 20 条一页，这个配置不再生效"
   },
   "hatch_time_enabled": {
-    "description": "显示孵化时间（普通 / 风场 / 5 倍 / 风场+5 倍）",
+    "description": "显示孵化时间（原始 / 风场×6 / 周末×5 / 叠加×30）",
     "type": "bool",
     "default": true,
-    "hint": "基础时长取图鉴的孵蛋时间，四种口径自动换算"
+    "hint": "基础时长取图鉴的孵蛋时间（本阶段没有就沿进化链找），四种口径自动换算；源数据没有时显示「暂无数据」"
   },
   "hatch_wind_mult": {
     "description": "风场加速倍速",
@@ -174,7 +174,7 @@
     "description": "卡片配色",
     "type": "text",
     "default": "",
-    "hint": "每行一项「键=#RRGGBB」，留空用默认。可配的键：背景 卡片 边框 标题 正文 次要 强调 标签底。例：强调=#C25828"
+    "hint": "每行一项「键=#RRGGBB」，留空用默认（暖纸图鉴：纸底 + 白磨砂卡 + 单一金色强调）。可配：背景 卡片 边框 标题 正文 次要 强调 标签底 天空顶 天空底 金 金深 纸 纸边 云 星 网格线。例：强调=#E8A72C"
   },
   "card_font_size": {
     "description": "卡片正文字号",
@@ -233,8 +233,8 @@
   "grid_avatar": {
     "description": "网格图卡片头像用哪张图",
     "type": "string",
-    "default": "stage1",
-    "hint": "stage1（默认）=一阶段精灵图，卡片只显示「一阶段 + 精灵蛋 + 异色蛋」；shiny=异色立绘（这时一阶段图退到四角徽标）"
+    "default": "own",
+    "hint": "own（默认）=显示卡片名字对应的最高阶段本体图；stage1=强制一阶段图；shiny=异色立绘"
   },
   "grid_show_ride": {
     "description": "卡片上标不标「是否同乘」",
@@ -270,7 +270,7 @@
     "description": "网格图配色（覆盖 card_theme）",
     "type": "text",
     "default": "",
-    "hint": "每行一项「键=#RRGGBB」。可配：背景 卡片 边框 标题 正文 次要 强调 标签底 网格线 容器底 头像底 阴影 空白。例：背景=#F4F0E7"
+    "hint": "每行一项「键=#RRGGBB」。可配：背景 卡片 边框 标题 正文 次要 强调 标签底 网格线 容器底 头像底 阴影 空白 天空顶 天空底 金 金深 纸 纸边 云 星。例：背景=#F3EDE0"
   },
   "grid_season_titles": {
     "description": "赛季名（画在网格图标题上）",

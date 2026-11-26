@@ -40,54 +40,62 @@ COLS = 4
 #: 默认画布宽度。固定宽度 → 每次渲染排版一致，不会被内容撑变形
 WIDTH = 1080
 
-#: 头像直径
-AVATAR = 100
+#: 头像直径（稍微加大，更突出）
+AVATAR = 96
 
-#: 卡片圆角 / 容器圆角
-CARD_RADIUS = 20
-BOX_RADIUS = 18
+#: 卡片圆角 / 容器圆角（羊皮纸 + 圆角徽章，洛克魔法图鉴感）
+CARD_RADIUS = 18
+BOX_RADIUS = 20
 
 #: 环绕徽标直径
-SAT = 36
+SAT = 24
 
 # ---------------------------------------------------------------- 配色
 
 #: 默认配色。前 8 个和 card.py 同名同义（card_theme 配置直接生效），
-#: 后 5 个是网格图专用（grid_theme 配置覆盖）。
-#: 底色取自参考图的暖米色（#F4F0E7 一带），卡片纯白 + 细边 + 软阴影分层。
+#: 其余是这套「暖纸图鉴」版式专用（grid_theme 配置覆盖）。
+# 参考 rocom / gamewiki：暖纸底 + 白磨砂卡 + 单一金强调，卡片不再整张上色。
 THEME_DEFAULT: Dict[str, str] = {
-    "背景": "#F4F0E7",      # 草稿纸米色
-    "卡片": "#FFFFFF",
-    "边框": "#E7E0D3",
-    "标题": "#2C2C2C",
-    "正文": "#4A4642",
-    "次要": "#8C867E",
-    "强调": "#C25828",
-    "标签底": "#F4F4F4",
-    "网格线": "#D2CBBA",    # 虚线容器 / 虚线分割线
-    "容器底": "#FFFEFB",
-    "头像底": "#F1EDE3",
-    "阴影": "#3C3228",
-    "空白": "#B8B2A8",
+    "背景": "#F3EDE0",   # 暖纸底
+    "卡片": "#FFFDF8",   # 白磨砂卡
+    "边框": "#E9DFCC",   # 1px 暖灰边框
+    "标题": "#2C2418",   # 深褐标题
+    "正文": "#4A4032",   # 褐正文
+    "次要": "#8E8170",   # 暖灰次要
+    "强调": "#E8A72C",   # 单一金强调
+    "标签底": "#F7F0E0", # 浅奶油标签/底色
+    "网格线": "#DED2BC", # 分隔线
+    "容器底": "#F3EDE0", # 页面纸底
+    "头像底": "#FFF9EC", # 头像奶油底
+    "阴影": "#6B5634",   # 暖褐阴影
+    "空白": "#B8AB94",   # 空状态灰
+    "天空顶": "#F6F0E3", # 纸面渐变顶（保留键，兼容旧配置）
+    "天空底": "#EFE5D3", # 纸面渐变底
+    "金": "#E8A72C",     # 金
+    "金深": "#B9771D",   # 深金
+    "纸": "#F3EDE0",     # 页面纸底
+    "纸边": "#E9DFCC",   # 纸边框
+    "云": "#FFFDF8",     # 保留键
+    "星": "#FFD978",     # 保留键
 }
 
-#: 标签类型 → (文字色, 底色)。多色标签就是靠这张表。
+#: 标签类型 → (文字色, 底色)。只做低饱和功能色，不抢主视觉。
 TAG_STYLE: Dict[str, Tuple[str, str]] = {
-    "shiny":   ("#6D28D9", "#F3E8FF"),   # 异色 —— 紫
-    "shinyegg": ("#00796B", "#DFF3F0"),  # 异色蛋 —— 青
-    "leader":  ("#B4430F", "#FFEEDF"),   # 首领化 —— 橙
-    "group":   ("#4B5563", "#F1F2F4"),   # 蛋组 —— 灰
-    "season":  ("#1D4ED8", "#E4ECFF"),   # 赛季 —— 蓝
-    "dex":     ("#6B7280", "#F4F4F5"),   # 图鉴号 —— 灰
-    "special": ("#0E7490", "#E0F2FE"),   # 特殊途径 —— 天蓝
-    "ride":    ("#166534", "#DCFCE7"),   # 可同乘 —— 绿
-    "noride":  ("#8A8178", "#F3F1EC"),   # 不可同乘 —— 浅灰
+    "shiny":    ("#6D4FB8", "#F1EBFB"),  # 异色
+    "shinyegg": ("#2C7A66", "#E5F4EF"),  # 异色蛋
+    "leader":   ("#A65A12", "#FBEFDF"),  # 首领化
+    "group":    ("#6B5E4C", "#F5EFE3"),  # 蛋组
+    "season":   ("#2F5FA8", "#E8EFFA"),  # 赛季
+    "dex":      ("#6D4FB8", "#F1EBFB"),  # 图鉴号
+    "special":  ("#2C6E8F", "#E5F2F7"),  # 特殊途径
+    "ride":     ("#2F7D57", "#E8F4EC"),  # 可同乘
+    "noride":   ("#8E8170", "#F1EADF"),  # 不可同乘
 }
 
-#: 蛋组 → 外圈颜色。同组恒定（同一个蛋组在所有页都是同一个颜色）
+#: 蛋组 → 外圈颜色（低饱和，和暖纸底协调）。
 RING_PALETTE: Tuple[str, ...] = (
-    "#5C7AEA", "#2EA18F", "#E28C3C", "#A86CD0",
-    "#5A965A", "#D05C78", "#488CBE", "#C4A848",
+    "#5B84C4", "#4E9C86", "#C98E3E", "#8E6CB8",
+    "#5F9A5F", "#C46A78", "#4F91B5", "#B39A45",
 )
 
 
@@ -334,10 +342,19 @@ def _ellipsis(draw, text: str, font, limit: float) -> str:
 
 
 def _fit_icon(path: str, box: int):
-    """按比例把图标缩进 box×box（不变形），返回 RGBA 图或 None。"""
+    """按比例把图标缩进 box×box（不变形），返回 RGBA 图或 None。
+
+    支持本地路径和 `data:image/...;base64,...`（card() 会把图标转成 data URI，
+    以前这里只认路径，导致网格图的星光/回顾图标一直画不出来）。
+    """
     Image, _, _, _ = _pil()  # type: ignore[misc]
+    s = str(path or "")
     try:
-        im = Image.open(str(path)).convert("RGBA")
+        if s.startswith("data:"):
+            raw = base64.b64decode(s.split(",", 1)[1])
+            im = Image.open(io.BytesIO(raw)).convert("RGBA")
+        else:
+            im = Image.open(s).convert("RGBA")
     except Exception:
         return None
     w, h = im.size or (0, 0)
@@ -358,16 +375,21 @@ def _paste_center(base, im, cx: int, cy: int) -> None:
 
 
 def card_height(base: int, avatar_d: int = AVATAR, tag_rows: int = 1) -> int:
-    """卡片高度（两条引擎共用这个公式，HTML 的 .pet 也按它定高，版式才不会飘）。"""
+    """卡片高度（两条引擎共用这个公式，HTML 的 .pet 也按它定高，版式才不会飘）。
+
+    新结构（自上而下）：顶部系别色带 6 → 头像 108 → 名字 → 小字
+    → 星光/回顾胶囊 22 → 标签 1~2 行。HTML 的 padding/margin 和这里一一对应。
+    """
     base = max(10, int(base or 18))
-    fs_name = base + 2
+    fs_name = base + 1
     fs_sub = max(10, base - 5)
-    fs_tag = max(9, base - 6)
-    pill_h = fs_tag + 12
+    fs_tag = max(9, base - 7)
+    pill_h = max(18, fs_tag + 9)
     tag_rows = max(1, min(2, int(tag_rows or 1)))
-    # 名字↔图鉴号、图鉴号↔组别 的间隔收小；底部留白加大，组别不再贴着卡片下沿
-    return int(16 + avatar_d + 10 + fs_name + 3 + fs_sub + 6
-               + tag_rows * pill_h + (tag_rows - 1) * 4 + 20)
+    name_line = int(fs_name * 1.30) + 2
+    sub_line = int(fs_sub * 1.35) + 2
+    return int(12 + 20 + 6 + avatar_d + 8 + name_line + 2 + sub_line + 4 + 18
+               + 4 + tag_rows * pill_h + (tag_rows - 1) * 4 + 12)
 
 
 def _tag_rows(draw, tags: Sequence[Any], font, maxw: float) -> List[List[Dict[str, Any]]]:
@@ -501,6 +523,148 @@ def _norm_panels(cards: Optional[Sequence[Dict[str, Any]]],
              "cards": [c for c in (cards or []) if isinstance(c, dict)]}]
 
 
+def _lerp_rgb(a, b, t: float):
+    t = max(0.0, min(1.0, float(t)))
+    return tuple(int(a[i] + (b[i] - a[i]) * t) for i in range(3))
+
+
+def _vgrad(size, top, bottom):
+    """竖向渐变图（宽 1 拉伸，够快）。"""
+    Image, _, _, _ = _pil()  # type: ignore[misc]
+    w, h = max(1, int(size[0])), max(1, int(size[1]))
+    strip = Image.new("RGB", (1, h))
+    px = strip.load()
+    for y in range(h):
+        px[0, y] = _lerp_rgb(top, bottom, y / float(max(1, h - 1)))
+    return strip.resize((w, h))
+
+
+def _hgrad(size, left, right):
+    Image, _, _, _ = _pil()  # type: ignore[misc]
+    w, h = max(1, int(size[0])), max(1, int(size[1]))
+    strip = Image.new("RGB", (w, 1))
+    px = strip.load()
+    for x in range(w):
+        px[x, 0] = _lerp_rgb(left, right, x / float(max(1, w - 1)))
+    return strip.resize((w, h))
+
+
+def _paper_noise(size: int = 96, seed: int = 7):
+    """暖纸纹理（稀疏小点，alpha 很低），Pillow 和 HTML 共用同一种颗粒。"""
+    Image, ImageDraw, _, _ = _pil()  # type: ignore[misc]
+    import random
+    rnd = random.Random(seed)
+    im = Image.new("RGBA", (size, size), (0, 0, 0, 0))
+    px = im.load()
+    for _ in range(size * size // 8):
+        x, y = rnd.randrange(size), rnd.randrange(size)
+        a = rnd.randint(2, 6)
+        tone = rnd.choice(((96, 78, 48), (140, 120, 86), (70, 58, 36)))
+        px[x, y] = (tone[0], tone[1], tone[2], a)
+    return im
+
+
+_NOISE_URI_CACHE = ""
+
+
+def _noise_uri() -> str:
+    """纸纹理 → data URI（HTML 里铺在背景上）。"""
+    global _NOISE_URI_CACHE
+    if _NOISE_URI_CACHE:
+        return _NOISE_URI_CACHE
+    try:
+        im = _paper_noise(72, 11)
+        buf = io.BytesIO()
+        im.save(buf, "PNG", optimize=True)
+        _NOISE_URI_CACHE = "data:image/png;base64," + base64.b64encode(
+            buf.getvalue()).decode("ascii")
+    except Exception:
+        _NOISE_URI_CACHE = ""
+    return _NOISE_URI_CACHE
+
+
+def _grad_round(img, box, radius: float, c1, c2, *, outline=None,
+                width: int = 2, horizontal: bool = False) -> None:
+    """圆角矩形内填渐变色（用蒙版裁切）。"""
+    Image, ImageDraw, _, _ = _pil()  # type: ignore[misc]
+    x0, y0, x1, y1 = [int(v) for v in box]
+    w, h = max(1, x1 - x0), max(1, y1 - y0)
+    grad = (_hgrad((w, h), c1, c2) if horizontal else _vgrad((w, h), c1, c2))
+    mask = Image.new("L", (w, h), 0)
+    ImageDraw.Draw(mask).rounded_rectangle([0, 0, w - 1, h - 1],
+                                           radius=max(0, int(radius)), fill=255)
+    img.paste(grad, (x0, y0), mask)
+    if outline:
+        ImageDraw.Draw(img).rounded_rectangle(
+            [x0, y0, x1 - 1, y1 - 1], radius=max(0, int(radius)),
+            outline=outline, width=width)
+
+
+def _star(draw, cx: float, cy: float, r: float, fill,
+          outline=None, width: int = 1) -> None:
+    pts = []
+    for i in range(10):
+        ang = math.radians(-90 + i * 36)
+        rr = r if i % 2 == 0 else r * 0.46
+        pts.append((cx + rr * math.cos(ang), cy + rr * math.sin(ang)))
+    draw.polygon(pts, fill=fill, outline=outline, width=width)
+
+
+def _diamond(draw, cx: float, cy: float, r: float, fill, outline=None) -> None:
+    pts = [(cx, cy - r), (cx + r, cy), (cx, cy + r), (cx - r, cy)]
+    draw.polygon(pts, fill=fill, outline=outline)
+
+
+def _cloud(img, cx: float, cy: float, s: float, color, alpha: int = 120) -> None:
+    """一团软云：几个半透明椭圆叠在一起。"""
+    Image, ImageDraw, _, _ = _pil()  # type: ignore[misc]
+    layer = Image.new("RGBA", img.size, (0, 0, 0, 0))
+    d = ImageDraw.Draw(layer)
+    parts = ((-0.72, 0.10, 0.46), (-0.20, -0.12, 0.56),
+             (0.34, -0.02, 0.50), (0.78, 0.14, 0.40), (0.02, 0.20, 0.55))
+    for dx, dy, rr in parts:
+        x = cx + dx * s
+        y = cy + dy * s
+        r = rr * s
+        d.ellipse([x - r, y - r * 0.62, x + r, y + r * 0.62],
+                  fill=(color[0], color[1], color[2], max(0, min(255, alpha))))
+    img.alpha_composite(layer)
+
+
+def _bracket(draw, x: float, y: float, sx: int, sy: int,
+             size: float, color, width: int = 3) -> None:
+    """四角金色包角（sx/sy 是方向，取 -1 或 1）。"""
+    draw.line([(x, y), (x + sx * size, y)], fill=color, width=width)
+    draw.line([(x, y), (x, y + sy * size)], fill=color, width=width)
+
+
+def _layout_panels(plist: Sequence[Dict[str, Any]], cols: int,
+                   inner_w: int, gap: int, pgap: int) -> List[Dict[str, Any]]:
+    """按两栏卡片数量分配列宽：常驻 1 只时左栏只占 1 列，右栏拿 3 列。
+
+    返回 [{panel, cols, width, card_w}]；单栏时 cols 就是总列数。
+    """
+    active = [p for p in plist if p["cards"]] or [{"title": "", "color": "", "cards": []}]
+    if len(active) == 1:
+        p = active[0]
+        cw = int((inner_w - gap * (cols - 1)) / float(cols))
+        return [{"panel": p, "cols": cols, "width": inner_w, "card_w": cw}]
+
+    p0, p1 = active[0], active[1]
+    n0, n1 = len(p0["cards"]), len(p1["cards"])
+    total = max(1, n0 + n1)
+    c0 = int(round(cols * n0 / float(total)))
+    c0 = max(1, min(cols - 1, c0))
+    c1 = cols - c0
+    cw = int((inner_w - gap * (cols - 2) - pgap) / float(cols))
+    w0 = c0 * cw + (c0 - 1) * gap
+    w1 = inner_w - w0 - pgap          # 末栏补齐，避免 1~2px 缝
+    return [
+        {"panel": p0, "cols": c0, "width": w0, "card_w": cw},
+        {"panel": p1, "cols": c1, "width": w1, "card_w": cw},
+    ]
+
+
 def render_grid(
     *,
     header: str,
@@ -518,13 +682,11 @@ def render_grid(
     theme: Any = "",
     empty_text: str = "这里还没有登记到精灵",
 ) -> bytes:
-    """画一张网格图，返回 PNG 字节。
+    """画一张「暖纸图鉴」网格图，返回 PNG 字节。
 
-    header   —— 左上角大字（例如 `异色精灵 · S5 · 圣龙宝藏`）
-    subtitle —— 右上角小字（例如 `第 1 / 3 页 · 共 39 只`）
-    footer   —— 底部一行提示（翻页 / 图例 / 数据来源）
-    panels   —— 两栏（左常驻 / 右奇遇）：`[{"title","color","cards"}, …]`
-                给两个 panel 时中间画一条竖虚线分开，每栏各占一半、两列卡片
+    参考 rocom / gamewiki 的做法：暖纸底 + 白磨砂卡 + 单一金色强调，
+    不再给每张卡整张上系别色，也不再堆金色缎带/包角/多层描边。
+    和 templates/grid.html 共用同一份数据与尺寸公式。
     """
     pil = _pil()
     if not pil:
@@ -532,288 +694,279 @@ def render_grid(
     Image, ImageDraw, _, _ = pil  # type: ignore[misc]
 
     th = parse_theme(theme)
-    bg = th["背景"]
     W = max(560, int(width))
     cols = max(1, min(6, int(cols or COLS)))
     plist = _norm_panels(cards, panels)
-    two = len(plist) == 2
-    per_cols = max(1, cols // 2) if two else cols
     all_cards = [c for p in plist for c in p["cards"]]
 
     base = max(10, int(font_size or 18))
-    fs_head = base + 9          # 标题
-    fs_name = base + 2          # 卡片名
-    fs_sub = max(10, base - 5)  # 卡片小字
-    fs_tag = max(9, base - 6)   # 标签
-    fs_foot = max(10, base - 4)  # 页脚
-    fs_panel = max(11, base)     # 栏目标题（常驻 / 奇遇）
+    fs_head = base + 16
+    fs_sub_head = max(11, base - 5)
+    fs_name = base + 1
+    fs_sub = max(10, base - 5)
+    fs_tag = max(9, base - 7)
+    fs_foot = max(10, base - 6)
+    fs_panel = base + 2
 
     f_head = _font(font_path, fs_head, bold=True)
-    f_sub = _font(font_path, max(10, base - 4))
+    f_sub_head = _font(font_path, fs_sub_head)
     f_name = _font(font_path, fs_name, bold=True)
     f_small = _font(font_path, fs_sub)
     f_tag = _font(font_path, fs_tag)
     f_foot = _font(font_path, fs_foot)
-    f_sat = _font(font_path, max(9, fs_tag))
     f_panel = _font(font_path, fs_panel, bold=True)
 
-    PAD = 26
-    GAP = 18
-    INNER = 18
-    DIVW = 34 if two else 0        # 中间分隔带宽度
+    # ---------------- 版式尺寸（HTML 模板按同一组数字） ----------------
+    M = 26
+    TOP_H = int(max(88, fs_head + 62))
+    GAP = 14
+    PGAP = 26
 
-    # 卡片宽度：按「每栏几列」算
-    IW = W - PAD * 2 - INNER * 2
-    panel_w = int((IW - DIVW) / 2) if two else IW
-    avatar_d = AVATAR if per_cols <= 4 else 86
-    card_w = int((panel_w - GAP * (per_cols - 1)) / float(per_cols))
+    inner_w = W - M * 2
+    lays = _layout_panels(plist, cols, inner_w, GAP, PGAP)
+    two = len(lays) == 2
+    card_w = lays[0]["card_w"]
+    per_cols = max(l["cols"] for l in lays)
+    avatar_d = AVATAR if per_cols <= 4 else 84
 
-    # 标签要占几行（最多两行）→ 卡片高度
-    pill_h = fs_tag + 12
-    _scratch_img = Image.new("RGB", (8, 8), (255, 255, 255))
-    _sdraw = ImageDraw.Draw(_scratch_img)
+    pill_h = max(18, fs_tag + 9)
+    _scratch = Image.new("RGB", (8, 8), (255, 255, 255))
+    _sd = ImageDraw.Draw(_scratch)
     tag_rows_max = 1
     for c in all_cards:
-        n_rows = len(_tag_rows(_sdraw, c.get("tags") or [], f_tag, card_w - 16))
-        tag_rows_max = max(tag_rows_max, min(2, n_rows))
+        n = len(_tag_rows(_sd, c.get("tags") or [], f_tag, card_w - 20))
+        tag_rows_max = max(tag_rows_max, min(2, n))
     card_h = card_height(base, avatar_d, tag_rows_max)
 
-    prows = [max(1, int(math.ceil(max(1, len(p["cards"])) / float(per_cols))))
-             for p in plist]
+    prows = [max(1, int(math.ceil(max(1, len(l["panel"]["cards"])) / float(l["cols"]))))
+             for l in lays]
     rows = max(prows) if prows else 1
-    panel_top = (fs_panel + 12) if any(p["title"] for p in plist) else 0
+    panel_top = 30 if any(l["panel"]["title"] for l in lays) else 0
 
-    head_h = int(fs_head + 14 + 12)
-    foot_lines = 1 if footer else 0
-    foot_h = int(fs_foot + 8) * foot_lines
-    box_h = INNER * 2 + panel_top + rows * card_h + (rows - 1) * GAP
-    H = int(PAD + head_h + box_h + (foot_h + 10 if foot_h else 0) + PAD)
+    board_top = TOP_H + 22
+    grid_top = board_top + panel_top
+    board_h = rows * card_h + (rows - 1) * GAP
+    if not all_cards:
+        board_h = 160
+    foot_h = 34 if (footer or total_pages > 1) else 0
+    H = int(grid_top + board_h + (14 + foot_h if foot_h else 0) + M)
 
-    img = Image.new("RGBA", (int(W), int(H)), (bg[0], bg[1], bg[2], 255))
+    # ---------------- 暖纸底 ----------------
+    img = _vgrad((W, H), th["天空顶"], th["天空底"]).convert("RGBA")
+    # 纸纹（低 alpha 平铺）
+    tex = _paper_noise(96, 7)
+    for ty in range(0, H, tex.height):
+        for tx in range(0, W, tex.width):
+            img.alpha_composite(tex, (tx, ty))
     draw = ImageDraw.Draw(img)
 
-    # ---------------- 表头 ----------------
-    hy = PAD
-    left_limit = W - PAD * 2 - (140 if subtitle else 0)
-    draw.text((PAD, hy), _ellipsis(draw, header, f_head, left_limit),
-              font=f_head, fill=th["标题"])
-    if subtitle:
-        sw = _tw(draw, subtitle, f_sub)
-        draw.text((W - PAD - sw, hy + (fs_head - fs_sub) / 2.0 + 2),
-                  subtitle, font=f_sub, fill=th["次要"])
-    dvy = hy + fs_head + 14
-    _draw_dashed(draw, [(PAD, dvy), (W - PAD, dvy)], th["网格线"], 2, 9, 6)
+    # ---------------- 顶部金色横幅（满幅） ----------------
+    _grad_round(img, (-2, -2, W + 2, TOP_H), 0, th["星"], th["强调"],
+                horizontal=True)
+    # 幽灵字：在横幅内裁切，不压正文
+    _ghost = "ROCO KINGDOM"
+    _gs = max(24, min(int(TOP_H * 0.82), 86))
+    _gf = _font(font_path, _gs, bold=True)
+    _gw = _tw(draw, _ghost, _gf)
+    if _gw > W * 0.72:
+        _gs = max(18, int(_gs * W * 0.72 / max(1.0, _gw)))
+        _gf = _font(font_path, _gs, bold=True)
+        _gw = _tw(draw, _ghost, _gf)
+    _gl = Image.new("RGBA", (W, TOP_H), (0, 0, 0, 0))
+    ImageDraw.Draw(_gl).text((W - 24 - _gw, TOP_H - _gs - 2), _ghost,
+                             font=_gf, fill=(255, 255, 255, 40))
+    img.alpha_composite(_gl)
 
-    # ---------------- 容器 ----------------
-    bx0, by0 = PAD, dvy + 12
-    bx1, by1 = W - PAD, by0 + box_h
-    draw.rounded_rectangle([bx0, by0, bx1, by1], radius=BOX_RADIUS,
-                           fill=(th["容器底"][0], th["容器底"][1], th["容器底"][2], 255))
+    # 标题 / 副标题
+    draw.text((M, 22), _ellipsis(draw, str(header or ""), f_head, inner_w - 170),
+              font=f_head, fill=th["标题"])
+    if str(subtitle or "").strip():
+        draw.text((M + 2, 22 + fs_head + 4),
+                  _ellipsis(draw, str(subtitle), f_sub_head, inner_w - 170),
+                  font=f_sub_head, fill=(74, 64, 50))
+
+    # 右侧「共 N 只」胶囊
+    _cnt = int(total or len(all_cards))
+    _pt = f"共 {_cnt} 只"
+    _ptw = _tw(draw, _pt, f_sub_head) + 26
+    _ph = fs_sub_head + 16
+    _px1 = W - M
+    _px0 = _px1 - _ptw
+    _py0 = 26
+    draw.rounded_rectangle([_px0, _py0, _px1, _py0 + _ph],
+                           radius=_ph / 2.0, fill=(255, 255, 255, 120),
+                           outline=(255, 255, 255, 170), width=1)
+    draw.text((_px0 + 13, _py0 + (_ph - fs_sub_head) / 2.0 - 2),
+              _pt, font=f_sub_head, fill=(92, 66, 20))
 
     if not all_cards:
-        cy = by0 + box_h / 2.0
-        ew = _tw(draw, empty_text, f_name)
-        draw.text(((W - ew) / 2.0, cy - fs_name / 2.0), empty_text,
+        _ey = grid_top + 74
+        _q_r = 30
+        _qx = W / 2.0
+        draw.ellipse([_qx - _q_r, _ey - _q_r - 26, _qx + _q_r, _ey + _q_r - 26],
+                     fill=th["卡片"], outline=th["边框"], width=1)
+        _qw = _tw(draw, "?", f_head)
+        draw.text((_qx - _qw / 2.0, _ey - fs_head - 24), "?",
+                  font=f_head, fill=th["空白"])
+        _ew = _tw(draw, empty_text, f_name)
+        draw.text(((W - _ew) / 2.0, _ey + 16), empty_text,
                   font=f_name, fill=th["空白"])
+        draw.text(((W - _tw(draw, "去查一只精灵，把第一枚蛋登记进来吧", f_small)) / 2.0,
+                   _ey + 44), "去查一只精灵，把第一枚蛋登记进来吧",
+                  font=f_small, fill=th["空白"])
 
     # ---------------- 每栏 ----------------
-    for pi, panel in enumerate(plist):
-        px0 = bx0 + INNER + pi * (panel_w + DIVW)
+    _px_cursor = M
+    for _li, lay in enumerate(lays):
+        panel = lay["panel"]
+        px0 = _px_cursor
+        _pcols = lay["cols"]
+        panel_w = lay["width"]
+        _px_cursor += panel_w + PGAP
         if panel["title"]:
             pcol = _to_rgb(panel.get("color") or "") or th["强调"]
-            ty0 = by0 + INNER + (panel_top - fs_panel) / 2.0 - 2
-            dot_r = max(4, fs_panel // 4)
-            draw.ellipse([px0 + 2, ty0 + fs_panel / 2.0 - dot_r,
-                          px0 + 2 + dot_r * 2, ty0 + fs_panel / 2.0 + dot_r], fill=pcol)
-            draw.text((px0 + 8 + dot_r * 2, ty0), panel["title"],
-                      font=f_panel, fill=pcol)
-            cnt = f"{len(panel['cards'])} 只"
-            cw_ = _tw(draw, cnt, f_small)
-            draw.text((px0 + panel_w - cw_, ty0 + 3), cnt, font=f_small, fill=th["次要"])
+            _dot = 8
+            _dy = board_top + 11
+            draw.ellipse([px0, _dy, px0 + _dot, _dy + _dot], fill=pcol)
+            draw.text((px0 + _dot + 8, board_top + 2), str(panel["title"]),
+                      font=f_panel, fill=th["标题"])
+            _ct = f"{len(panel['cards'])} 只"
+            _ctw = _tw(draw, _ct, f_tag)
+            draw.text((px0 + panel_w - _ctw, board_top + 8), _ct,
+                      font=f_tag, fill=th["次要"])
 
         for i, c in enumerate(panel["cards"]):
-            r, cc = divmod(i, per_cols)
+            r, cc = divmod(i, _pcols)
             x0 = px0 + cc * (card_w + GAP)
-            y0 = by0 + INNER + panel_top + r * (card_h + GAP)
+            y0 = grid_top + r * (card_h + GAP)
             x1, y1 = x0 + card_w, y0 + card_h
             c = c if isinstance(c, dict) else {}
 
-            _shadow(img, (x0, y0, x1, y1), CARD_RADIUS, th["阴影"], blur=6, alpha=22, dy=2)
-            # 系别色：卡片底色 / 描边 / 头像外圈都跟着系别走（调用方给了 bg/border 就用它）
-            accent = _to_rgb(c.get("elem_color") or "")
-            card_fill = (_to_rgb(c.get("bg") or "")
-                         or (_mix(accent, (255, 255, 255), 0.80) if accent else th["卡片"]))
-            card_line = (_to_rgb(c.get("border") or "")
-                         or (_mix(accent, (255, 255, 255), 0.50) if accent else th["边框"]))
+            accent = _to_rgb(c.get("elem_color") or "") or th["强调"]
+            soft = _mix(accent, th["卡片"], 0.84)
+            ink = _mix(accent, (44, 36, 24), 0.34)
+
+            _shadow(img, (x0, y0, x1, y1), CARD_RADIUS, th["阴影"],
+                    blur=6, alpha=14, dy=2)
             draw.rounded_rectangle([x0, y0, x1, y1], radius=CARD_RADIUS,
-                                   fill=(card_fill[0], card_fill[1], card_fill[2], 255),
-                                   outline=card_line, width=1)
+                                   fill=th["卡片"], outline=th["边框"], width=1)
 
+            # 顶部小行：系别小胶囊 + 区间
+            _ch_h = 19
+            _chip_x = x0 + 12
+            if str(c.get("elem") or "").strip():
+                _et = str(c.get("elem"))
+                _ef = _font(font_path, fs_tag, bold=True)
+                _ew = int(_tw(draw, _et, _ef) + 16)
+                draw.rounded_rectangle([_chip_x, y0 + 11, _chip_x + _ew,
+                                        y0 + 11 + _ch_h],
+                                       radius=6, fill=soft)
+                draw.text((_chip_x + 8, y0 + 11 + 3), _et, font=_ef, fill=ink)
+            if c.get("bins") not in (None, ""):
+                _bt = f"区间 {c.get('bins')}"
+                _bw = _tw(draw, _bt, f_tag)
+                draw.text((x1 - 12 - _bw, y0 + 14), _bt, font=f_tag,
+                          fill=th["次要"])
+
+            # 头像：细系别圈 + 奶油底
             cx = (x0 + x1) / 2.0
-            ring = accent or (_to_rgb(c.get("ring") or "") or th["强调"])
-
-            # 头像圈：外圈主题色 + 内圈浅底 + 图标按比例缩放
-            ay = y0 + 16
-            ax = cx - avatar_d / 2.0
-            draw.ellipse([ax - 3, ay - 3, ax + avatar_d + 3, ay + avatar_d + 3], fill=ring)
-            draw.ellipse([ax, ay, ax + avatar_d, ay + avatar_d], fill=th["头像底"])
-            icon_px = int(avatar_d * 0.82)
-            ic = _fit_icon(str(c.get("icon") or ""), icon_px) if c.get("icon") else None
+            ay = y0 + 38
+            _acy = ay + avatar_d / 2.0
+            draw.ellipse([cx - avatar_d / 2.0 - 3, _acy - avatar_d / 2.0 - 3,
+                          cx + avatar_d / 2.0 + 3, _acy + avatar_d / 2.0 + 3],
+                         fill=accent)
+            draw.ellipse([cx - avatar_d / 2.0, _acy - avatar_d / 2.0,
+                          cx + avatar_d / 2.0, _acy + avatar_d / 2.0],
+                         fill=th["头像底"])
+            ic = _fit_icon(str(c.get("icon") or ""), int(avatar_d * 0.84)) \
+                if c.get("icon") else None
             if ic is not None:
-                _paste_center(img, ic, int(cx), int(ay + avatar_d / 2.0))
+                _paste_center(img, ic, int(cx), int(_acy))
             else:
-                qw = _tw(draw, "?", f_head)
-                draw.text((cx - qw / 2.0, ay + avatar_d / 2.0 - fs_head * 0.62),
-                          "?", font=f_head, fill=th["空白"])
+                _qw = _tw(draw, "?", f_head)
+                draw.text((cx - _qw / 2.0, _acy - fs_head * 0.62), "?",
+                          font=f_head, fill=th["空白"])
 
-            # 环绕徽标：45°/135°/225°/315° 四个方位（最多 4 个）
-            sats = list(c.get("sats") or [])[:4]
-            if sats:
-                sx, sy = cx, ay + avatar_d / 2.0
-                # 徽标贴在精灵图**下半部**（和右下角区间数同一片区域），不再浮在图的上沿
-                # 徽标骑在圆的边上（和左下/右下胶囊一样只压住一点点），不是整个塞进图里
-                offs = [(-0.35, -0.44), (0.35, -0.44), (-0.35, 0.44), (0.35, 0.44)]
-                for k, s in enumerate(sats):
-                    ux, uy = offs[min(k, 3)]
-                    px = sx + ux * avatar_d
-                    py = sy + uy * avatar_d
-                    rr = SAT / 2.0
-                    sat_ring = _to_rgb((s or {}).get("ring") or "") or ring
-                    draw.ellipse([px - rr, py - rr, px + rr, py + rr],
-                                 fill=(255, 255, 255, 255), outline=sat_ring, width=2)
-                    s_icon = str((s or {}).get("icon") or "")
-                    s_text = str((s or {}).get("text") or "")
-                    s_color = _to_rgb((s or {}).get("color") or "") or th["正文"]
-                    sim = _fit_icon(s_icon, int(SAT * 0.72)) if s_icon else None
-                    if sim is not None:
-                        _paste_center(img, sim, int(px), int(py))
-                    elif s_text:
-                        tw_ = _tw(draw, s_text, f_sat)
-                        draw.text((px - tw_ / 2.0, py - fs_tag * 0.68), s_text,
-                                  font=f_sat, fill=s_color)
-
-            # 左列 / 右列两个锚点：系别章、区间章、星光、回顾全部对齐到这两列
-            # TODO: 根据实际图片尺寸微调坐标
-            ecx = cx - avatar_d * 0.38          # 左列中心（和「系别」章同列）
-            ecy = ay + avatar_d * 0.92          # 下排（系别 / 区间 所在行）
-            bcx = cx + avatar_d * 0.38          # 右列中心（和「区间」章同列）
-            bcy = ay + avatar_d * 0.92
-
-            # 星光值（左列）/ 回顾值（右列）：画在系别 / 区间**上方一行**，
-            # 和它们同列贴边 —— 图标 + 数值作为一个整体画进胶囊，不会错位
-            f_fa = _font(font_path, max(9, fs_tag), bold=True)
-            fh_fa = max(16, fs_tag + 8)
-            for _val, _ip, _is_left in (
-                    (c.get("star"), str(c.get("star_icon") or ""), True),
-                    (c.get("review"), str(c.get("review_icon") or ""), False)):
-                if _val in (None, "", 0):       # 没数据就整条不画（不留空图标）
-                    continue
-                _txt = str(_val)
-                _ico = _fit_icon(_ip, int(fh_fa * 0.72)) if _ip else None
-                _tw_t = _tw(draw, _txt, f_fa)
-                _iw = (fh_fa * 0.72 + 4) if _ico is not None else 0
-                _bw = int(_tw_t + _iw + 14)
-                _cx0 = ecx if _is_left else bcx
-                # TODO: 根据实际图片尺寸微调坐标（-8 是两行之间的间距）
-                _cy0 = ecy - fh_fa - 8
-                _fx0 = _cx0 - _bw / 2.0
-                _fy0 = _cy0 - fh_fa / 2.0
-                draw.rounded_rectangle(
-                    [_fx0, _fy0, _fx0 + _bw, _fy0 + fh_fa], radius=fh_fa / 2.0,
-                    fill=(card_fill[0], card_fill[1], card_fill[2], 255),
-                    outline=th["边框"], width=2)
-                _tx0 = _fx0 + 7
-                if _ico is not None:
-                    _paste_center(img, _ico, int(_tx0 + fh_fa * 0.36 - 2), int(_cy0))
-                    _tx0 += _iw
-                draw.text((_tx0, _cy0 - fs_tag * 0.66), _txt, font=f_fa, fill=th["正文"])
-
-            # 系别标签：贴在精灵图**左下角**（骑在圆圈边上，像给图角盖的章）
-            elem_txt = str(c.get("elem") or "").strip()
-            if elem_txt:
-                f_el = _font(font_path, max(9, fs_tag), bold=True)
-                bh = max(16, fs_tag + 8)
-                bw = int(_tw(draw, elem_txt, f_el) + 12)
-                # 章用系别色的**深一档**（主色留给外圈），加粗白边 —— 这样章和外圈
-                # 分得开，不会糊成一坨让人以为头像不圆
-                ecol = accent or th["强调"]
-                ex0, ey0 = ecx - bw / 2.0, ecy - bh / 2.0
-                draw.rounded_rectangle([ex0, ey0, ex0 + bw, ey0 + bh], radius=bh / 2.0,
-                                       fill=ecol,
-                                       outline=(card_fill[0], card_fill[1], card_fill[2], 255),
-                                       width=3)
-                etw = _tw(draw, elem_txt, f_el)
-                draw.text((ex0 + (bw - etw) / 2.0, ey0 + bh / 2.0 - fs_tag * 0.66),
-                          elem_txt, font=f_el, fill=_fg_on(ecol))
-
-            # 区间数：精灵图**右上角**，和系别章同一套胶囊样式
-            bins_n = c.get("bins")
-            if bins_n not in (None, ""):
-                btxt = f"区间 {bins_n}"
-                f_b = _font(font_path, max(9, fs_tag), bold=True)
-                bh2 = max(16, fs_tag + 8)
-                bw2 = int(_tw(draw, btxt, f_b) + 12)
-                bcol = accent or th["强调"]                          # 和系别章同色
-                pbx = bcx - bw2 / 2.0
-                pby = bcy - bh2 / 2.0
-                draw.rounded_rectangle([pbx, pby, pbx + bw2, pby + bh2],
-                                       radius=bh2 / 2.0, fill=bcol,
-                                       outline=(card_fill[0], card_fill[1], card_fill[2], 255),
-                                       width=3)
-                btw = _tw(draw, btxt, f_b)
-                draw.text((pbx + (bw2 - btw) / 2.0, pby + bh2 / 2.0 - fs_tag * 0.66),
-                          btxt, font=f_b, fill=_fg_on(bcol))
+            # 蛋徽标：头像右下角最多两枚
+            for k, s in enumerate(list(c.get("sats") or [])[:2]):
+                rr = SAT / 2.0
+                sx2 = cx + avatar_d / 2.0 - 8 - k * 24
+                sy2 = ay + avatar_d - 8
+                draw.ellipse([sx2 - rr, sy2 - rr, sx2 + rr, sy2 + rr],
+                             fill=th["卡片"], outline=th["边框"], width=1)
+                sim = _fit_icon(str((s or {}).get("icon") or ""), int(SAT * 0.74))
+                if sim is not None:
+                    _paste_center(img, sim, int(sx2), int(sy2))
 
             # 名字 / 小字
-            ny = ay + avatar_d + 10
-            name = _ellipsis(draw, str(c.get("name") or ""), f_name, card_w - 24)
+            ny = ay + avatar_d + 8
+            name = _ellipsis(draw, str(c.get("name") or ""), f_name, card_w - 22)
             nw = _tw(draw, name, f_name)
             draw.text((cx - nw / 2.0, ny), name, font=f_name, fill=th["标题"])
-            sy2 = ny + fs_name + 3
-            sub = _ellipsis(draw, str(c.get("sub") or ""), f_small, card_w - 24)
+            sy2 = ny + int(fs_name * 1.30) + 2
+            sub = _ellipsis(draw, str(c.get("sub") or ""), f_small, card_w - 22)
             if sub:
                 sw = _tw(draw, sub, f_small)
-                draw.text((cx - sw / 2.0, sy2), sub, font=f_small,
-                          fill=(_to_rgb(c.get("sub_fg") or "") or th["次要"]))
+                draw.text((cx - sw / 2.0, sy2), sub, font=f_small, fill=th["次要"])
 
-            # 标签（多色小胶囊，居中，最多两行 —— 高度已经在上面量好了）
-            ty = sy2 + fs_sub + 6
-            maxw = card_w - 16
-            rows_tags = _tag_rows(draw, c.get("tags") or [], f_tag, maxw)
-            for ri, row in enumerate(rows_tags):
+            # 星光 / 回顾：一行小字 + 图标，不做胶囊
+            _facts = []
+            if c.get("star") not in (None, "", 0):
+                _facts.append((str(c.get("star")), str(c.get("star_img") or "")))
+            if c.get("review") not in (None, "", 0):
+                _facts.append((str(c.get("review")), str(c.get("review_img") or "")))
+            fy = sy2 + int(fs_sub * 1.35) + 4
+            if _facts:
+                _parts = []
+                for _t, _ip in _facts:
+                    _iw = 14 if _ip else 0
+                    _parts.append((_t, _ip, int(_tw(draw, _t, f_tag) + _iw + 2)))
+                _tot = sum(p[2] for p in _parts) + 10 * (len(_parts) - 1)
+                _fx = cx - _tot / 2.0
+                for _t, _ip, _wd in _parts:
+                    if _ip:
+                        _fic = _fit_icon(_ip, 13)
+                        if _fic is not None:
+                            _paste_center(img, _fic, int(_fx + 6), int(fy + 8))
+                    draw.text((_fx + (15 if _ip else 0), fy), _t, font=f_tag,
+                              fill=th["正文"])
+                    _fx += _wd + 10
+
+            # 标签：浅奶油小胶囊，最多两行
+            ty = fy + 18 + 4
+            rows_tags = _tag_rows(draw, c.get("tags") or [], f_tag, card_w - 20)
+            for ri, row in enumerate(rows_tags[:2]):
                 total_w = sum(x["w"] for x in row) + 6 * (len(row) - 1)
                 tx = cx - total_w / 2.0
                 yy = ty + ri * (pill_h + 4)
-                if yy + pill_h > y1 - 4:
+                if yy + pill_h > y1 - 6:
                     break
                 for x in row:
-                    fg = _to_rgb(x["fg"]) or th["正文"]
+                    fg = _to_rgb(x["fg"]) or th["次要"]
                     bgc = _to_rgb(x["bg"]) or th["标签底"]
                     draw.rounded_rectangle([tx, yy, tx + x["w"], yy + pill_h],
-                                           radius=pill_h / 2.0, fill=bgc,
-                                           outline=_mix(fg, bgc, 0.55), width=1)
+                                           radius=pill_h / 2.0, fill=bgc)
                     tw_ = _tw(draw, x["text"], f_tag)
-                    draw.text((tx + (x["w"] - tw_) / 2.0, yy + 5), x["text"],
+                    draw.text((tx + (x["w"] - tw_) / 2.0, yy + 3), x["text"],
                               font=f_tag, fill=fg)
                     tx += x["w"] + 6
 
-    # 中间竖虚线（常驻 ｜ 奇遇）
+    # 双栏分隔：一根很淡的竖线
     if two:
-        dx = bx0 + INNER + panel_w + DIVW / 2.0
-        _draw_dashed(draw, [(dx, by0 + INNER + 2), (dx, by1 - INNER - 2)],
-                     th["网格线"], 2, 8, 7)
-
-    # 容器的虚线边框画在卡片上面，才不会被卡片盖住一小截
-    _dashed_rrect(draw, (bx0, by0, bx1, by1), BOX_RADIUS, th["网格线"], 2, 9, 6)
+        dx = M + lays[0]["width"] + PGAP / 2.0
+        draw.line([(dx, board_top + 2), (dx, grid_top + board_h)],
+                  fill=th["网格线"], width=1)
 
     # ---------------- 页脚 ----------------
-    if footer:
-        fy = by1 + 12
-        draw.text((PAD, fy), _ellipsis(draw, footer, f_foot, W - PAD * 2 - 90),
+    if foot_h:
+        _fy = grid_top + board_h + 14
+        draw.line([(M, _fy), (W - M, _fy)], fill=th["网格线"], width=1)
+        _brand = str(footer or "").strip() or "洛克王国 · 精灵图鉴"
+        draw.text((M, _fy + 10), _ellipsis(draw, _brand, f_foot, inner_w - 160),
                   font=f_foot, fill=th["次要"])
-        pg = f"{page} / {total_pages}"
-        pw = _tw(draw, pg, f_foot)
-        draw.text((W - PAD - pw, fy), pg, font=f_foot, fill=th["空白"])
+        _pg = f"{page} / {total_pages}"
+        _pgw = _tw(draw, _pg, f_foot)
+        draw.text((W - M - _pgw, _fy + 10), _pg, font=f_foot, fill=th["空白"])
 
     return _png(img)
 
@@ -846,13 +999,26 @@ def html_data(
     cols = max(1, min(6, int(cols or COLS)))
     base = max(10, int(font_size or 18))
     plist = _norm_panels(cards, panels)
-    two = len(plist) == 2
-    per_cols = max(1, cols // 2) if two else cols
     all_cards = [c for p in plist for c in p["cards"]]
-    avatar_d = AVATAR if per_cols <= 4 else 86
+
+    # 和 render_grid 同一组版式常量（HTML 直接吃这些数字，两条引擎才不会飘）
+    M = 26
+    GAP = 14
+    PGAP = 26
+    W = max(560, int(width))
+    inner_w = W - M * 2
+    lays = _layout_panels(plist, cols, inner_w, GAP, PGAP)
+    two = len(lays) == 2
+    per_cols = max(l["cols"] for l in lays)
+    card_w = lays[0]["card_w"]
+    avatar_d = AVATAR if per_cols <= 4 else 84
+    fs_head = base + 16
+    top_h = int(max(88, fs_head + 62))
+    panel_top = 30 if any(l["panel"]["title"] for l in lays) else 0
+    fs_tag = max(9, base - 7)
+    pill_h = max(18, fs_tag + 9)
 
     # 标签要占几行：能测就真测（和 Pillow 版同一套 _tag_rows），测不了按 1 行算
-    fs_tag = max(9, base - 6)
     tag_rows_max = 1
     pil = _pil()
     if pil is not None:
@@ -861,14 +1027,9 @@ def html_data(
             scratch = Image.new("RGB", (8, 8), (255, 255, 255))
             sd = ImageDraw.Draw(scratch)
             f_tag = _font(font_path, fs_tag)
-            W = max(560, int(width))
-            IW = W - 26 * 2 - 18 * 2
-            DIVW = 34 if two else 0
-            panel_w = int((IW - DIVW) / 2) if two else IW
-            card_w = int((panel_w - 18 * (per_cols - 1)) / float(per_cols))
             for c in all_cards:
                 c = c if isinstance(c, dict) else {}
-                n_rows = len(_tag_rows(sd, c.get("tags") or [], f_tag, card_w - 16))
+                n_rows = len(_tag_rows(sd, c.get("tags") or [], f_tag, card_w - 20))
                 tag_rows_max = max(tag_rows_max, min(2, n_rows))
         except Exception:
             tag_rows_max = 1
@@ -908,6 +1069,8 @@ def html_data(
             ring_hex = ("#%02X%02X%02X" % accent) if accent else str(
                 c.get("ring") or RING_PALETTE[0])
             elem_bg = ("#%02X%02X%02X" % accent) if accent else ""
+            elem_soft = ("#%02X%02X%02X" % _mix(accent, th["卡片"], 0.84)) if accent else ""
+            elem_ink = ("#%02X%02X%02X" % _mix(accent, (44, 36, 24), 0.34)) if accent else ""
             out_cards.append({
                 "name": str(c.get("name") or ""),
                 "sub": str(c.get("sub") or ""),
@@ -918,25 +1081,32 @@ def html_data(
                 "border": line_hex,
                 "elem": str(c.get("elem") or ""),
                 "elem_color": "#%02X%02X%02X" % accent if accent else "",
+                "elem_fg": ("#%02X%02X%02X" % _fg_on(accent)) if accent else "",
+                "elem_soft": elem_soft,
+                "elem_ink": elem_ink,
                 "bins": c.get("bins"),
                 "bins_bg": ("#%02X%02X%02X" % accent) if accent else "",
                 "img": data_uri(str(c.get("icon") or "")),
                 "tags": tags,
                 "sats": sats,
-                # 星光值 / 回顾值：贴在精灵图左右两侧（图标转 data URI 内联）
+                # 星光值 / 回顾值：名字下方胶囊（图标转 data URI 内联，
+                # 以前这里直接塞本地路径，Playwright 沙箱读不到，HTML 版就丢图标）
                 "star": int(c.get("star") or 0),
                 "review": int(c.get("review") or 0),
-                "star_img": str(c.get("star_img") or ""),
-                "review_img": str(c.get("review_img") or ""),
+                "star_img": data_uri(str(c.get("star_img") or "")),
+                "review_img": data_uri(str(c.get("review_img") or "")),
             })
         return out_cards
 
     out_panels = []
-    for p in plist:
+    for lay in lays:
+        p = lay["panel"]
         out_panels.append({
             "title": p["title"],
-            "color": p["color"] or "#C25828",
+            "color": p["color"] or "#E8A72C",
             "count": len(p["cards"]),
+            "cols": lay["cols"],
+            "width": lay["width"],
             "cards": pack(p["cards"]),
         })
 
@@ -955,6 +1125,16 @@ def html_data(
         "base": base,
         "card_h": card_height(base, avatar_d, tag_rows_max),
         "empty_text": "这里还没有登记到精灵",
+        "m": M,
+        "gap": GAP,
+        "pgap": PGAP,
+        "top_h": top_h,
+        "panel_top": panel_top,
+        "pill_h": pill_h,
+        "avatar_d": avatar_d,
+        "card_radius": CARD_RADIUS,
+        "total_count": int(total or len(all_cards)),
+        "noise": _noise_uri(),
         "color": {k: "#%02X%02X%02X" % v for k, v in th.items()},
     }
 
